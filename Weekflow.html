@@ -1,0 +1,1169 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Weekflow v2.0 本地 Task 管理工具，支持周时间轴、分组、Flow、资料库、双向联动、看板、备份和 Excel 批量导入导出。"
+    />
+    <title>Weekflow v2.0 · Task management</title>
+    <link rel="stylesheet" href="./css/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="app-header">
+        <a class="brand" href="#" aria-label="Weekflow 首页" data-action="show-home">
+          <span class="brand-mark" aria-hidden="true">
+            <span></span><span></span><span></span><span></span><span></span><span></span>
+          </span>
+          <span>
+            <strong>Weekflow</strong>
+            <small>Task management</small>
+          </span>
+        </a>
+
+        <nav class="view-nav" aria-label="主导航">
+          <button class="nav-tab is-active" type="button" data-view="home">
+            <span aria-hidden="true">⌂</span> 主页
+          </button>
+          <button class="nav-tab" type="button" data-view="timeline">
+            <span aria-hidden="true">⌁</span> 时间轴看板
+          </button>
+          <button class="nav-tab" type="button" data-view="dashboard">
+            <span aria-hidden="true">▦</span> 整体看板
+          </button>
+          <button class="nav-tab" type="button" data-view="materials">
+            <span aria-hidden="true">▤</span> 资料库
+          </button>
+        </nav>
+
+        <div id="header-summary" class="header-summary" aria-live="polite">
+          <span><b id="header-pending">0</b> 未完成</span>
+          <span class="summary-overdue"><b id="header-overdue">0</b> 逾期</span>
+        </div>
+
+        <div id="header-actions" class="header-actions">
+          <button class="button button-quiet" type="button" data-action="new-group">
+            <span aria-hidden="true">＋</span> 新建分组
+          </button>
+          <button class="button button-quiet" type="button" data-action="new-flow">
+            <span aria-hidden="true">＋</span> 新建 Flow
+          </button>
+          <button class="button button-primary" type="button" data-action="new-task">
+            <span aria-hidden="true">＋</span> 新建 Task
+          </button>
+        </div>
+      </header>
+
+      <section id="filter-bar" class="filter-bar" aria-label="筛选与数据操作" hidden>
+        <label class="search-field" for="filter-search">
+          <span aria-hidden="true">⌕</span>
+          <input
+            id="filter-search"
+            type="search"
+            autocomplete="off"
+            placeholder="搜索 Task、Flow、进度、交付物或资料"
+          />
+          <kbd>⌘ K</kbd>
+        </label>
+
+        <details class="filter-menu" id="group-filter">
+          <summary>
+            <span>分组</span>
+            <b id="group-filter-count">全部</b>
+          </summary>
+          <div class="filter-popover">
+            <div class="filter-popover-head">
+              <strong>筛选分组</strong>
+              <button type="button" data-action="clear-groups">清空</button>
+            </div>
+            <div id="group-filter-options" class="check-list"></div>
+          </div>
+        </details>
+
+        <details class="filter-menu" id="flow-filter">
+          <summary>
+            <span>Flow</span>
+            <b id="filter-flow-label">全部</b>
+          </summary>
+          <div class="filter-popover">
+            <div class="filter-popover-head">
+              <strong>筛选 Flow</strong>
+              <button type="button" data-action="clear-flow-filter">清空</button>
+            </div>
+            <div id="filter-flow-options" class="check-list single-choice-list"></div>
+          </div>
+        </details>
+        <input id="filter-flow" type="hidden" value="all" />
+
+        <details class="filter-menu" id="status-filter">
+          <summary>
+            <span>状态</span>
+            <b id="filter-status-label">全部</b>
+          </summary>
+          <div class="filter-popover filter-popover-compact">
+            <div class="filter-popover-head">
+              <strong>筛选状态</strong>
+              <button type="button" data-action="clear-status-filter">清空</button>
+            </div>
+            <div id="filter-status-options" class="check-list single-choice-list"></div>
+          </div>
+        </details>
+        <input id="filter-status" type="hidden" value="all" />
+
+        <details class="filter-menu" id="urgency-filter">
+          <summary>
+            <span>紧急程度</span>
+            <b id="filter-urgency-label">全部</b>
+          </summary>
+          <div class="filter-popover filter-popover-compact">
+            <div class="filter-popover-head">
+              <strong>筛选紧急程度</strong>
+              <button type="button" data-action="clear-urgency-filter">清空</button>
+            </div>
+            <div id="filter-urgency-options" class="check-list single-choice-list"></div>
+          </div>
+        </details>
+        <input id="filter-urgency" type="hidden" value="all" />
+
+        <label class="toggle-filter" for="filter-overdue">
+          <input id="filter-overdue" type="checkbox" />
+          <span aria-hidden="true"></span>
+          仅看逾期
+        </label>
+
+        <button class="text-button" type="button" data-action="clear-filters">清空筛选</button>
+
+        <div class="data-actions">
+          <button class="button button-quiet" type="button" data-action="export-excel">
+            <span aria-hidden="true">⇩</span> 导出 Excel
+          </button>
+          <details class="more-menu">
+            <summary aria-label="更多数据操作">•••</summary>
+            <div class="more-popover">
+              <span class="menu-section-label">批量录入</span>
+              <a href="./templates/Weekflow_Task导入模板.xlsx" download>
+                下载 Excel 导入模板
+              </a>
+              <button type="button" data-action="import-excel">上传 Excel 批量导入</button>
+              <span class="menu-section-label">数据备份</span>
+              <button type="button" data-action="export-json">导出 JSON 备份</button>
+              <button type="button" data-action="import-json">从 JSON 恢复</button>
+            </div>
+          </details>
+          <input
+            id="excel-file-input"
+            type="file"
+            accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+            hidden
+          />
+          <input id="json-file-input" type="file" accept=".json,application/json" hidden />
+        </div>
+      </section>
+
+      <section id="materials-filter-bar" class="filter-bar materials-filter-bar" aria-label="资料库筛选" hidden>
+        <label class="search-field materials-search-field" for="material-filter-name">
+          <span aria-hidden="true">⌕</span>
+          <input
+            id="material-filter-name"
+            type="search"
+            autocomplete="off"
+            placeholder="搜索资料名称"
+          />
+          <kbd>⌘ K</kbd>
+        </label>
+
+        <details class="filter-menu" id="material-type-filter">
+          <summary>
+            <span>类型</span>
+            <b id="material-filter-type-label">全部</b>
+          </summary>
+          <div class="filter-popover">
+            <div class="filter-popover-head">
+              <strong>筛选资料类型</strong>
+              <button type="button" data-action="clear-material-types">清空</button>
+            </div>
+            <div id="material-filter-types" class="check-list"></div>
+          </div>
+        </details>
+
+        <details class="filter-menu" id="material-group-filter">
+          <summary>
+            <span>分组</span>
+            <b id="material-filter-group-label">全部</b>
+          </summary>
+          <div class="filter-popover">
+            <div class="filter-popover-head">
+              <strong>筛选分组</strong>
+              <button type="button" data-action="clear-material-groups">清空</button>
+            </div>
+            <div id="material-filter-groups" class="check-list"></div>
+          </div>
+        </details>
+
+        <details class="filter-menu" id="material-flow-filter">
+          <summary>
+            <span>Flow</span>
+            <b id="material-filter-flow-label">全部</b>
+          </summary>
+          <div class="filter-popover filter-popover-wide">
+            <div class="filter-popover-head">
+              <strong>筛选 Flow</strong>
+              <button type="button" data-action="clear-material-flows">清空</button>
+            </div>
+            <div id="material-filter-flows" class="check-list"></div>
+          </div>
+        </details>
+
+        <details class="filter-menu" id="material-task-filter">
+          <summary>
+            <span>Task</span>
+            <b id="material-filter-task-label">全部</b>
+          </summary>
+          <div class="filter-popover filter-popover-wide">
+            <div class="filter-popover-head">
+              <strong>筛选 Task</strong>
+              <button type="button" data-action="clear-material-tasks">清空</button>
+            </div>
+            <div id="material-filter-tasks" class="check-list"></div>
+          </div>
+        </details>
+
+        <button class="text-button" type="button" data-action="clear-material-filters">
+          清空筛选
+        </button>
+      </section>
+
+      <main>
+        <section id="home-view" class="view-panel home-view" aria-labelledby="home-heading">
+          <div class="home-hero">
+            <div class="home-hero-copy">
+              <p class="eyebrow">Weekflow v2.0</p>
+              <h1 id="home-heading">把工作拆成清晰的下一步</h1>
+              <p>
+                用分组建立工作版图，用 Flow 串起执行步骤，再用周时间轴看清每一个 DDL。
+              </p>
+              <div class="home-stats" aria-label="当前数据概览">
+                <span><b id="home-task-total">0</b> Task</span>
+                <span><b id="home-completion-rate">0%</b> 完成率</span>
+                <span><b id="home-group-total">0</b> 分组</span>
+                <span><b id="home-flow-total">0</b> Flow</span>
+                <span><b id="home-material-total">0</b> 资料</span>
+              </div>
+            </div>
+            <div class="home-flow-visual" aria-label="Weekflow 工作结构示意">
+              <div class="home-visual-caption">
+                <span>WORK MAP</span>
+                <b>Group → Flow → Task</b>
+              </div>
+              <div class="home-group-node">
+                <i aria-hidden="true">G</i>
+                <div>
+                  <small>GROUP</small>
+                  <strong>工作主题</strong>
+                </div>
+              </div>
+              <div class="home-flow-track" aria-hidden="true">
+                <span></span><span></span><span></span>
+              </div>
+              <div class="home-flow-node">
+                <i aria-hidden="true">F</i>
+                <div>
+                  <small>FLOW</small>
+                  <strong>执行流程</strong>
+                </div>
+                <em>67%</em>
+              </div>
+              <div class="home-task-steps" aria-hidden="true">
+                <span class="is-complete"><i>01</i>需求确认</span>
+                <span class="is-complete"><i>02</i>方案执行</span>
+                <span class="is-current"><i>03</i>交付验收</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="home-entry-grid" aria-label="Weekflow 功能入口">
+            <button class="home-entry-card is-timeline" type="button" data-view="timeline">
+              <span class="home-entry-icon" aria-hidden="true">⌁</span>
+              <span class="home-entry-copy">
+                <small>PLAN BY WEEK</small>
+                <strong>时间轴看板</strong>
+                <span>按周查看 DDL、推进状态和工作步骤</span>
+              </span>
+              <span class="home-entry-arrow" aria-hidden="true">→</span>
+            </button>
+            <button class="home-entry-card is-dashboard" type="button" data-view="dashboard">
+              <span class="home-entry-icon" aria-hidden="true">▦</span>
+              <span class="home-entry-copy">
+                <small>SEE THE PULSE</small>
+                <strong>整体看板</strong>
+                <span>掌握 Task、分组和 Flow 的实时进度</span>
+              </span>
+              <span class="home-entry-arrow" aria-hidden="true">→</span>
+            </button>
+            <button class="home-entry-card is-materials" type="button" data-view="materials">
+              <span class="home-entry-icon" aria-hidden="true">▤</span>
+              <span class="home-entry-copy">
+                <small>FIND THE SOURCE</small>
+                <strong>资料库</strong>
+                <span>集中管理链接、关联工作并查看最近常用</span>
+              </span>
+              <span class="home-entry-arrow" aria-hidden="true">→</span>
+            </button>
+            <button class="home-entry-card is-guide" type="button" data-action="open-user-guide">
+              <span class="home-entry-icon" aria-hidden="true">?</span>
+              <span class="home-entry-copy">
+                <small>QUICK GUIDE</small>
+                <strong>使用说明</strong>
+                <span>了解主要功能、数据保存与导出方法</span>
+              </span>
+              <span class="home-entry-arrow" aria-hidden="true">↗</span>
+            </button>
+            <button class="home-entry-card is-changelog" type="button" data-action="open-changelog">
+              <span class="home-entry-icon" aria-hidden="true">✦</span>
+              <span class="home-entry-copy">
+                <small>WHAT'S NEW</small>
+                <strong>更新日志</strong>
+                <span>查看 Weekflow v2.0 的发布内容</span>
+              </span>
+              <span class="home-entry-arrow" aria-hidden="true">↗</span>
+            </button>
+          </div>
+        </section>
+
+        <section id="timeline-view" class="view-panel" aria-labelledby="timeline-heading" hidden>
+          <div class="view-toolbar timeline-toolbar">
+            <div class="timeline-title-group">
+              <div class="timeline-title-copy">
+                <h1 id="timeline-heading">Task 时间轴</h1>
+                <span>周一至周日 · 表头显示周五</span>
+              </div>
+              <div class="timeline-legend" aria-label="图例">
+                <span><i class="legend-dot current"></i>本周</span>
+                <span><i class="legend-dot overdue"></i>逾期</span>
+                <span><i class="legend-dot complete"></i>完成</span>
+                <span id="visible-result-count">0 条可见 Task</span>
+                <div id="active-filters" class="active-filters" aria-live="polite"></div>
+              </div>
+            </div>
+            <div class="timeline-range-controls">
+              <span id="range-label" class="range-label"></span>
+              <div class="group-bulk-controls" aria-label="分组与 Flow 展开折叠控制">
+                <button type="button" data-action="groups-expand-all" title="展开所有分组与 Flow">
+                  <span aria-hidden="true">↧</span> 展开全部
+                </button>
+                <button type="button" data-action="groups-collapse-all" title="折叠所有分组与 Flow">
+                  <span aria-hidden="true">↥</span> 折叠全部
+                </button>
+              </div>
+              <div class="segmented" aria-label="时间轴范围控制">
+                <button type="button" data-action="timeline-prev" title="向前 4 周">←</button>
+                <button type="button" data-action="timeline-today">回到本周</button>
+                <button type="button" data-action="timeline-next" title="向后 4 周">→</button>
+              </div>
+              <button class="button button-quiet" type="button" data-action="timeline-all">
+                全部范围
+              </button>
+            </div>
+          </div>
+
+          <div id="timeline-scroll" class="timeline-scroll" tabindex="0">
+            <div id="timeline-board" class="timeline-board"></div>
+          </div>
+        </section>
+
+        <section id="dashboard-view" class="view-panel" aria-labelledby="dashboard-heading" hidden>
+          <div class="view-toolbar dashboard-toolbar">
+            <div class="dashboard-title-group">
+              <h1 id="dashboard-heading">整体看板</h1>
+              <span>全量数据 · 实时更新</span>
+            </div>
+            <p class="dashboard-note">点击分组、Flow 或逾期数字，可返回时间轴定位任务。</p>
+          </div>
+
+          <div id="metric-cards" class="metric-cards"></div>
+
+          <section class="dashboard-section" aria-labelledby="group-overview-title">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Group pulse</p>
+                <h2 id="group-overview-title">分组进度</h2>
+              </div>
+              <span id="dashboard-scope">统计全部 Task</span>
+            </div>
+            <div id="group-dashboard" class="group-dashboard"></div>
+          </section>
+
+          <section class="dashboard-section" aria-labelledby="flow-overview-title">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Workflow pulse</p>
+                <h2 id="flow-overview-title">Flow 进度</h2>
+              </div>
+              <span>按工作步骤实时统计</span>
+            </div>
+            <div id="flow-dashboard" class="group-dashboard flow-dashboard"></div>
+          </section>
+
+          <section class="dashboard-section table-section" aria-labelledby="group-table-title">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Exact numbers</p>
+                <h2 id="group-table-title">分组汇总</h2>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>分组</th>
+                    <th>Task 总数</th>
+                    <th>已完成</th>
+                    <th>未完成</th>
+                    <th>逾期</th>
+                    <th>完成率</th>
+                  </tr>
+                </thead>
+                <tbody id="group-summary-body"></tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="dashboard-section table-section" aria-labelledby="flow-table-title">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Workflow numbers</p>
+                <h2 id="flow-table-title">Flow 汇总</h2>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>所属分组</th>
+                    <th>Flow</th>
+                    <th>步骤数</th>
+                    <th>已完成</th>
+                    <th>未完成</th>
+                    <th>逾期</th>
+                    <th>完成率</th>
+                  </tr>
+                </thead>
+                <tbody id="flow-summary-body"></tbody>
+              </table>
+            </div>
+          </section>
+        </section>
+
+        <section id="materials-view" class="view-panel materials-view" aria-labelledby="materials-heading" hidden>
+          <div class="view-toolbar materials-toolbar">
+            <div class="materials-title-block">
+              <div class="materials-title-line">
+                <h1 id="materials-heading">资料库</h1>
+                <div class="materials-summary" aria-live="polite">
+                  <span><b id="materials-total">0</b> 全部资料</span>
+                  <span
+                    title="本自然周或上个自然周至少打开过一次"
+                  ><b id="materials-frequent-total">0</b> 最近常用</span>
+                  <span><b id="materials-ungrouped-total">0</b> 未分组</span>
+                </div>
+              </div>
+              <span id="materials-result-count">共 0 条资料</span>
+            </div>
+            <div class="materials-actions">
+              <span id="material-selection-count" class="material-selection-count">已选 0 条</span>
+              <button class="button button-danger-quiet" type="button" data-action="delete-selected-materials" disabled>
+                删除所选
+              </button>
+              <div class="segmented material-scope-toggle" aria-label="资料显示范围">
+                <button class="is-active" type="button" data-action="materials-all">全部</button>
+                <button type="button" data-action="materials-recent">最近常用</button>
+              </div>
+              <details class="materials-download-menu">
+                <summary class="button button-quiet">下载</summary>
+                <div class="materials-download-popover">
+                  <a
+                    href="./templates/Weekflow_资料库导入模板.xlsx"
+                    download
+                  >
+                    下载空白模板
+                  </a>
+                  <button type="button" data-action="export-materials">下载资料库</button>
+                </div>
+              </details>
+              <button class="button button-quiet" type="button" data-action="import-materials">
+                上传
+              </button>
+              <button class="button button-primary" type="button" data-action="new-material">
+                ＋ 添加资料
+              </button>
+            </div>
+          </div>
+
+          <section class="dashboard-section materials-table-section" aria-label="资料清单">
+            <div class="table-wrap materials-table-wrap">
+              <table class="materials-table">
+                <thead>
+                  <tr>
+                    <th class="material-select-column">
+                      <input id="material-select-visible" type="checkbox" aria-label="选择当前筛选结果中的全部资料" />
+                    </th>
+                    <th><span>链接名称</span></th>
+                    <th><span>链接地址</span></th>
+                    <th><span>类型</span></th>
+                    <th><span>相关 Task</span></th>
+                    <th><span>相关 Flow</span></th>
+                    <th><span>分组</span></th>
+                    <th><span>备注</span></th>
+                  </tr>
+                </thead>
+                <tbody id="materials-table-body"></tbody>
+              </table>
+            </div>
+          </section>
+          <input
+            id="material-file-input"
+            type="file"
+            accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+            hidden
+          />
+        </section>
+      </main>
+    </div>
+
+    <dialog id="excel-import-dialog" class="modal modal-large">
+      <div class="modal-head">
+        <div>
+          <p class="eyebrow">Bulk import</p>
+          <h2>Excel 批量导入</h2>
+        </div>
+        <button class="icon-button" type="button" data-action="close-excel-import" aria-label="关闭">×</button>
+      </div>
+      <p id="excel-import-file" class="modal-context"></p>
+      <div id="excel-import-summary" class="import-summary"></div>
+      <div id="excel-import-errors" class="import-errors" role="alert"></div>
+      <div class="table-wrap import-preview-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>分组</th>
+              <th>Flow</th>
+              <th>Task name</th>
+              <th>DDL</th>
+              <th>紧急程度</th>
+            </tr>
+          </thead>
+          <tbody id="excel-import-preview"></tbody>
+        </table>
+      </div>
+      <p class="import-note">
+        导入会新增 Task；不存在的分组和 Flow 将自动创建。已有同名分组或 Flow 会直接复用。
+      </p>
+      <div class="modal-actions">
+        <button class="button button-quiet" type="button" data-action="choose-excel-import">
+          重新选择文件
+        </button>
+        <button class="button button-quiet" type="button" data-action="close-excel-import">
+          取消
+        </button>
+        <button
+          id="excel-import-confirm"
+          class="button button-primary"
+          type="button"
+          data-action="confirm-excel-import"
+        >
+          确认导入
+        </button>
+      </div>
+    </dialog>
+
+    <dialog id="user-guide-dialog" class="modal document-modal">
+      <div class="modal-head">
+        <div>
+          <p class="eyebrow">Quick guide</p>
+          <h2>Weekflow 使用说明</h2>
+        </div>
+        <button class="icon-button" type="button" data-action="close-user-guide" aria-label="关闭">×</button>
+      </div>
+      <article class="document-content">
+        <p class="guide-intro">
+          这是一款 Multi-task 管理的座舱程序，具备多任务进度管理、任务相关资料汇总整理的功能。
+        </p>
+        <section>
+          <h3>主要功能</h3>
+          <ul>
+            <li><b>时间轴看板：</b>按自然周查看 Task DDL，支持前后浏览、回到本周、全部范围以及分组和 Flow 展开折叠。</li>
+            <li><b>Task 管理：</b>创建和编辑 Task，可记录进度、完成状态和相关资料；紧急程度、汇报对象和交付物为必填项。</li>
+            <li><b>Flow 工作流：</b>在分组和 Task 之间增加可选步骤层，支持拖动排序；新 Flow 默认继承所属分组颜色。</li>
+            <li><b>筛选与看板：</b>时间轴可按分组、Flow、状态、紧急程度、逾期或关键词组合筛选；筛选弹层会在切换菜单或点击空白处时关闭，整体看板只显示进度统计。</li>
+            <li><b>Excel 批量录入：</b>下载空白模板集中填写 Task，上传后先校验预览，再一次性导入。</li>
+            <li><b>资料库：</b>统一管理说明文档、交付物、控制表和文件夹；搜索及类型、分组、Flow、Task 筛选集中在表格上方，并按“分组 → Flow → Task”选择关联、与时间轴双向同步。</li>
+            <li><b>最近常用：</b>本自然周或上个自然周至少打开过一次的资料可一键筛出。</li>
+            <li><b>资料导入与清理：</b>资料 Excel 可选择补充导入或全部覆盖；重复地址可替换或跳过，批量删除需连续确认两次。</li>
+          </ul>
+        </section>
+        <section>
+          <h3>数据保存位置</h3>
+          <p>数据保存在当前浏览器、当前页面来源的 <code>localStorage</code> 中，主数据键为：</p>
+          <pre>weekflow-v2.0:data:v3</pre>
+          <p>清除浏览器网站数据、使用无痕窗口、更换浏览器或更换启动地址，都会影响可见数据。</p>
+        </section>
+        <section>
+          <h3>数据备份与恢复</h3>
+          <ol>
+            <li>点击顶部数据操作区的 <b>•••</b>。</li>
+            <li>选择“导出 JSON 备份”，将文件保存到安全位置。</li>
+            <li>需要恢复时选择“从 JSON 恢复”，程序会先校验数据并请求确认。</li>
+          </ol>
+          <p>建议在批量修改、迁移浏览器或清理网站数据前先导出 JSON 备份。</p>
+        </section>
+        <section>
+          <h3>Excel 批量导入</h3>
+          <ol>
+            <li>点击顶部数据操作区的 <b>•••</b>，下载 Excel 导入模板。</li>
+            <li>在“Task导入”工作表中填写数据，每行代表一条 Task。</li>
+            <li>选择“上传 Excel 批量导入”，检查错误提示和数据预览。</li>
+            <li>确认无误后点击“确认导入”。</li>
+          </ol>
+          <p>不存在的分组和 Flow 会自动创建；已有同名项会复用。Flow 颜色留空时默认继承分组颜色。</p>
+          <p>分组、Task name、DDL、紧急程度、汇报对象和交付物均为必填字段。</p>
+        </section>
+        <section>
+          <h3>Excel 导出</h3>
+          <p>点击“导出 Excel”会生成包含“整体看板”和“时间表看板”的 <code>.xlsx</code> 文件。</p>
+          <p>文件包含全部 Task、分组和 Flow 统计、步骤序号、进度记录、DDL 周时间轴与完整链接，不受当前筛选条件影响。</p>
+          <p>资料库的“下载”菜单包含空白模板和全量资料清单，“上传”用于导入 Excel。</p>
+        </section>
+        <section>
+          <h3>开发团队</h3>
+          <p>开发团队：Wesley Yan</p>
+          <p>首个正式版本（v1.0）：2026年7月30日</p>
+          <p>最新版本（v2.0）更新时间：2026年7月31日</p>
+        </section>
+      </article>
+      <div class="modal-actions">
+        <button class="button button-primary" type="button" data-action="close-user-guide">知道了</button>
+      </div>
+    </dialog>
+
+    <dialog id="changelog-dialog" class="modal document-modal changelog-modal">
+      <div class="modal-head">
+        <div>
+          <p class="eyebrow">Release notes</p>
+          <h2>Weekflow 更新日志</h2>
+        </div>
+        <button class="icon-button" type="button" data-action="close-changelog" aria-label="关闭">×</button>
+      </div>
+      <article class="document-content changelog-content">
+        <div class="release-entry" data-version="2.0">
+          <div class="release-heading">
+            <span>v2.0 正式版本</span>
+            <time datetime="2026-07-31">2026-07-31</time>
+          </div>
+          <p class="release-lead">资料协同升级版本，把时间轴中的链接统一为可筛选、可统计、可双向编辑的资料库。</p>
+          <section>
+            <h3>新增</h3>
+            <ul>
+              <li>新增与时间轴、整体看板并列的资料库模块。</li>
+              <li>资料支持说明文档、交付物、控制表、文件夹四种类型及多 Task/Flow/分组关联。</li>
+              <li>新增资料库顶部搜索/筛选栏、最近常用统计、手动录入及 Excel 导入导出。</li>
+              <li>时间轴“说明文档/交付物”合并为“相关资料”，编辑后实时同步资料库。</li>
+              <li>资料 Excel 支持补充导入、重复地址替换或跳过，以及双重确认的全部覆盖。</li>
+              <li>资料列表支持表头全选当前结果、复选和双重确认批量删除。</li>
+            </ul>
+          </section>
+          <section>
+            <h3>优化与修复</h3>
+            <ul>
+              <li>旧版 Task 内链接自动迁移为 v2.0 统一资料，保留类型与 Task 归属。</li>
+              <li>资料名称、地址、类型和关联关系从任一入口修改后保持同一数据源。</li>
+              <li>最近常用改按本自然周和上个自然周统计，任一周打开过一次即可保留。</li>
+              <li>资料关联改为“分组 → Flow → Task”级联选择，并移除备注搜索、重复全选和操作列。</li>
+              <li>时间轴筛选统一为“筛选分组”样式，筛选菜单支持互斥打开与点击空白自动关闭。</li>
+              <li>资料库搜索与筛选移到表格上方，弹层配色、选中态和层级提示统一为时间轴看板风格。</li>
+              <li>整体看板隐藏时间轴专属命令栏；资料编辑弹窗压缩基础信息区，为关联选择释放更多空间。</li>
+              <li>资料表头、类型、相关 Flow、分组和备注统一为资料名称的 12px 主字号；链接和相关 Task 保持紧凑字号。</li>
+              <li>程序内更新日志改为完整版本历史，按版本号从新到旧展示。</li>
+              <li>使用说明新增 Multi-task 管理座舱定位，以及开发团队、首版日期和最新版本更新时间。</li>
+            </ul>
+          </section>
+        </div>
+
+        <div class="release-entry" data-version="1.1">
+          <div class="release-heading">
+            <span>v1.1 批量录入升级</span>
+            <time datetime="2026-07-30">2026-07-30</time>
+          </div>
+          <p class="release-lead">批量录入与字段规则升级版本，减少初始建档操作并统一数据质量要求。</p>
+          <section>
+            <h3>新增</h3>
+            <ul>
+              <li>提供空白 Excel 导入模板、逐行校验预览和 Task 批量导入。</li>
+              <li>导入时可自动复用或创建分组与 Flow，并支持 Flow 步骤序号。</li>
+              <li>导入预览显示 Task、新分组和新 Flow 数量；存在错误时禁止确认。</li>
+            </ul>
+          </section>
+          <section>
+            <h3>变更与修复</h3>
+            <ul>
+              <li>紧急程度、汇报对象和交付物改为网页表单与 Excel 导入必填项。</li>
+              <li>紧急程度取消默认选中，创建 Task 时需要主动选择。</li>
+              <li>修复带 Excel 日期格式的文本日期被误判为无效日期的问题。</li>
+              <li>正式版存储空间升级为 <code>weekflow-v1.1:*</code>，并自动迁移 v1.0 本地数据。</li>
+            </ul>
+          </section>
+        </div>
+
+        <div class="release-entry" data-version="1.0">
+          <div class="release-heading">
+            <span>v1.0 首个正式版本</span>
+            <time datetime="2026-07-30">2026-07-30</time>
+          </div>
+          <p class="release-lead">第一个完整发布版本，聚焦周时间轴、Workflow 步骤组织和本地数据管理。</p>
+          <section>
+            <h3>新增</h3>
+            <ul>
+              <li>图形化主页，以及时间轴看板、整体看板、使用说明和更新日志四个快捷入口。</li>
+              <li>“分组 → 可选 Flow → Task”的三级工作结构。</li>
+              <li>Flow 创建、编辑、删除、折叠、进度统计和 Task 步骤拖动排序。</li>
+              <li>Task 自由文本进度记录、说明文档链接和交付物链接。</li>
+              <li>分组、Flow、状态、紧急程度、逾期和关键词组合筛选。</li>
+              <li>整体看板的 Task、分组与 Flow 进度统计。</li>
+              <li>JSON 数据备份恢复和包含 Flow/步骤信息的 Excel 导出。</li>
+              <li>独立空白发布目录，不包含示例数据及“恢复示例数据”入口。</li>
+              <li>发布版使用独立的 <code>weekflow-v1.0:*</code> 存储空间，不读取开发版残留示例数据。</li>
+              <li>汇报对象和管理对象自动提供已使用历史值，减少名称不一致。</li>
+              <li>新建 Flow 默认继承所属分组颜色，主动改色后保留自定义值。</li>
+            </ul>
+          </section>
+          <section>
+            <h3>优化与修复</h3>
+            <ul>
+              <li>筛选条件移动到“可见 Task”数量右侧，不再额外占用一行。</li>
+              <li>时间轴左侧六列表头放大，同时保持固定列宽和单行防溢出。</li>
+              <li>压缩时间轴上方区域，为 Task 列表释放更多空间。</li>
+              <li>加强数据版本、分组/Flow/Task 关联和进度更新时间校验。</li>
+              <li>支持旧版 v1 本地数据自动迁移到 v2。</li>
+            </ul>
+          </section>
+        </div>
+      </article>
+      <div class="modal-actions">
+        <button class="button button-primary" type="button" data-action="close-changelog">关闭</button>
+      </div>
+    </dialog>
+
+    <dialog id="group-dialog" class="modal modal-small">
+      <form id="group-form" method="dialog" novalidate>
+        <div class="modal-head">
+          <div>
+            <p class="eyebrow">Group</p>
+            <h2 id="group-dialog-title">新建分组</h2>
+          </div>
+          <button class="icon-button" type="button" data-action="close-group-dialog" aria-label="关闭">×</button>
+        </div>
+        <input id="group-id" type="hidden" />
+        <label class="form-field">
+          <span>分组名称 <em>*</em></span>
+          <input id="group-name" name="name" maxlength="80" required autocomplete="off" />
+          <small class="field-error" data-error-for="group-name"></small>
+        </label>
+        <label class="form-field">
+          <span>分组颜色</span>
+          <span class="color-field">
+            <input id="group-color" name="color" type="color" value="#665CFF" />
+            <output id="group-color-value">#665CFF</output>
+          </span>
+        </label>
+        <div class="modal-actions split-actions">
+          <button id="group-delete-button" class="button button-danger-quiet" type="button" data-action="delete-group" hidden>
+            删除分组
+          </button>
+          <span></span>
+          <button class="button button-quiet" type="button" data-action="close-group-dialog">取消</button>
+          <button id="group-save-button" class="button button-primary" type="submit">保存分组</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="flow-dialog" class="modal">
+      <form id="flow-form" method="dialog" novalidate>
+        <div class="modal-head">
+          <div>
+            <p class="eyebrow">Workflow</p>
+            <h2 id="flow-dialog-title">新建 Flow</h2>
+          </div>
+          <button class="icon-button" type="button" data-action="close-flow-dialog" aria-label="关闭">×</button>
+        </div>
+        <input id="flow-id" type="hidden" />
+        <div class="form-grid flow-form-grid">
+          <label class="form-field form-field-wide">
+            <span>Flow 名称 <em>*</em></span>
+            <input id="flow-name" maxlength="80" required autocomplete="off" />
+            <small class="field-error" data-error-for="flow-name"></small>
+          </label>
+          <label class="form-field">
+            <span>所属分组 <em>*</em></span>
+            <select id="flow-group" required></select>
+            <small class="field-error" data-error-for="flow-group"></small>
+          </label>
+          <label class="form-field">
+            <span>Flow 颜色</span>
+            <span class="color-field">
+              <input id="flow-color" type="color" value="#5368D8" />
+              <output id="flow-color-value">#5368D8</output>
+            </span>
+            <small>默认继承所属分组颜色，主动修改后保留自定义颜色。</small>
+          </label>
+        </div>
+
+        <section id="flow-order-section" class="flow-order-section" aria-labelledby="flow-order-title">
+          <div class="flow-order-head">
+            <div>
+              <h3 id="flow-order-title">工作步骤排序</h3>
+              <p>拖动左侧把手调整顺序，也可使用上下移动按钮。</p>
+            </div>
+            <span id="flow-task-count">0 个步骤</span>
+          </div>
+          <div id="flow-task-order-list" class="flow-task-order-list"></div>
+        </section>
+
+        <div class="modal-actions split-actions">
+          <button id="flow-delete-button" class="button button-danger-quiet" type="button" data-action="delete-flow" hidden>
+            删除 Flow
+          </button>
+          <span></span>
+          <button class="button button-quiet" type="button" data-action="close-flow-dialog">取消</button>
+          <button id="flow-save-button" class="button button-primary" type="submit">保存 Flow</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="task-dialog" class="modal modal-large">
+      <form id="task-form" method="dialog" novalidate>
+        <div class="modal-head">
+          <div>
+            <p class="eyebrow">Task details</p>
+            <h2 id="task-dialog-title">新建 Task</h2>
+          </div>
+          <button class="icon-button" type="button" data-action="close-task-dialog" aria-label="关闭">×</button>
+        </div>
+
+        <input id="task-id" type="hidden" />
+        <div class="form-grid">
+          <label class="form-field form-field-wide">
+            <span>Task name <em>*</em></span>
+            <input id="task-name" maxlength="160" required autocomplete="off" />
+            <small class="field-error" data-error-for="task-name"></small>
+          </label>
+          <label class="form-field">
+            <span>所属分组 <em>*</em></span>
+            <select id="task-group" required></select>
+            <small class="field-error" data-error-for="task-group"></small>
+          </label>
+          <label class="form-field">
+            <span>所属 Flow（可选）</span>
+            <select id="task-flow"></select>
+            <small>不加入 Flow 时，Task 直接显示在分组下。</small>
+            <small class="field-error" data-error-for="task-flow"></small>
+          </label>
+          <label class="form-field">
+            <span>DDL <em>*</em></span>
+            <input id="task-ddl" type="date" required />
+            <small class="field-error" data-error-for="task-ddl"></small>
+          </label>
+          <label class="form-field">
+            <span>紧急程度 <em>*</em></span>
+            <select id="task-urgency" required>
+              <option value="" selected disabled>请选择紧急程度</option>
+              <option value="high">高</option>
+              <option value="medium">中</option>
+              <option value="low">低</option>
+            </select>
+            <small class="field-error" data-error-for="task-urgency"></small>
+          </label>
+          <label class="form-field">
+            <span>完成状态</span>
+            <select id="task-status">
+              <option value="pending">未完成</option>
+              <option value="completed">已完成</option>
+            </select>
+          </label>
+          <label class="form-field">
+            <span>完成日期</span>
+            <input id="task-completed-at" type="date" disabled />
+            <small>标记完成时自动记录，可按需调整。</small>
+          </label>
+          <label class="form-field">
+            <span>汇报对象 <em>*</em></span>
+            <input
+              id="task-report-to"
+              list="task-report-to-options"
+              maxlength="120"
+              required
+              autocomplete="off"
+            />
+            <datalist id="task-report-to-options"></datalist>
+            <small>可从历史值中选择，也可输入新值。</small>
+            <small class="field-error" data-error-for="task-report-to"></small>
+          </label>
+          <label class="form-field">
+            <span>管理对象</span>
+            <input
+              id="task-managed-object"
+              list="task-managed-object-options"
+              maxlength="160"
+              autocomplete="off"
+            />
+            <datalist id="task-managed-object-options"></datalist>
+            <small>可从历史值中选择，也可输入新值。</small>
+          </label>
+          <label class="form-field form-field-wide">
+            <span>交付物 <em>*</em></span>
+            <textarea id="task-deliverable" rows="2" maxlength="500" required></textarea>
+            <small class="field-error" data-error-for="task-deliverable"></small>
+          </label>
+        </div>
+
+        <section class="link-editor material-editor" aria-labelledby="task-materials-title">
+          <div class="link-editor-head">
+            <div>
+              <h3 id="task-materials-title">相关资料</h3>
+              <p>资料会同步到资料库；支持说明文档、交付物、控制表和文件夹。</p>
+            </div>
+            <button class="button button-quiet button-small" type="button" data-add-material>
+              ＋ 添加资料
+            </button>
+          </div>
+          <div id="task-materials" class="link-rows material-link-rows"></div>
+        </section>
+        <small id="task-links-error" class="field-error"></small>
+
+        <div class="modal-actions split-actions">
+          <button id="task-delete-button" class="button button-danger-quiet" type="button" data-action="delete-task" hidden>
+            删除 Task
+          </button>
+          <span></span>
+          <button class="button button-quiet" type="button" data-action="close-task-dialog">取消</button>
+          <button id="task-save-button" class="button button-primary" type="submit">保存 Task</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="link-dialog" class="modal">
+      <form id="link-form" method="dialog" novalidate>
+        <div class="modal-head">
+          <div>
+            <p class="eyebrow">Related materials</p>
+            <h2 id="link-dialog-title">管理相关资料</h2>
+          </div>
+          <button class="icon-button" type="button" data-action="close-link-dialog" aria-label="关闭">×</button>
+        </div>
+        <p id="link-dialog-task" class="modal-context"></p>
+        <div id="link-manager-rows" class="link-rows link-manager-rows"></div>
+        <button class="button button-quiet button-small" type="button" data-action="add-managed-link">＋ 添加资料</button>
+        <small id="link-manager-error" class="field-error"></small>
+        <div class="modal-actions">
+          <button class="button button-quiet" type="button" data-action="close-link-dialog">取消</button>
+          <button id="link-manager-save" class="button button-primary" type="submit">保存资料</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="material-dialog" class="modal modal-large">
+      <form id="material-form" method="dialog" novalidate>
+        <div class="modal-head">
+          <div>
+            <p class="eyebrow">Material details</p>
+            <h2 id="material-dialog-title">添加资料</h2>
+          </div>
+          <button class="icon-button" type="button" data-action="close-material-dialog" aria-label="关闭">×</button>
+        </div>
+        <input id="material-id" type="hidden" />
+        <div class="form-grid material-form-grid">
+          <label class="form-field material-field-title">
+            <span>链接名称 <em>*</em></span>
+            <input id="material-title" maxlength="160" required autocomplete="off" />
+            <small class="field-error" data-error-for="material-title"></small>
+          </label>
+          <label class="form-field material-field-type">
+            <span>类型</span>
+            <select id="material-type">
+              <option value="document">说明文档</option>
+              <option value="deliverable">交付物</option>
+              <option value="control">控制表</option>
+              <option value="folder">文件夹</option>
+            </select>
+          </label>
+          <label class="form-field material-field-url">
+            <span>链接地址 <em>*</em></span>
+            <input id="material-url" type="url" maxlength="3000" required placeholder="https://" />
+            <small class="field-error" data-error-for="material-url"></small>
+          </label>
+          <label class="form-field material-field-note">
+            <span>备注</span>
+            <textarea id="material-note" rows="1" maxlength="2000"></textarea>
+          </label>
+        </div>
+
+        <div class="material-relation-grid">
+          <fieldset class="relation-fieldset relation-step relation-step-group">
+            <legend><span>1</span> 分组（可多选）</legend>
+            <input class="relation-search" type="search" data-relation-search="group" placeholder="搜索分组" autocomplete="off" />
+            <div id="material-group-options" class="relation-options"></div>
+          </fieldset>
+          <fieldset class="relation-fieldset relation-step relation-step-flow">
+            <legend><span>2</span> 相关 Flow（可多选）</legend>
+            <input class="relation-search" type="search" data-relation-search="flow" placeholder="请先选择分组" autocomplete="off" />
+            <div id="material-flow-options" class="relation-options"></div>
+          </fieldset>
+          <fieldset class="relation-fieldset relation-step relation-step-task">
+            <legend><span>3</span> 相关 Task（可多选）</legend>
+            <input class="relation-search" type="search" data-relation-search="task" placeholder="请先选择分组" autocomplete="off" />
+            <div id="material-task-options" class="relation-options"></div>
+          </fieldset>
+        </div>
+        <p class="material-relation-note">
+          先选择分组，再从所选分组内勾选 Flow 和 Task；所有选项都来自时间轴看板。
+        </p>
+
+        <div class="modal-actions split-actions">
+          <button id="material-delete-button" class="button button-danger-quiet" type="button" data-action="delete-material" hidden>
+            删除资料
+          </button>
+          <span></span>
+          <button class="button button-quiet" type="button" data-action="close-material-dialog">取消</button>
+          <button id="material-save-button" class="button button-primary" type="submit">保存资料</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="material-import-dialog" class="modal modal-large">
+      <div class="modal-head">
+        <div>
+          <p class="eyebrow">Materials import</p>
+          <h2>资料库 Excel 导入</h2>
+        </div>
+        <button class="icon-button" type="button" data-action="close-material-import" aria-label="关闭">×</button>
+      </div>
+      <p id="material-import-file" class="modal-context"></p>
+      <fieldset class="material-import-mode">
+        <legend>导入方式</legend>
+        <label>
+          <input type="radio" name="material-import-mode" value="append" checked />
+          <span><b>补充导入</b><small>新增资料；遇到相同链接地址时选择替换或跳过。</small></span>
+        </label>
+        <label>
+          <input type="radio" name="material-import-mode" value="replace" />
+          <span><b>全部覆盖</b><small>删除资料库全部现有资料，再写入本次文件。</small></span>
+        </label>
+      </fieldset>
+      <fieldset id="material-duplicate-choice" class="material-import-mode duplicate-choice" hidden>
+        <legend>发现重复链接地址</legend>
+        <label>
+          <input type="radio" name="material-duplicate-mode" value="replace" checked />
+          <span><b>用新上传资料替换</b><small>保留原资料 ID 和打开记录，其他字段以新文件为准。</small></span>
+        </label>
+        <label>
+          <input type="radio" name="material-duplicate-mode" value="skip" />
+          <span><b>跳过重复资料</b><small>保留原资料，只导入地址不重复的新内容。</small></span>
+        </label>
+      </fieldset>
+      <div id="material-import-summary" class="import-summary"></div>
+      <div id="material-import-errors" class="import-errors" role="alert"></div>
+      <div class="table-wrap import-preview-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>链接名称</th>
+              <th>类型</th>
+              <th>相关 Task</th>
+              <th>分组</th>
+            </tr>
+          </thead>
+          <tbody id="material-import-preview"></tbody>
+        </table>
+      </div>
+      <p class="import-note">
+        导入不会创建 Task、Flow 或分组；无法匹配或存在重名歧义时会阻止导入。补充导入会新增或按选择处理重复地址，全部覆盖会先清空资料库。
+      </p>
+      <div class="modal-actions">
+        <button class="button button-quiet" type="button" data-action="choose-material-import">重新选择文件</button>
+        <button class="button button-quiet" type="button" data-action="close-material-import">取消</button>
+        <button id="material-import-confirm" class="button button-primary" type="button" data-action="confirm-material-import">
+          确认导入
+        </button>
+      </div>
+    </dialog>
+
+    <dialog id="progress-dialog" class="modal">
+      <form id="progress-form" method="dialog" novalidate>
+        <div class="modal-head">
+          <div>
+            <p class="eyebrow">Progress note</p>
+            <h2>编辑进度记录</h2>
+          </div>
+          <button class="icon-button" type="button" data-action="close-progress-dialog" aria-label="关闭">×</button>
+        </div>
+        <p id="progress-dialog-task" class="modal-context"></p>
+        <label class="form-field progress-note-field">
+          <span>进度内容</span>
+          <textarea
+            id="progress-note"
+            rows="10"
+            maxlength="4000"
+            placeholder="例如：已完成需求确认和接口联调，当前等待业务方验收。&#10;&#10;可按日期分段记录，也可以作为持续更新的项目备注。"
+            aria-describedby="progress-dialog-updated progress-character-count"
+          ></textarea>
+        </label>
+        <div class="progress-meta-row">
+          <span id="progress-dialog-updated">尚未记录进度</span>
+          <span id="progress-character-count">0 / 4000</span>
+        </div>
+        <div class="modal-actions">
+          <button class="button button-quiet" type="button" data-action="close-progress-dialog">取消</button>
+          <button id="progress-save-button" class="button button-primary" type="submit">保存进度</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="delete-group-dialog" class="modal modal-small">
+      <form method="dialog">
+        <div class="modal-head">
+          <div>
+            <p class="eyebrow">Delete group</p>
+            <h2>分组内仍有 Task</h2>
+          </div>
+          <button class="icon-button" type="button" data-action="cancel-group-delete" aria-label="关闭">×</button>
+        </div>
+        <p id="delete-group-message" class="modal-context"></p>
+        <label class="form-field">
+          <span>移动到其他分组</span>
+          <select id="delete-group-target"></select>
+        </label>
+        <div class="choice-actions">
+          <button class="button button-quiet" type="button" data-action="cancel-group-delete">取消</button>
+          <button class="button button-primary" type="button" data-action="move-and-delete-group">移动 Task 与 Flow 后删除</button>
+          <button class="button button-danger" type="button" data-action="delete-group-with-tasks">同时删除 Task</button>
+        </div>
+      </form>
+    </dialog>
+
+    <div id="toast-region" class="toast-region" aria-live="polite" aria-atomic="true"></div>
+
+    <script src="./vendor/jszip.min.js"></script>
+    <script src="./vendor/xlsx.full.min.js"></script>
+    <script src="./js/utils.js"></script>
+    <script src="./js/date-utils.js"></script>
+    <script src="./js/stats.js"></script>
+    <script src="./js/materials.js"></script>
+    <script src="./js/storage.js"></script>
+    <script src="./js/excel-export.js"></script>
+    <script src="./js/excel-import.js"></script>
+    <script src="./js/material-excel.js"></script>
+    <script src="./js/app.js"></script>
+  </body>
+</html>
