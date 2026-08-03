@@ -27,10 +27,13 @@
 })(typeof self !== "undefined" ? self : globalThis, function (dates, utils, materialTools) {
   "use strict";
 
-  var STORAGE_KEY = "weekflow-v2.0:data:v3";
-  var LEGACY_STORAGE_KEY = "weekflow-v2.0:data:v2";
-  var CORRUPT_KEY = "weekflow-v2.0:corrupt-backup";
+  var STORAGE_KEY = "weekflow-v2.1:data:v3";
+  var LEGACY_STORAGE_KEY = "weekflow-v2.1:data:v2";
+  var CORRUPT_KEY = "weekflow-v2.1:corrupt-backup";
   var PREVIOUS_STORAGE_KEYS = [
+    "weekflow-v2.1:data:v2",
+    "weekflow-v2.1:data:v1",
+    "weekflow-v2.0:data:v3",
     "weekflow-v2.0:data:v2",
     "weekflow-v2.0:data:v1",
     "weekflow-v1.1:data:v2",
@@ -361,7 +364,7 @@
       if (!checked.valid) throw new Error(checked.errors.join("\n"));
       if (loadedFromLegacy) {
         var migrated = persist(checked.data);
-        lastWarning = "已自动迁移 Weekflow v1.1/v1.0 或旧版数据到 v2.0，并建立统一资料库。";
+        lastWarning = "已自动迁移 Weekflow v2.0/v1.1/v1.0 或旧版数据到 v2.1，并保留统一资料库。";
         return migrated;
       }
       memoryData = checked.data;

@@ -30,6 +30,26 @@
     ["documentLinks", "说明文档链接", false],
     ["deliverableLinks", "交付物链接", false]
   ];
+  var COLUMN_WIDTHS = [18, 14, 20, 14, 11, 30, 14, 13, 13, 14, 18, 20, 26, 34, 38, 38];
+  var urgencyLabels = { high: "高", medium: "中", low: "低" };
+  var GUIDE_ROWS = [
+    ["分组*", "是", "补充导入会复用同名分组；完整覆盖会按文件重建分组范围", "产品与项目"],
+    ["分组颜色", "否", "格式为 #RRGGBB；留空时沿用匹配分组颜色或自动分配", "#665CFF"],
+    ["Flow", "否", "同一分组内按名称匹配；留空表示普通 Task", "版本发布流程"],
+    ["Flow颜色", "否", "格式为 #RRGGBB；新 Flow 留空时继承分组颜色", "#665CFF"],
+    ["Flow步骤", "否", "Task 在 Flow 中的步骤序号，填写大于 0 的整数", "1"],
+    ["Task name*", "是", "Task 名称，最多 160 个字符", "完成发布前检查"],
+    ["DDL*", "是", "截止日期，建议使用 yyyy-mm-dd", "2026-08-07"],
+    ["紧急程度*", "是", "仅支持高、中、低", "高"],
+    ["完成状态", "否", "未完成或已完成；留空默认为未完成", "未完成"],
+    ["完成日期", "否", "仅已完成 Task 使用；建议使用 yyyy-mm-dd", "2026-08-06"],
+    ["汇报对象*", "是", "会与既有同名对象统一，便于筛选", "项目负责人"],
+    ["管理对象", "否", "会与既有同名对象统一，便于筛选", "发布小组"],
+    ["交付物*", "是", "简要描述交付成果，最多 500 个字符", "发布确认单"],
+    ["进度记录", "否", "可填写当前进度或备注，最多 4000 个字符", "已完成联调"],
+    ["说明文档链接", "否", "格式：标题|https://...；多个链接用换行或中文分号分隔", "操作说明|https://example.com/guide"],
+    ["交付物链接", "否", "格式：标题|https://...；多个链接用换行或中文分号分隔", "交付文件|https://example.com/delivery"]
+  ];
 
   function cleanText(value, maxLength) {
     return String(value === null || value === undefined ? "" : value)
@@ -350,6 +370,182 @@
     }
   }
 
+  function numericOrder(value, fallback) {
+    var number = Number(value);
+    return Number.isFinite(number) ? number : fallback;
+  }
+
+  function orderedTasks(data) {
+    var groups = (Array.isArray(data && data.groups) ? data.groups : [])
+      .slice()
+      .sort(function (left, right) {
+        return numericOrder(left.order, 0) - numericOrder(right.order, 0);
+      });
+    var groupRank = new Map();
+    groups.forEach(function (group, index) {
+      groupRank.set(group.id, index);
+    });
+    var flows = (Array.isArray(data && data.flows) ? data.flows : [])
+      .slice()
+      .sort(function (left, right) {
+        var groupDifference =
+          (groupRank.get(left.groupId) || 0) - (groupRank.get(right.groupId) || 0);
+        return (
+          groupDifference ||
+          numericOrder(left.order, 0) - numericOrder(right.order, 0)
+        );
+      });
+    var flowRank = new Map();
+    flows.forEach(function (flow, index) {
+      flowRank.set(flow.id, index);
+    });
+    var sourceRank = new Map();
+    (Array.isArray(data && data.tasks) ? data.tasks : []).forEach(function (task, index) {
+      sourceRank.set(task.id, index);
+    });
+    return (Array.isArray(data && data.tasks) ? data.tasks : [])
+      .filter(function (task) {
+        return groupRank.has(task.groupId);
+      })
+      .slice()
+      .sort(function (left, right) {
+        var groupDifference = groupRank.get(left.groupId) - groupRank.get(right.groupId);
+        if (groupDifference) return groupDifference;
+        var leftFlowRank = left.flowId && flowRank.has(left.flowId)
+          ? flowRank.get(left.flowId)
+          : Number.MAX_SAFE_INTEGER;
+        var rightFlowRank = right.flowId && flowRank.has(right.flowId)
+          ? flowRank.get(right.flowId)
+          : Number.MAX_SAFE_INTEGER;
+        if (leftFlowRank !== rightFlowRank) return leftFlowRank - rightFlowRank;
+        if (left.flowId && right.flowId && left.flowId === right.flowId) {
+          var stepDifference =
+            numericOrder(left.flowOrder, Number.MAX_SAFE_INTEGER) -
+            numericOrder(right.flowOrder, Number.MAX_SAFE_INTEGER);
+          if (stepDifference) return stepDifference;
+        }
+        return sourceRank.get(left.id) - sourceRank.get(right.id);
+      });
+  }
+
+  function exportLinkText(materials, taskId, type) {
+    return (Array.isArray(materials) ? materials : [])
+      .filter(function (material) {
+        return (
+          material &&
+          material.type === type &&
+          Array.isArray(material.taskIds) &&
+          material.taskIds.includes(taskId)
+        );
+      })
+      .map(function (material) {
+        var title = cleanText(material.title, 160).replace(/[|\r\n]+/g, "｜");
+        return (title ? title + "|" : "") + cleanText(material.url, 3000);
+      })
+      .join("\n");
+  }
+
+  function buildExportRows(data) {
+    var groupMap = new Map(
+      (Array.isArray(data && data.groups) ? data.groups : []).map(function (group) {
+        return [group.id, group];
+      })
+    );
+    var flowMap = new Map(
+      (Array.isArray(data && data.flows) ? data.flows : []).map(function (flow) {
+        return [flow.id, flow];
+      })
+    );
+    var materials = Array.isArray(data && data.materials) ? data.materials : [];
+    return orderedTasks(data).map(function (task) {
+      var group = groupMap.get(task.groupId);
+      var flow = task.flowId ? flowMap.get(task.flowId) : null;
+      return [
+        group ? group.name : "",
+        group ? group.color : "",
+        flow ? flow.name : "",
+        flow ? flow.color : "",
+        flow ? task.flowOrder || "" : "",
+        task.name,
+        task.ddl,
+        urgencyLabels[task.urgency] || task.urgency || "",
+        task.status === "completed" ? "已完成" : "未完成",
+        task.status === "completed" ? task.completedAt || "" : "",
+        task.reportTo || "",
+        task.managedObject || "",
+        task.deliverable || "",
+        task.progressNote || "",
+        exportLinkText(materials, task.id, "document"),
+        exportLinkText(materials, task.id, "deliverable")
+      ];
+    });
+  }
+
+  function buildWorkbook(data) {
+    if (!XLSX) throw new Error("Excel 组件未加载。");
+    var headers = COLUMNS.map(function (column) {
+      return column[1];
+    });
+    var rows = buildExportRows(data);
+    var taskSheet = XLSX.utils.aoa_to_sheet(
+      [
+        ["Weekflow Task 当前数据（可再次导入）"],
+        ["每行代表 1 条 Task；文件结构与空白导入模板一致，可在“上传 Excel 批量导入”中直接使用。"],
+        ["带 * 为必填列｜请勿修改表头｜日期建议使用 yyyy-mm-dd｜单次最多导入 1000 条 Task"],
+        headers
+      ].concat(rows)
+    );
+    taskSheet["!merges"] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 15 } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: 15 } },
+      { s: { r: 2, c: 0 }, e: { r: 2, c: 15 } }
+    ];
+    taskSheet["!cols"] = COLUMN_WIDTHS.map(function (width) {
+      return { wch: width };
+    });
+    taskSheet["!autofilter"] = {
+      ref: "A4:P" + Math.max(4, rows.length + 4)
+    };
+    taskSheet["!freeze"] = { xSplit: 0, ySplit: 4 };
+
+    var guideRows = [
+      ["Weekflow Excel 导入使用说明"],
+      ["1. 回到“Task导入”工作表，每行填写或调整 1 条 Task。"],
+      ["2. 分组、Task name、DDL、紧急程度、汇报对象和交付物为必填。"],
+      ["3. 在 Weekflow 中选择“••• → 上传 Excel 批量导入”，先查看校验预览。"],
+      ["4. 选择补充导入或完整覆盖；完整覆盖会连续确认两次。"],
+      ["字段", "必填", "填写规则", "格式示例（仅供参考）"]
+    ].concat(GUIDE_ROWS);
+    var guideSheet = XLSX.utils.aoa_to_sheet(guideRows);
+    guideSheet["!merges"] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 3 } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: 3 } },
+      { s: { r: 2, c: 0 }, e: { r: 2, c: 3 } },
+      { s: { r: 3, c: 0 }, e: { r: 3, c: 3 } },
+      { s: { r: 4, c: 0 }, e: { r: 4, c: 3 } }
+    ];
+    guideSheet["!cols"] = [{ wch: 20 }, { wch: 10 }, { wch: 58 }, { wch: 42 }];
+    guideSheet["!autofilter"] = { ref: "A6:D" + guideRows.length };
+    guideSheet["!freeze"] = { xSplit: 0, ySplit: 6 };
+
+    var workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, taskSheet, SHEET_NAME);
+    XLSX.utils.book_append_sheet(workbook, guideSheet, "填写说明");
+    workbook.Props = {
+      Title: "Weekflow Task 当前数据",
+      Subject: "Weekflow v2.1 re-importable Task data",
+      Author: "Wesley Yan",
+      Comments: "与 Weekflow Task 导入模板结构一致，可再次批量导入。"
+    };
+    return workbook;
+  }
+
+  function exportWorkbook(data, filename) {
+    XLSX.writeFile(buildWorkbook(data), filename || "Weekflow_Task当前数据.xlsx", {
+      compression: true
+    });
+  }
+
   return {
     SHEET_NAME: SHEET_NAME,
     MAX_ROWS: MAX_ROWS,
@@ -358,6 +554,9 @@
     }),
     parseDate: parseDate,
     parseLinks: parseLinks,
-    parseWorkbook: parseWorkbook
+    parseWorkbook: parseWorkbook,
+    buildExportRows: buildExportRows,
+    buildWorkbook: buildWorkbook,
+    exportWorkbook: exportWorkbook
   };
 });

@@ -261,7 +261,7 @@
     });
     XLSX.utils.book_append_sheet(workbook, sheet, "资料库");
     workbook.Props = {
-      Title: "Weekflow v2.0 资料库",
+      Title: "Weekflow v2.1 资料库",
       Subject: "Weekflow materials library",
       Author: "Wesley Yan"
     };

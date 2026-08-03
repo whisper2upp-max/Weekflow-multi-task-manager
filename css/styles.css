@@ -4032,7 +4032,7 @@ h1 {
   }
 }
 
-/* Weekflow v2.0：统一相关资料与资料库。 */
+/* Weekflow v2.1：统一相关资料与资料库。 */
 .timeline-corner,
 .task-info {
   grid-template-columns: minmax(235px, 1fr) 58px 76px 104px 40px;

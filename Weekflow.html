@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Weekflow v2.0 本地 Task 管理工具，支持周时间轴、分组、Flow、资料库、双向联动、看板、备份和 Excel 批量导入导出。"
+      content="Weekflow v2.1 本地 Task 管理工具，支持周时间轴、分组、Flow、资料库、双向联动、看板、备份和 Excel 批量导入导出。"
     />
-    <title>Weekflow v2.0 · Task management</title>
+    <title>Weekflow v2.1 · Task management</title>
     <link rel="stylesheet" href="./css/styles.css" />
   </head>
   <body>
@@ -137,7 +137,7 @@
 
         <div class="data-actions">
           <button class="button button-quiet" type="button" data-action="export-excel">
-            <span aria-hidden="true">⇩</span> 导出 Excel
+            <span aria-hidden="true">⇩</span> 导出看板报告
           </button>
           <details class="more-menu">
             <summary aria-label="更多数据操作">•••</summary>
@@ -146,6 +146,9 @@
               <a href="./templates/Weekflow_Task导入模板.xlsx" download>
                 下载 Excel 导入模板
               </a>
+              <button type="button" data-action="export-import-data">
+                按导入模板下载当前数据
+              </button>
               <button type="button" data-action="import-excel">上传 Excel 批量导入</button>
               <span class="menu-section-label">数据备份</span>
               <button type="button" data-action="export-json">导出 JSON 备份</button>
@@ -239,7 +242,7 @@
         <section id="home-view" class="view-panel home-view" aria-labelledby="home-heading">
           <div class="home-hero">
             <div class="home-hero-copy">
-              <p class="eyebrow">Weekflow v2.0</p>
+              <p class="eyebrow">Weekflow v2.1</p>
               <h1 id="home-heading">把工作拆成清晰的下一步</h1>
               <p>
                 用分组建立工作版图，用 Flow 串起执行步骤，再用周时间轴看清每一个 DDL。
@@ -325,7 +328,7 @@
               <span class="home-entry-copy">
                 <small>WHAT'S NEW</small>
                 <strong>更新日志</strong>
-                <span>查看 Weekflow v2.0 的发布内容</span>
+                <span>查看 Weekflow v2.1 的发布内容</span>
               </span>
               <span class="home-entry-arrow" aria-hidden="true">↗</span>
             </button>
@@ -541,6 +544,17 @@
         <button class="icon-button" type="button" data-action="close-excel-import" aria-label="关闭">×</button>
       </div>
       <p id="excel-import-file" class="modal-context"></p>
+      <fieldset class="material-import-mode excel-import-mode">
+        <legend>导入方式</legend>
+        <label>
+          <input type="radio" name="excel-import-mode" value="append" checked />
+          <span><b>补充导入</b><small>保留现有数据并新增 Task；同名分组和 Flow 会直接复用。</small></span>
+        </label>
+        <label>
+          <input type="radio" name="excel-import-mode" value="replace" />
+          <span><b>完整覆盖</b><small>以文件替换全部分组、Flow 和 Task；资料库条目不会删除。</small></span>
+        </label>
+      </fieldset>
       <div id="excel-import-summary" class="import-summary"></div>
       <div id="excel-import-errors" class="import-errors" role="alert"></div>
       <div class="table-wrap import-preview-wrap">
@@ -559,7 +573,7 @@
         </table>
       </div>
       <p class="import-note">
-        导入会新增 Task；不存在的分组和 Flow 将自动创建。已有同名分组或 Flow 会直接复用。
+        补充导入会新增 Task；完整覆盖会连续确认两次，并按文件替换时间轴数据。同名层级沿用原 ID 时会保留资料关联，无法匹配的旧关联会移除。
       </p>
       <div class="modal-actions">
         <button class="button button-quiet" type="button" data-action="choose-excel-import">
@@ -598,7 +612,7 @@
             <li><b>Task 管理：</b>创建和编辑 Task，可记录进度、完成状态和相关资料；紧急程度、汇报对象和交付物为必填项。</li>
             <li><b>Flow 工作流：</b>在分组和 Task 之间增加可选步骤层，支持拖动排序；新 Flow 默认继承所属分组颜色。</li>
             <li><b>筛选与看板：</b>时间轴可按分组、Flow、状态、紧急程度、逾期或关键词组合筛选；筛选弹层会在切换菜单或点击空白处时关闭，整体看板只显示进度统计。</li>
-            <li><b>Excel 批量录入：</b>下载空白模板集中填写 Task，上传后先校验预览，再一次性导入。</li>
+            <li><b>Excel 批量录入：</b>可下载空白模板或按模板下载当前数据，上传后先校验预览，再选择补充导入或完整覆盖。</li>
             <li><b>资料库：</b>统一管理说明文档、交付物、控制表和文件夹；搜索及类型、分组、Flow、Task 筛选集中在表格上方，并按“分组 → Flow → Task”选择关联、与时间轴双向同步。</li>
             <li><b>最近常用：</b>本自然周或上个自然周至少打开过一次的资料可一键筛出。</li>
             <li><b>资料导入与清理：</b>资料 Excel 可选择补充导入或全部覆盖；重复地址可替换或跳过，批量删除需连续确认两次。</li>
@@ -607,7 +621,7 @@
         <section>
           <h3>数据保存位置</h3>
           <p>数据保存在当前浏览器、当前页面来源的 <code>localStorage</code> 中，主数据键为：</p>
-          <pre>weekflow-v2.0:data:v3</pre>
+          <pre>weekflow-v2.1:data:v3</pre>
           <p>清除浏览器网站数据、使用无痕窗口、更换浏览器或更换启动地址，都会影响可见数据。</p>
         </section>
         <section>
@@ -622,25 +636,27 @@
         <section>
           <h3>Excel 批量导入</h3>
           <ol>
-            <li>点击顶部数据操作区的 <b>•••</b>，下载 Excel 导入模板。</li>
-            <li>在“Task导入”工作表中填写数据，每行代表一条 Task。</li>
+            <li>点击顶部数据操作区的 <b>•••</b>，下载空白 Excel 导入模板，或选择“按导入模板下载当前数据”。</li>
+            <li>在“Task导入”工作表中填写或调整数据，每行代表一条 Task。</li>
             <li>选择“上传 Excel 批量导入”，检查错误提示和数据预览。</li>
-            <li>确认无误后点击“确认导入”。</li>
+            <li>选择“补充导入”或“完整覆盖”，确认无误后执行导入。</li>
           </ol>
           <p>不存在的分组和 Flow 会自动创建；已有同名项会复用。Flow 颜色留空时默认继承分组颜色。</p>
+          <p>补充导入保留现有时间轴数据并新增 Task；完整覆盖会连续确认两次，以文件替换全部分组、Flow 和 Task。资料库条目不会删除，同名层级会尽量沿用原 ID 以保留关联。</p>
           <p>分组、Task name、DDL、紧急程度、汇报对象和交付物均为必填字段。</p>
         </section>
         <section>
           <h3>Excel 导出</h3>
-          <p>点击“导出 Excel”会生成包含“整体看板”和“时间表看板”的 <code>.xlsx</code> 文件。</p>
+          <p>点击“导出看板报告”会生成包含“整体看板”和“时间表看板”的 <code>.xlsx</code> 文件。</p>
           <p>文件包含全部 Task、分组和 Flow 统计、步骤序号、进度记录、DDL 周时间轴与完整链接，不受当前筛选条件影响。</p>
+          <p>看板报告用于阅读与汇报，不作为批量导入文件；需要再次上传时，请使用“按导入模板下载当前数据”。</p>
           <p>资料库的“下载”菜单包含空白模板和全量资料清单，“上传”用于导入 Excel。</p>
         </section>
         <section>
           <h3>开发团队</h3>
           <p>开发团队：Wesley Yan</p>
           <p>首个正式版本（v1.0）：2026年7月30日</p>
-          <p>最新版本（v2.0）更新时间：2026年7月31日</p>
+          <p>最新版本（v2.1）更新时间：2026年8月2日</p>
         </section>
       </article>
       <div class="modal-actions">
@@ -657,6 +673,31 @@
         <button class="icon-button" type="button" data-action="close-changelog" aria-label="关闭">×</button>
       </div>
       <article class="document-content changelog-content">
+        <div class="release-entry" data-version="2.1">
+          <div class="release-heading">
+            <span>v2.1 数据可移植与交互稳定版</span>
+            <time datetime="2026-08-02">2026-08-02</time>
+          </div>
+          <p class="release-lead">增强 Task 数据回导能力、Excel 兼容性与长列表连续操作体验。</p>
+          <section>
+            <h3>新增与调整</h3>
+            <ul>
+              <li>Task 批量录入新增“按导入模板下载当前数据”，导出的 16 列数据可直接再次上传。</li>
+              <li>Task Excel 上传新增补充导入和双重确认的完整覆盖模式。</li>
+              <li>时间轴主按钮改名为“导出看板报告”，与可回导的当前数据文件明确区分。</li>
+              <li>正式版升级为独立 v2.1 存储空间，并自动迁移 v2.0、v1.1 和 v1.0 数据。</li>
+            </ul>
+          </section>
+          <section>
+            <h3>优化与修复</h3>
+            <ul>
+              <li>修复 Windows Excel 打开看板报告时提示修复 <code>workbook.xml</code> 的兼容性问题。</li>
+              <li>修复展开或收起任意分组/Flow 后时间轴滚动回顶的问题，被操作行会保持在原视口位置。</li>
+              <li>修复逐条勾选或取消资料后资料表滚动回顶的问题，选择状态改为局部更新。</li>
+            </ul>
+          </section>
+        </div>
+
         <div class="release-entry" data-version="2.0">
           <div class="release-heading">
             <span>v2.0 正式版本</span>

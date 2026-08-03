@@ -1,20 +1,26 @@
-Weekflow v2.0
-Release date: 2026-07-31
+Weekflow v2.1
+Release date: 2026-08-02
 
 This is the clean release build.
 - No sample groups, Flows, Tasks, or materials are bundled.
 - The restore-sample-data action and sample-data generator are not included.
-- The release uses an isolated weekflow-v2.0:* browser storage namespace.
-- Existing Weekflow v1.1/v1.0 browser data is migrated to data v3 and left intact for rollback.
+- The release uses an isolated weekflow-v2.1:* browser storage namespace.
+- Existing Weekflow v2.0/v1.1/v1.0 browser data is migrated to data v3 and left intact for rollback.
 - User data is stored locally in the browser.
 - Blank Task and materials-library Excel templates are included.
+- Task data can be downloaded in the same 16-column import-template format and uploaded again.
+- Task Excel import supports supplement mode and double-confirm complete replacement while retaining the materials library and matching hierarchy IDs.
+- The timeline action is named "Export dashboard report" to distinguish the presentation workbook from re-importable Task data.
+- Dashboard-report OOXML includes the workbook-level AutoFilter name and standard Windows Excel workbook metadata; it contains no VBA, external workbook links, or data connections.
+- Expanding or collapsing an individual Group/Flow preserves the operated row, timeline horizontal position, and page scroll position.
+- Selecting or clearing individual materials updates selection controls in place without rebuilding the table or resetting its scroll position.
 - The materials library supports Group → Flow → Task cascading relations, two-way Task linkage, natural-week recent-use filtering, supplement/overwrite import, and double-confirm bulk deletion.
 - Timeline filters share one high-contrast popover style and auto-close when another menu or blank page area is clicked.
 - The timeline-only command bar is hidden on the overall dashboard.
 - Materials search and filters live in a dedicated bar above the table; material names edit in place and URLs open directly.
 - The material editor uses a compact two-row details area so Group, Flow, and Task relations keep most of the dialog space.
 - Materials table headers, type, Flow, Group, and notes use the same 12px primary size as material names; URLs and related Tasks stay compact.
-- The in-app changelog shows the full v2.0, v1.1, and v1.0 history in descending version order.
+- The in-app changelog shows the full v2.1, v2.0, v1.1, and v1.0 history in descending version order.
 - The user guide identifies Weekflow as a Multi-task management cockpit and records the Wesley Yan development attribution plus first/latest release dates.
 - Urgency, report-to, and deliverable are required for new or edited Tasks.
 - Start with: open Weekflow.html directly, or run npm run serve and visit /Weekflow.html

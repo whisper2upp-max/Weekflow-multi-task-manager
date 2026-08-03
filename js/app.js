@@ -287,6 +287,9 @@
     dom["progress-form"].addEventListener("submit", saveProgressNote);
     dom["progress-note"].addEventListener("input", updateProgressCharacterCount);
     dom["excel-file-input"].addEventListener("change", importExcelFile);
+    queryAll('input[name="excel-import-mode"]').forEach(function (input) {
+      input.addEventListener("change", renderExcelImportMode);
+    });
     dom["json-file-input"].addEventListener("change", importJsonFile);
     dom["material-form"].addEventListener("submit", saveMaterialFromForm);
     dom["material-form"].addEventListener("input", handleMaterialRelationSearch);
@@ -305,7 +308,7 @@
           return selectedId !== id;
         });
       }
-      renderMaterialLibrary();
+      syncMaterialSelectionState();
     });
     queryAll('input[name="material-import-mode"]').forEach(function (input) {
       input.addEventListener("change", renderMaterialImportMode);
@@ -497,6 +500,7 @@
       "export-excel": function () {
         exportExcel(actionNode);
       },
+      "export-import-data": exportTaskImportData,
       "import-excel": openExcelFilePicker,
       "choose-excel-import": openExcelFilePicker,
       "close-excel-import": closeExcelImportDialog,
@@ -542,6 +546,56 @@
       toast("保存失败：" + error.message, "error", 6500);
       return false;
     }
+  }
+
+  function findTimelineAnchorRow(kind, id) {
+    var selector = kind === "group" ? ".group-row" : ".flow-row";
+    var datasetKey = kind === "group" ? "groupId" : "flowId";
+    return queryAll(selector, dom["timeline-board"]).find(function (row) {
+      return row.dataset[datasetKey] === id;
+    });
+  }
+
+  function captureTimelineViewport(kind, id) {
+    var scroller = dom["timeline-scroll"];
+    var anchor = findTimelineAnchorRow(kind, id);
+    return {
+      kind: kind,
+      id: id,
+      scrollTop: scroller.scrollTop,
+      scrollLeft: scroller.scrollLeft,
+      windowX: window.scrollX,
+      windowY: window.scrollY,
+      anchorTop: anchor
+        ? anchor.getBoundingClientRect().top - scroller.getBoundingClientRect().top
+        : null
+    };
+  }
+
+  function restoreTimelineViewport(viewport) {
+    if (!viewport) return;
+    var scroller = dom["timeline-scroll"];
+    function restore() {
+      scroller.scrollLeft = viewport.scrollLeft;
+      var anchor = findTimelineAnchorRow(viewport.kind, viewport.id);
+      if (anchor && Number.isFinite(viewport.anchorTop)) {
+        var currentTop =
+          anchor.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
+        scroller.scrollTop += currentTop - viewport.anchorTop;
+      } else {
+        scroller.scrollTop = viewport.scrollTop;
+      }
+      window.scrollTo(viewport.windowX, viewport.windowY);
+    }
+    restore();
+    window.requestAnimationFrame(restore);
+  }
+
+  function persistAndRenderTimelineCollapse(kind, id) {
+    var viewport = captureTimelineViewport(kind, id);
+    var saved = persistAndRender();
+    restoreTimelineViewport(viewport);
+    return saved;
   }
 
   function sanitizeUiState() {
@@ -1042,6 +1096,7 @@
   function createGroupRow(group, groupTasks, weeks) {
     var summary = stats.summarize(groupTasks, new Date());
     var row = utils.el("div", "group-row" + (group.collapsed ? " is-collapsed" : ""));
+    row.dataset.groupId = group.id;
     applyGroupVariables(row, group);
 
     var left = utils.el("div", "group-left");
@@ -1104,6 +1159,7 @@
   function createFlowRow(flow, group, flowTasks, weeks) {
     var summary = stats.summarize(flowTasks, new Date());
     var row = utils.el("div", "flow-row" + (flow.collapsed ? " is-collapsed" : ""));
+    row.dataset.flowId = flow.id;
     applyGroupVariables(row, group);
     applyFlowVariables(row, flow);
 
@@ -1405,7 +1461,7 @@
     if (!group) return;
     group.collapsed = !group.collapsed;
     group.updatedAt = new Date().toISOString();
-    persistAndRender();
+    persistAndRenderTimelineCollapse("group", group.id);
   }
 
   function toggleFlowCollapsed(flowId) {
@@ -1413,7 +1469,7 @@
     if (!flow) return;
     flow.collapsed = !flow.collapsed;
     flow.updatedAt = new Date().toISOString();
-    persistAndRender();
+    persistAndRenderTimelineCollapse("flow", flow.id);
   }
 
   function setAllGroupsCollapsed(collapsed) {
@@ -2063,6 +2119,31 @@
       .filter(materialMatchesFilters);
   }
 
+  function syncMaterialSelectionState(visibleIds) {
+    var ids = Array.isArray(visibleIds)
+      ? visibleIds
+      : getVisibleMaterials().map(function (material) {
+          return material.id;
+        });
+    var selectedIds = new Set(ui.selectedMaterialIds);
+    var selectedVisibleCount = ids.filter(function (id) {
+      return selectedIds.has(id);
+    }).length;
+    dom["material-selection-count"].textContent =
+      "已选 " + ui.selectedMaterialIds.length + " 条";
+    var deleteButton = query('[data-action="delete-selected-materials"]');
+    if (deleteButton) deleteButton.disabled = ui.selectedMaterialIds.length === 0;
+    dom["material-select-visible"].checked =
+      ids.length > 0 && selectedVisibleCount === ids.length;
+    dom["material-select-visible"].indeterminate =
+      selectedVisibleCount > 0 && selectedVisibleCount < ids.length;
+    queryAll("[data-material-select]", dom["materials-table-body"]).forEach(
+      function (checkbox) {
+        checkbox.checked = selectedIds.has(checkbox.value);
+      }
+    );
+  }
+
   function renderMaterialLibrary() {
     dom["material-filter-name"].value = ui.materialFilters.name;
     renderMaterialFilterOptions();
@@ -2088,17 +2169,7 @@
     var visibleIds = visible.map(function (material) {
       return material.id;
     });
-    var selectedVisibleCount = visibleIds.filter(function (id) {
-      return ui.selectedMaterialIds.includes(id);
-    }).length;
-    dom["material-selection-count"].textContent =
-      "已选 " + ui.selectedMaterialIds.length + " 条";
-    var deleteButton = query('[data-action="delete-selected-materials"]');
-    if (deleteButton) deleteButton.disabled = ui.selectedMaterialIds.length === 0;
-    dom["material-select-visible"].checked =
-      visibleIds.length > 0 && selectedVisibleCount === visibleIds.length;
-    dom["material-select-visible"].indeterminate =
-      selectedVisibleCount > 0 && selectedVisibleCount < visibleIds.length;
+    syncMaterialSelectionState(visibleIds);
     dom["materials-result-count"].textContent =
       "显示 " + visible.length + " / " + data.materials.length + " 条资料";
     var body = utils.clear(dom["materials-table-body"]);
@@ -2134,7 +2205,7 @@
         return !visibleIds.includes(id);
       });
     }
-    renderMaterialLibrary();
+    syncMaterialSelectionState(visibleIds);
   }
 
   function deleteSelectedMaterials() {
@@ -4110,6 +4181,8 @@
     }).length;
     return {
       taskCount: rows.length,
+      groupCount: fileGroups.size,
+      flowCount: fileFlows.size,
       newGroupCount: newGroupCount,
       newFlowCount: newFlowCount
     };
@@ -4121,15 +4194,39 @@
     dom["excel-import-summary"].appendChild(card);
   }
 
+  function renderExcelImportMode() {
+    var pending = ui.pendingExcelImport;
+    if (!pending) return;
+    var modeInput = query('input[name="excel-import-mode"]:checked');
+    var mode = modeInput ? modeInput.value : "append";
+    var summary = pending.summary;
+    utils.clear(dom["excel-import-summary"]);
+    appendImportSummaryCard(summary.taskCount, " 条 Task");
+    appendImportSummaryCard(
+      mode === "replace" ? summary.groupCount : summary.newGroupCount,
+      mode === "replace" ? " 个分组" : " 个新分组"
+    );
+    appendImportSummaryCard(
+      mode === "replace" ? summary.flowCount : summary.newFlowCount,
+      mode === "replace" ? " 个 Flow" : " 个新 Flow"
+    );
+    if (!ui.isImportingExcel) {
+      dom["excel-import-confirm"].textContent =
+        mode === "replace" ? "确认完整覆盖" : "确认补充导入";
+    }
+  }
+
   function renderExcelImportDialog(file, result) {
     var errors = result.errors.slice();
     if (!result.rows.length && !errors.length) {
       errors.push("文件中没有可导入的 Task，请在模板表头下方填写数据。");
     }
+    var summary = analyzeExcelRows(result.rows);
     ui.pendingExcelImport = {
       filename: file.name,
       rows: utils.clone(result.rows),
-      errors: errors
+      errors: errors,
+      summary: summary
     };
 
     var sizeLabel =
@@ -4138,12 +4235,6 @@
         : Math.max(1, Math.round(file.size / 1024)) + " KB";
     dom["excel-import-file"].textContent =
       file.name + " · " + sizeLabel + (result.sheetName ? " · 工作表：" + result.sheetName : "");
-
-    var summary = analyzeExcelRows(result.rows);
-    utils.clear(dom["excel-import-summary"]);
-    appendImportSummaryCard(summary.taskCount, " 条 Task");
-    appendImportSummaryCard(summary.newGroupCount, " 个新分组");
-    appendImportSummaryCard(summary.newFlowCount, " 个新 Flow");
 
     var errorBox = utils.clear(dom["excel-import-errors"]);
     errorBox.classList.toggle("has-errors", errors.length > 0);
@@ -4193,7 +4284,9 @@
     }
 
     dom["excel-import-confirm"].disabled = Boolean(errors.length || !result.rows.length);
-    dom["excel-import-confirm"].textContent = "确认导入";
+    var appendMode = query('input[name="excel-import-mode"][value="append"]');
+    if (appendMode) appendMode.checked = true;
+    renderExcelImportMode();
     if (!dom["excel-import-dialog"].open) dom["excel-import-dialog"].showModal();
   }
 
@@ -4230,8 +4323,18 @@
     if (dom["excel-import-dialog"].open) dom["excel-import-dialog"].close();
   }
 
-  function createImportedMaterial(link, type, taskId, stamp) {
-    return materialTools.makeMaterial(
+  function attachImportedMaterial(link, type, taskId, stamp) {
+    var key = materialUrlKey(link.url);
+    var existing = data.materials.find(function (material) {
+      return materialUrlKey(material.url) === key;
+    });
+    if (existing) {
+      var previousCount = existing.taskIds.length;
+      existing.taskIds = materialTools.uniqueIds(existing.taskIds.concat(taskId));
+      if (existing.taskIds.length !== previousCount) existing.updatedAt = stamp;
+      return existing;
+    }
+    var material = materialTools.makeMaterial(
       {
         id: utils.uid("material"),
         title: link.title,
@@ -4241,9 +4344,11 @@
       },
       stamp
     );
+    data.materials.push(material);
+    return material;
   }
 
-  function applyExcelRows(rows) {
+  function appendExcelRows(rows) {
     var stamp = new Date().toISOString();
     var groupByName = new Map();
     data.groups.forEach(function (group) {
@@ -4368,16 +4473,217 @@
       };
       data.tasks.push(importedTask);
       row.documentLinks.forEach(function (link) {
-        data.materials.push(
-          createImportedMaterial(link, "document", importedTask.id, stamp)
-        );
+        attachImportedMaterial(link, "document", importedTask.id, stamp);
       });
       row.deliverableLinks.forEach(function (link) {
-        data.materials.push(
-          createImportedMaterial(link, "deliverable", importedTask.id, stamp)
-        );
+        attachImportedMaterial(link, "deliverable", importedTask.id, stamp);
       });
     });
+  }
+
+  function taskImportKey(groupName, flowName, taskName) {
+    return [
+      normalizeImportName(groupName),
+      normalizeImportName(flowName),
+      normalizeImportName(taskName)
+    ].join("::");
+  }
+
+  function replaceExcelRows(rows) {
+    var stamp = new Date().toISOString();
+    var existingGroupById = new Map();
+    var existingGroupByName = new Map();
+    data.groups.forEach(function (group) {
+      existingGroupById.set(group.id, group);
+      existingGroupByName.set(normalizeImportName(group.name), group);
+    });
+    var existingFlowById = new Map();
+    var existingFlowByName = new Map();
+    data.flows.forEach(function (flow) {
+      var group = existingGroupById.get(flow.groupId);
+      existingFlowById.set(flow.id, flow);
+      if (group) existingFlowByName.set(importFlowKey(group.name, flow.name), flow);
+    });
+    var existingTaskQueues = new Map();
+    data.tasks.forEach(function (task) {
+      var group = existingGroupById.get(task.groupId);
+      var flow = task.flowId ? existingFlowById.get(task.flowId) : null;
+      if (!group) return;
+      var key = taskImportKey(group.name, flow ? flow.name : "", task.name);
+      if (!existingTaskQueues.has(key)) existingTaskQueues.set(key, []);
+      existingTaskQueues.get(key).push(task);
+    });
+
+    var groupSpecs = new Map();
+    rows.forEach(function (row) {
+      var key = normalizeImportName(row.groupName);
+      if (!groupSpecs.has(key)) {
+        groupSpecs.set(key, { name: row.groupName, color: row.groupColor || "" });
+      } else if (!groupSpecs.get(key).color && row.groupColor) {
+        groupSpecs.get(key).color = row.groupColor;
+      }
+    });
+    var nextGroups = [];
+    var groupByName = new Map();
+    groupSpecs.forEach(function (spec, key) {
+      var existing = existingGroupByName.get(key);
+      var group = {
+        id: existing ? existing.id : utils.uid("group"),
+        name: spec.name,
+        color:
+          spec.color ||
+          (existing && existing.color) ||
+          storage.nextGroupColor(nextGroups),
+        order: nextGroups.length + 1,
+        collapsed: existing ? existing.collapsed : false,
+        createdAt: existing ? existing.createdAt : stamp,
+        updatedAt: stamp
+      };
+      nextGroups.push(group);
+      groupByName.set(key, group);
+    });
+
+    var flowSpecs = new Map();
+    rows.forEach(function (row) {
+      if (!row.flowName) return;
+      var key = importFlowKey(row.groupName, row.flowName);
+      if (!flowSpecs.has(key)) {
+        flowSpecs.set(key, {
+          groupKey: normalizeImportName(row.groupName),
+          name: row.flowName,
+          color: row.flowColor || ""
+        });
+      } else if (!flowSpecs.get(key).color && row.flowColor) {
+        flowSpecs.get(key).color = row.flowColor;
+      }
+    });
+    var nextFlows = [];
+    var flowByName = new Map();
+    var nextFlowOrderByGroup = new Map();
+    flowSpecs.forEach(function (spec, key) {
+      var group = groupByName.get(spec.groupKey);
+      var existing = existingFlowByName.get(key);
+      var order = (nextFlowOrderByGroup.get(group.id) || 0) + 1;
+      var flow = {
+        id: existing ? existing.id : utils.uid("flow"),
+        groupId: group.id,
+        name: spec.name,
+        color: spec.color || (existing && existing.color) || group.color,
+        order: order,
+        collapsed: existing ? existing.collapsed : false,
+        createdAt: existing ? existing.createdAt : stamp,
+        updatedAt: stamp
+      };
+      nextFlows.push(flow);
+      flowByName.set(key, flow);
+      nextFlowOrderByGroup.set(group.id, order);
+    });
+
+    var nextTasks = [];
+    var maxTaskOrderByFlow = new Map();
+    rows.forEach(function (row) {
+      var group = groupByName.get(normalizeImportName(row.groupName));
+      var flow = row.flowName
+        ? flowByName.get(importFlowKey(row.groupName, row.flowName))
+        : null;
+      var queue = existingTaskQueues.get(
+        taskImportKey(row.groupName, row.flowName, row.taskName)
+      );
+      var existing = queue && queue.length ? queue.shift() : null;
+      var flowOrder = null;
+      if (flow) {
+        flowOrder = row.flowOrder || (maxTaskOrderByFlow.get(flow.id) || 0) + 1;
+        maxTaskOrderByFlow.set(
+          flow.id,
+          Math.max(maxTaskOrderByFlow.get(flow.id) || 0, flowOrder)
+        );
+      }
+      nextTasks.push({
+        id: existing ? existing.id : utils.uid("task"),
+        groupId: group.id,
+        flowId: flow ? flow.id : null,
+        flowOrder: flowOrder,
+        name: row.taskName,
+        reportTo: canonicalTaskSuggestionValue("reportTo", row.reportTo),
+        managedObject: canonicalTaskSuggestionValue("managedObject", row.managedObject),
+        deliverable: row.deliverable,
+        ddl: row.ddl,
+        urgency: row.urgency,
+        status: row.status,
+        completedAt:
+          row.status === "completed" ? row.completedAt || dates.todayISO() : null,
+        progressNote: row.progressNote,
+        progressUpdatedAt: row.progressNote
+          ? existing &&
+            existing.progressNote === row.progressNote &&
+            existing.progressUpdatedAt
+            ? existing.progressUpdatedAt
+            : stamp
+          : null,
+        createdAt: existing ? existing.createdAt : stamp,
+        updatedAt: stamp
+      });
+    });
+
+    data.groups = nextGroups;
+    data.flows = nextFlows;
+    data.tasks = nextTasks;
+    var validGroupIds = new Set(nextGroups.map(function (group) {
+      return group.id;
+    }));
+    var validFlowIds = new Set(nextFlows.map(function (flow) {
+      return flow.id;
+    }));
+    var validTaskIds = new Set(nextTasks.map(function (task) {
+      return task.id;
+    }));
+    data.materials.forEach(function (material) {
+      var previousRelationCount =
+        material.taskIds.length + material.flowIds.length + material.groupIds.length;
+      material.taskIds = material.taskIds.filter(function (id) {
+        return validTaskIds.has(id);
+      });
+      material.flowIds = material.flowIds.filter(function (id) {
+        return validFlowIds.has(id);
+      });
+      material.groupIds = material.groupIds.filter(function (id) {
+        return validGroupIds.has(id);
+      });
+      if (
+        previousRelationCount !==
+        material.taskIds.length + material.flowIds.length + material.groupIds.length
+      ) {
+        material.updatedAt = stamp;
+      }
+    });
+
+    nextTasks.forEach(function (task) {
+      data.materials.forEach(function (material) {
+        if (!["document", "deliverable"].includes(material.type)) return;
+        var previousCount = material.taskIds.length;
+        material.taskIds = material.taskIds.filter(function (id) {
+          return id !== task.id;
+        });
+        if (material.taskIds.length !== previousCount) material.updatedAt = stamp;
+      });
+    });
+    rows.forEach(function (row, index) {
+      var task = nextTasks[index];
+      row.documentLinks.forEach(function (link) {
+        attachImportedMaterial(link, "document", task.id, stamp);
+      });
+      row.deliverableLinks.forEach(function (link) {
+        attachImportedMaterial(link, "deliverable", task.id, stamp);
+      });
+    });
+  }
+
+  function applyExcelRows(rows, mode) {
+    if (mode === "replace") {
+      replaceExcelRows(rows);
+      return;
+    }
+    appendExcelRows(rows);
   }
 
   function confirmExcelImport() {
@@ -4390,13 +4696,43 @@
     ) {
       return;
     }
+    var modeInput = query('input[name="excel-import-mode"]:checked');
+    var mode = modeInput ? modeInput.value : "append";
+    if (mode === "replace") {
+      if (
+        !window.confirm(
+          "完整覆盖会以本文件中的 " +
+            pending.summary.groupCount +
+            " 个分组、" +
+            pending.summary.flowCount +
+            " 个 Flow 和 " +
+            pending.rows.length +
+            " 条 Task，替换当前全部时间轴数据。资料库的 " +
+            data.materials.length +
+            " 条资料不会删除；同名层级会尽量保留原有关联。是否继续？"
+        )
+      ) {
+        return;
+      }
+      if (
+        !window.confirm(
+          "再次确认：文件中没有的分组、Flow 和 Task 将被移除，无法匹配的资料关联也会移除。建议已先导出 JSON 备份。"
+        )
+      ) {
+        return;
+      }
+    }
     ui.isImportingExcel = true;
     dom["excel-import-confirm"].disabled = true;
     dom["excel-import-confirm"].textContent = "正在导入…";
     var backup = utils.clone(data);
     try {
-      applyExcelRows(pending.rows);
-      if (!persistAndRender("已从 Excel 导入 " + pending.rows.length + " 条 Task")) {
+      applyExcelRows(pending.rows, mode);
+      var successMessage =
+        mode === "replace"
+          ? "已完整覆盖时间轴，共导入 " + pending.rows.length + " 条 Task"
+          : "已补充导入 " + pending.rows.length + " 条 Task";
+      if (!persistAndRender(successMessage)) {
         data = backup;
         renderAll();
         return;
@@ -4420,7 +4756,27 @@
     } finally {
       ui.isImportingExcel = false;
       dom["excel-import-confirm"].disabled = false;
-      dom["excel-import-confirm"].textContent = "确认导入";
+      if (ui.pendingExcelImport) {
+        renderExcelImportMode();
+      } else {
+        dom["excel-import-confirm"].textContent = "确认补充导入";
+      }
+    }
+  }
+
+  function exportTaskImportData() {
+    closeDetailsMenus();
+    if (!excelImport || typeof excelImport.exportWorkbook !== "function") {
+      toast("可回导 Excel 组件未加载，请刷新页面后重试。", "error", 6500);
+      return;
+    }
+    try {
+      var filename =
+        "Weekflow_Task当前数据_" + dates.dateTimeStamp(new Date()) + ".xlsx";
+      excelImport.exportWorkbook(data, filename);
+      toast("已按导入模板下载当前数据：" + filename);
+    } catch (error) {
+      toast("当前数据下载失败：" + error.message, "error", 7000);
     }
   }
 
@@ -4435,10 +4791,10 @@
         .exportWorkbook(data, window.JSZip, new Date())
         .then(function (result) {
           utils.downloadBlob(result.blob, result.filename);
-          toast("Excel 已导出：" + result.filename);
+          toast("看板报告已导出：" + result.filename);
         })
         .catch(function (error) {
-          toast("Excel 导出失败：" + error.message, "error", 7000);
+          toast("看板报告导出失败：" + error.message, "error", 7000);
         })
         .finally(function () {
           ui.isExporting = false;
@@ -4490,7 +4846,7 @@
         }
         try {
           localStorage.setItem(
-            "weekflow-task-manager:v3:pre-import-backup",
+            "weekflow-v2.1:pre-import-backup",
             JSON.stringify(data)
           );
         } catch (_error) {

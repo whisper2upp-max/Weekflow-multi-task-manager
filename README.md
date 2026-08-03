@@ -1,4 +1,4 @@
-# Weekflow v2.0 · Task management
+# Weekflow v2.1 · Task management
 
 Weekflow 是一个桌面端优先、无需后端的本地 Task 管理程序。它以自然周时间轴为主视图，通过“分组 → 可选 Flow → 有序 Task”组织工作，并提供整体看板、统一资料库、Excel 批量录入与本地备份。
 
@@ -85,26 +85,29 @@ http://localhost:8080/Weekflow.html
 正式版业务数据保存在当前浏览器、当前页面来源的 `localStorage`：
 
 ```text
-weekflow-v2.0:data:v3
+weekflow-v2.1:data:v3
 ```
 
 相关迁移与安全备份键：
 
 ```text
+weekflow-v2.1:data:v2
+weekflow-v2.1:data:v1
+weekflow-v2.0:data:v3
 weekflow-v2.0:data:v2
 weekflow-v2.0:data:v1
 weekflow-v1.1:data:v2
 weekflow-v1.1:data:v1
 weekflow-v1.0:data:v2
 weekflow-v1.0:data:v1
-weekflow-v2.0:pre-import-backup
-weekflow-v2.0:corrupt-backup
+weekflow-v2.1:pre-import-backup
+weekflow-v2.1:corrupt-backup
 ```
 
 - 当前数据结构版本为 `version: 3`，包含 `groups、flows、tasks、materials`。
 - v1/v2 数据会自动迁移；旧 Task 内的说明文档与交付物链接会转成统一资料并保留 Task 关联。
 - 每次业务修改都会立即保存。若主数据损坏，原始内容会尝试写入 `corrupt-backup`。
-- 首次打开时会尝试迁移同一页面来源下的 Weekflow v1.1/v1.0 正式版数据；旧键保留用于回退。
+- 首次打开时会优先迁移同一页面来源下的 Weekflow v2.0 正式数据，也兼容 v1.1/v1.0；旧键保留用于回退。
 - 清除网站数据、使用无痕窗口、更换浏览器或启动地址，会改变可见数据。
 
 ## 数据备份与恢复
@@ -121,7 +124,11 @@ weekflow-v2.0:corrupt-backup
 
 ### Task 导入
 
-从顶部 `•••` 下载 `templates/Weekflow_Task导入模板.xlsx`：
+顶部 `•••` 的“批量录入”区域提供三项操作：
+
+- “下载 Excel 导入模板”：下载空白 `templates/Weekflow_Task导入模板.xlsx`。
+- “按导入模板下载当前数据”：按相同 16 列结构下载全部当前 Task，可编辑后直接再次上传。
+- “上传 Excel 批量导入”：读取空白模板或当前数据文件，校验后选择补充导入或完整覆盖。
 
 - 每行代表 1 条 Task。
 - `分组*、Task name*、DDL*、紧急程度*、汇报对象*、交付物*` 为必填字段。
@@ -130,6 +137,8 @@ weekflow-v2.0:corrupt-backup
 - 新 Flow 未指定颜色时继承分组色，不会覆盖已有自定义色。
 - 支持完成状态、完成日期、管理对象、进度记录和说明文档/交付物链接。
 - 上传后先显示错误清单、统计和前 20 条预览；单次最多 1000 条 Task。
+- “补充导入”保留现有分组、Flow 和 Task，并新增文件中的 Task；同名分组与 Flow 会复用。
+- “完整覆盖”连续确认两次，以文件内容替换全部时间轴分组、Flow 和 Task。资料库条目不会删除；同名层级会沿用原 ID 以尽量保留资料关联，无法匹配的旧关联会移除。
 
 ### 资料库导入
 
@@ -148,7 +157,7 @@ weekflow-v2.0:corrupt-backup
 
 ### 时间轴与整体看板
 
-点击“导出 Excel”生成：
+点击“导出看板报告”生成：
 
 ```text
 Task看板_YYYYMMDD_HHmm.xlsx
@@ -160,6 +169,8 @@ Task看板_YYYYMMDD_HHmm.xlsx
 2. `时间表看板`：15 个固定 Task 字段、完整进度记录、统一相关资料，以及从最早到最晚 DDL 的周时间轴。
 
 导出包含全部 Task，不受当前筛选影响。多个资料以 `[类型] 名称：URL` 换行写入同一单元格。
+
+看板报告是阅读与汇报文件，不是批量导入格式。需要编辑后重新上传时，应使用“按导入模板下载当前数据”。看板报告不包含宏、外部链接或连接，并包含与时间表 AutoFilter 对应的标准工作簿级筛选名称，以兼容 Windows Excel 的严格 OOXML 校验。
 
 ### 资料库
 
@@ -177,18 +188,18 @@ Weekflow_资料库_YYYYMMDD_HHmm.xlsx
 
 - 开发团队：Wesley Yan
 - 首个正式版本（v1.0）：2026年7月30日
-- 最新版本（v2.0）更新时间：2026年7月31日
+- 最新版本（v2.1）更新时间：2026年8月2日
 
 ## 程序文件
 
-- 本文件夹是 Weekflow v2.0 空白正式发布版。
+- 本文件夹是 Weekflow v2.1 空白正式发布版。
 - 程序需要保留整个文件夹结构，不能只移动 `Weekflow.html`；页面依赖 `css、js、templates、vendor` 子目录。
-- 如果收到 `Weekflow v2.0.zip`，请完整解压后再使用。
+- 如果收到 `Weekflow v2.1.zip`，请完整解压后再使用。
 
 ## 文件结构
 
 ```text
-Weekflow v2.0/
+Weekflow v2.1/
 ├── Weekflow.html
 ├── css/styles.css
 ├── js/

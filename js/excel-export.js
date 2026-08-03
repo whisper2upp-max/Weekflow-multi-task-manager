@@ -565,14 +565,22 @@
     );
   }
 
-  function workbookXml() {
+  function workbookXml(data, now) {
+    var timeline = buildTimelineRows(data, now);
+    var lastColumn = columnName(timeline.rows[0].length - 1);
+    var lastRow = timeline.rows.length;
     return (
       '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
       '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
-      '<fileVersion appName="xl"/><workbookPr/>' +
-      '<bookViews><workbookView xWindow="120" yWindow="120" windowWidth="24000" windowHeight="15000"/></bookViews>' +
-      '<sheets><sheet name="整体看板" sheetId="1" r:id="rId1"/><sheet name="时间表看板" sheetId="2" r:id="rId2"/></sheets>' +
-      '<calcPr calcId="191029"/></workbook>'
+      '<workbookPr date1904="0"/>' +
+      '<bookViews><workbookView visibility="visible" minimized="0" showHorizontalScroll="1" showVerticalScroll="1" showSheetTabs="1" xWindow="120" yWindow="120" windowWidth="24000" windowHeight="15000" tabRatio="600" firstSheet="0" activeTab="0" autoFilterDateGrouping="1"/></bookViews>' +
+      '<sheets><sheet name="整体看板" sheetId="1" state="visible" r:id="rId1"/><sheet name="时间表看板" sheetId="2" state="visible" r:id="rId2"/></sheets>' +
+      '<definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="1" hidden="1">&apos;时间表看板&apos;!$A$1:$' +
+      lastColumn +
+      "$" +
+      lastRow +
+      "</definedName></definedNames>" +
+      '<calcPr calcId="191029" fullCalcOnLoad="1"/></workbook>'
     );
   }
 
@@ -614,7 +622,7 @@
       '<vt:variant><vt:i4>2</vt:i4></vt:variant></vt:vector></HeadingPairs>' +
       '<TitlesOfParts><vt:vector size="2" baseType="lpstr"><vt:lpstr>整体看板</vt:lpstr><vt:lpstr>时间表看板</vt:lpstr></vt:vector></TitlesOfParts>' +
       "<Company></Company><LinksUpToDate>false</LinksUpToDate><SharedDoc>false</SharedDoc>" +
-      "<HyperlinksChanged>false</HyperlinksChanged><AppVersion>1.0</AppVersion></Properties>"
+      "<HyperlinksChanged>false</HyperlinksChanged><AppVersion>16.0300</AppVersion></Properties>"
     );
   }
 
@@ -628,7 +636,7 @@
     zip.file("_rels/.rels", packageRelationshipsXml());
     zip.file("docProps/core.xml", corePropertiesXml(date));
     zip.file("docProps/app.xml", appPropertiesXml());
-    zip.file("xl/workbook.xml", workbookXml());
+    zip.file("xl/workbook.xml", workbookXml(data, date));
     zip.file("xl/_rels/workbook.xml.rels", workbookRelationshipsXml());
     zip.file("xl/styles.xml", styleSheetXml(data));
     zip.file("xl/worksheets/sheet1.xml", overallSheetXml(data, date));
@@ -661,6 +669,7 @@
       xmlEscape: xmlEscape,
       columnName: columnName,
       excelSerial: excelSerial,
+      workbookXml: workbookXml,
       styleSheetXml: styleSheetXml,
       overallSheetXml: overallSheetXml,
       timelineSheetXml: timelineSheetXml
