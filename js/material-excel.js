@@ -10,11 +10,17 @@
       : typeof require === "function"
         ? require("./materials.js")
         : null;
-  var api = factory(xlsx, materialTools);
+  var xlsxSafe =
+    root.App && root.App.xlsxSafe
+      ? root.App.xlsxSafe
+      : typeof require === "function"
+        ? require("./xlsx-safe.js")
+        : null;
+  var api = factory(xlsx, materialTools, xlsxSafe);
   if (typeof module === "object" && module.exports) module.exports = api;
   root.App = root.App || {};
   root.App.materialExcel = api;
-})(typeof self !== "undefined" ? self : globalThis, function (XLSX, materialTools) {
+})(typeof self !== "undefined" ? self : globalThis, function (XLSX, materialTools, xlsxSafe) {
   "use strict";
 
   var SHEET_NAME = "资料库导入";
@@ -261,16 +267,29 @@
     });
     XLSX.utils.book_append_sheet(workbook, sheet, "资料库");
     workbook.Props = {
-      Title: "Weekflow v2.1 资料库",
+      Title: "Weekflow v2.3 资料库",
       Subject: "Weekflow materials library",
       Author: "Wesley Yan"
     };
     return workbook;
   }
 
-  function exportWorkbook(data, filename) {
-    XLSX.writeFile(buildWorkbook(data), filename || "Weekflow_资料库.xlsx", {
-      compression: true
+  function buildXlsxPackage(data, ZipConstructor, outputType) {
+    if (!xlsxSafe || typeof xlsxSafe.buildWorkbookPackage !== "function") {
+      return Promise.reject(new Error("Excel 安全打包组件未加载。"));
+    }
+    return xlsxSafe.buildWorkbookPackage(
+      buildWorkbook(data),
+      XLSX,
+      ZipConstructor,
+      outputType
+    );
+  }
+
+  function exportWorkbook(data, ZipConstructor, filename) {
+    var outputName = filename || "Weekflow_资料库.xlsx";
+    return buildXlsxPackage(data, ZipConstructor, "blob").then(function (blob) {
+      return { filename: outputName, blob: blob };
     });
   }
 
@@ -283,6 +302,7 @@
     splitNames: splitNames,
     parseWorkbook: parseWorkbook,
     buildWorkbook: buildWorkbook,
+    buildXlsxPackage: buildXlsxPackage,
     exportWorkbook: exportWorkbook
   };
 });

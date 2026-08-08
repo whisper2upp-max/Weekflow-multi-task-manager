@@ -1112,6 +1112,11 @@ h3 {
   accent-color: var(--emerald);
 }
 
+.complete-check input:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
 .task-title-wrap {
   min-width: 0;
 }
@@ -1139,11 +1144,27 @@ h3 {
 
 .task-meta {
   display: flex;
+  min-width: 0;
   align-items: center;
   gap: 5px;
   margin-top: 3px;
+  overflow: hidden;
   color: var(--ink-soft);
   font-size: 9px;
+}
+
+.recurrence-badge {
+  min-width: 0;
+  flex: 1 1 auto;
+  max-width: 190px;
+  overflow: hidden;
+  border-radius: 999px;
+  padding: 1px 6px;
+  background: var(--indigo-soft);
+  color: var(--indigo-dark);
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .task-row.is-completed .task-title {
@@ -1153,6 +1174,7 @@ h3 {
 
 .status-label {
   display: inline-flex;
+  flex: 0 0 auto;
   align-items: center;
   gap: 3px;
   border-radius: 999px;
@@ -2107,6 +2129,130 @@ td {
   background: var(--amber-soft);
   color: var(--amber);
   content: "!";
+}
+
+.ddl-reminder {
+  border: 1px solid #c8d2e3;
+  border-left: 4px solid var(--indigo);
+  border-radius: 13px;
+  padding: 12px 13px;
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 18px 42px rgba(23, 32, 51, 0.2);
+  color: var(--ink);
+  pointer-events: auto;
+  animation: toast-in 180ms ease-out;
+}
+
+.ddl-reminder-head {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) 26px;
+  align-items: start;
+  gap: 9px;
+}
+
+.ddl-reminder-icon {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 9px;
+  background: var(--indigo-soft);
+  color: var(--indigo-dark);
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.ddl-reminder-head strong,
+.ddl-reminder-head small {
+  display: block;
+}
+
+.ddl-reminder-head strong {
+  font-size: 12px;
+}
+
+.ddl-reminder-head small {
+  margin-top: 2px;
+  color: var(--ink-soft);
+  font-size: 9px;
+}
+
+.ddl-reminder-close {
+  position: relative;
+  width: 26px;
+  height: 26px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--ink-soft);
+  transition: border-color 150ms ease, background 150ms ease, transform 150ms ease;
+}
+
+.ddl-reminder-close::before,
+.ddl-reminder-close::after {
+  position: absolute;
+  top: 12px;
+  left: 7px;
+  width: 12px;
+  height: 1.5px;
+  border-radius: 999px;
+  background: currentColor;
+  content: "";
+}
+
+.ddl-reminder-close::before {
+  transform: rotate(45deg);
+}
+
+.ddl-reminder-close::after {
+  transform: rotate(-45deg);
+}
+
+.ddl-reminder-close:hover {
+  border-color: var(--line);
+  background: var(--fog);
+  color: var(--ink);
+  transform: rotate(4deg);
+}
+
+.ddl-reminder-close:focus-visible {
+  outline: 2px solid var(--indigo);
+  outline-offset: 2px;
+}
+
+.ddl-reminder-list {
+  display: grid;
+  gap: 5px;
+  margin-top: 9px;
+}
+
+.ddl-reminder-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  border-top: 1px solid var(--line);
+  padding-top: 6px;
+  font-size: 10px;
+}
+
+.ddl-reminder-item span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ddl-reminder-item time {
+  color: var(--coral);
+  font-family: var(--font-data);
+  font-size: 9px;
+  font-weight: 750;
+}
+
+.ddl-reminder-empty {
+  margin: 2px 0 0;
+  color: var(--ink-soft);
+  font-size: 10px;
 }
 
 @keyframes toast-in {
@@ -3198,6 +3344,107 @@ h1 {
   margin-top: 14px;
 }
 
+.dashboard-module-switch {
+  margin-top: 14px;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  padding: 14px 16px;
+  background: var(--paper);
+  box-shadow: var(--shadow-sm);
+}
+
+.dashboard-module-switch .section-heading {
+  margin-bottom: 11px;
+}
+
+.dashboard-module-tabs {
+  max-width: 100%;
+}
+
+.dashboard-module-tabs button {
+  min-width: 104px;
+}
+
+.dashboard-module-tabs button.is-active {
+  background: var(--navy);
+  color: #fff;
+}
+
+.dashboard-module-tabs button.is-active:hover {
+  background: var(--navy);
+  color: #fff;
+}
+
+.dashboard-module-hint {
+  margin: 9px 0 0;
+  color: var(--ink-soft);
+  font-size: 10px;
+}
+
+.person-card {
+  cursor: default;
+}
+
+.person-card:hover {
+  transform: none;
+}
+
+.person-card .group-card-stats {
+  align-items: center;
+}
+
+.person-card-actions {
+  display: flex;
+  justify-content: flex-end;
+  border-top: 1px solid var(--line);
+  margin-top: 10px;
+  padding-top: 9px;
+}
+
+.dashboard-export-button,
+.dashboard-table-export {
+  border: 1px solid color-mix(in srgb, var(--group-color, var(--indigo)) 32%, var(--line));
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--group-color, var(--indigo)) 8%, #fff);
+  color: var(--group-color, var(--indigo-dark));
+  font-size: 10px;
+  font-weight: 720;
+}
+
+.dashboard-export-button {
+  min-height: 27px;
+  margin-left: auto;
+  padding: 3px 7px;
+}
+
+.dashboard-table-export {
+  min-height: 30px;
+  padding: 4px 9px;
+}
+
+.dashboard-export-button:hover,
+.dashboard-table-export:hover {
+  border-color: var(--group-color, var(--indigo));
+  background: color-mix(in srgb, var(--group-color, var(--indigo)) 14%, #fff);
+}
+
+.dashboard-export-button:disabled,
+.dashboard-table-export:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
+.person-table-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 680;
+}
+
+.person-table-name .group-swatch {
+  background: var(--swatch);
+}
+
 .group-dashboard {
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
 }
@@ -3936,6 +4183,10 @@ h1 {
     display: none;
   }
 
+  .header-actions {
+    margin-left: auto;
+  }
+
   .search-field {
     width: 270px;
     min-width: 220px;
@@ -4032,7 +4283,7 @@ h1 {
   }
 }
 
-/* Weekflow v2.1：统一相关资料与资料库。 */
+/* 统一相关资料与资料库。 */
 .timeline-corner,
 .task-info {
   grid-template-columns: minmax(235px, 1fr) 58px 76px 104px 40px;
@@ -4714,7 +4965,7 @@ h1 {
   }
 
   .materials-actions {
-    justify-content: flex-start;
+    justify-content: flex-end;
   }
 
   .materials-title-line {

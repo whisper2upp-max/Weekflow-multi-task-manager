@@ -1,18 +1,30 @@
-Weekflow v2.1
-Release date: 2026-08-02
+Weekflow v2.3
+Release date: 2026-08-08
 
 This is the clean release build.
 - No sample groups, Flows, Tasks, or materials are bundled.
 - The restore-sample-data action and sample-data generator are not included.
-- The release uses an isolated weekflow-v2.1:* browser storage namespace.
-- Existing Weekflow v2.0/v1.1/v1.0 browser data is migrated to data v3 and left intact for rollback.
+- The release uses an isolated weekflow-v2.3:* browser storage namespace.
+- Existing Weekflow v2.2/v2.1/v2.0/v1.1/v1.0 browser data is migrated to data v3 and left intact for rollback.
 - User data is stored locally in the browser.
 - Blank Task and materials-library Excel templates are included.
-- Task data can be downloaded in the same 16-column import-template format and uploaded again.
+- Tasks can recur weekly or monthly between required start/end dates. One stored Task renders every scheduled DDL from its anchor weekday/day-of-month; short months clamp safely to month-end.
+- Checking the current natural week/month marks that occurrence and every earlier occurrence complete. The next period starts unchecked while the continuous earlier history remains stored, and the same Task is counted only once. Legacy gapped histories are repaired automatically.
+- Quarterly recurrence and the unused Flow-template UI/data model have been removed. Existing Flow creation, editing, and Task step ordering remain unchanged.
+- A non-modal bottom-right reminder lists incomplete Tasks due within seven days on every app entry and closes automatically after ten seconds; its close control now uses a polished drawn icon.
+- JSON backup and restore validates Task-level recurrence dates and completion history while safely ignoring legacy top-level recurring-rule and Flow-template fields.
+- Task data can be downloaded in the same 20-column import-template format and uploaded again, including recurrence cadence, start/end dates, and completion history. Legacy 16-column files remain accepted.
 - Task Excel import supports supplement mode and double-confirm complete replacement while retaining the materials library and matching hierarchy IDs.
 - The timeline action is named "Export dashboard report" to distinguish the presentation workbook from re-importable Task data.
+- The overall dashboard keeps only the five top-level metrics visible on entry and reveals Group, Flow, managed-object, or report-to summaries through four mutually exclusive buttons.
+- Managed-object and report-to views provide progress cards, exact tables, and one-click per-object Task status workbooks sorted by Group with DDL, progress, deliverables, and related materials.
+- Report-to and managed-object values are documented and demonstrated as person names in the Task form and Excel template.
+- Dashboard and per-person Task status workbooks include recurrence fields and status-aware timeline markers, and open with no frozen panes on either worksheet.
 - Dashboard-report OOXML includes the workbook-level AutoFilter name and standard Windows Excel workbook metadata; it contains no VBA, external workbook links, or data connections.
+- Re-importable Task data and materials-library downloads are repackaged without SheetJS's unused macro-enabled content marker or workbook code name, and explicitly set document security to zero for Windows Excel compatibility.
 - Expanding or collapsing an individual Group/Flow preserves the operated row, timeline horizontal position, and page scroll position.
+- Completing or reopening any Task now preserves the operated Task row, timeline horizontal position, and page scroll position instead of jumping to the first Group.
+- At Windows display-scaling breakpoints, the timeline create-actions and materials-library action group remain right-aligned without horizontal page overflow.
 - Selecting or clearing individual materials updates selection controls in place without rebuilding the table or resetting its scroll position.
 - The materials library supports Group → Flow → Task cascading relations, two-way Task linkage, natural-week recent-use filtering, supplement/overwrite import, and double-confirm bulk deletion.
 - Timeline filters share one high-contrast popover style and auto-close when another menu or blank page area is clicked.
@@ -20,7 +32,7 @@ This is the clean release build.
 - Materials search and filters live in a dedicated bar above the table; material names edit in place and URLs open directly.
 - The material editor uses a compact two-row details area so Group, Flow, and Task relations keep most of the dialog space.
 - Materials table headers, type, Flow, Group, and notes use the same 12px primary size as material names; URLs and related Tasks stay compact.
-- The in-app changelog shows the full v2.1, v2.0, v1.1, and v1.0 history in descending version order.
+- The in-app changelog shows the full v2.3, v2.2, v2.1, v2.0, v1.1, and v1.0 history in descending version order.
 - The user guide identifies Weekflow as a Multi-task management cockpit and records the Wesley Yan development attribution plus first/latest release dates.
 - Urgency, report-to, and deliverable are required for new or edited Tasks.
 - Start with: open Weekflow.html directly, or run npm run serve and visit /Weekflow.html

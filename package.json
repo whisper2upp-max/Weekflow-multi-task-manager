@@ -1,8 +1,8 @@
 {
   "name": "weekflow-task-manager",
-  "version": "2.1.0",
+  "version": "2.3.0",
   "private": true,
-  "description": "Weekflow v2.1 空白发布版：带统一资料库和 Workflow 的本地周时间轴 Task 管理工具",
+  "description": "Weekflow v2.3 空白发布版：带统一资料库和 Workflow 的本地周时间轴 Task 管理工具",
   "scripts": {
     "serve": "python3 -m http.server 8080"
   }

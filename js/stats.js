@@ -66,7 +66,9 @@
       var rightOverdue = dates.isOverdue(right, today) ? 0 : 1;
       if (leftOverdue !== rightOverdue) return leftOverdue - rightOverdue;
 
-      if (left.ddl !== right.ddl) return String(left.ddl).localeCompare(String(right.ddl));
+      var leftDdl = dates.taskEffectiveDdl(left, today);
+      var rightDdl = dates.taskEffectiveDdl(right, today);
+      if (leftDdl !== rightDdl) return String(leftDdl).localeCompare(String(rightDdl));
       return String(left.name).localeCompare(String(right.name), "zh-CN");
     });
   }
@@ -80,7 +82,9 @@
         ? Number(right.flowOrder)
         : Number.MAX_SAFE_INTEGER;
       if (leftOrder !== rightOrder) return leftOrder - rightOrder;
-      if (left.ddl !== right.ddl) return String(left.ddl).localeCompare(String(right.ddl));
+      var leftDdl = dates.taskEffectiveDdl(left, today);
+      var rightDdl = dates.taskEffectiveDdl(right, today);
+      if (leftDdl !== rightDdl) return String(leftDdl).localeCompare(String(rightDdl));
       var nameDifference = String(left.name).localeCompare(String(right.name), "zh-CN");
       return nameDifference || String(left.id || "").localeCompare(String(right.id || ""));
     });
@@ -161,12 +165,38 @@
       });
   }
 
+  function summarizeByTaskField(tasks, field, today, emptyLabel) {
+    if (!["managedObject", "reportTo"].includes(field)) return [];
+    var buckets = new Map();
+    (Array.isArray(tasks) ? tasks : []).forEach(function (task) {
+      var value = String((task && task[field]) || "").trim();
+      if (!buckets.has(value)) buckets.set(value, []);
+      buckets.get(value).push(task);
+    });
+    return Array.from(buckets.entries())
+      .sort(function (left, right) {
+        if (!left[0] && right[0]) return 1;
+        if (left[0] && !right[0]) return -1;
+        return left[0].localeCompare(right[0], "zh-CN");
+      })
+      .map(function (entry) {
+        return Object.assign(
+          {
+            value: entry[0],
+            label: entry[0] || emptyLabel || "未填写"
+          },
+          summarize(entry[1], today)
+        );
+      });
+  }
+
   return {
     filterTasks: filterTasks,
     sortTasks: sortTasks,
     sortFlowTasks: sortFlowTasks,
     summarize: summarize,
     summarizeByGroup: summarizeByGroup,
-    summarizeByFlow: summarizeByFlow
+    summarizeByFlow: summarizeByFlow,
+    summarizeByTaskField: summarizeByTaskField
   };
 });

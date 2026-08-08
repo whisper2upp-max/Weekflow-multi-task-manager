@@ -11,6 +11,7 @@
   var excelImport = App.excelImport;
   var materialTools = App.materials;
   var materialExcel = App.materialExcel;
+  var automation = App.automation;
 
   var urgencyLabels = { high: "高", medium: "中", low: "低" };
   var statusLabels = { pending: "未完成", completed: "已完成" };
@@ -29,6 +30,7 @@
     timelineAnchor: dates.getWeekFriday(new Date()),
     windowPastWeeks: 4,
     windowFutureWeeks: 11,
+    dashboardModule: null,
     taskDraftMaterials: [],
     managedMaterials: [],
     managedTaskId: null,
@@ -49,10 +51,13 @@
     deletingGroupId: null,
     isSavingTask: false,
     isExporting: false,
+    isExportingPersonStatus: false,
     isImportingExcel: false,
     pendingExcelImport: null,
     pendingMaterialImport: null,
-    isImportingMaterials: false
+    isImportingMaterials: false,
+    ddlReminderTimer: null,
+    recurrenceRefreshTimer: null
   };
 
   var dom = {};
@@ -107,6 +112,15 @@
       "group-summary-body",
       "flow-summary-body",
       "dashboard-scope",
+      "dashboard-module-nav",
+      "dashboard-group-panel",
+      "dashboard-flow-panel",
+      "dashboard-managed-panel",
+      "dashboard-report-panel",
+      "managed-object-dashboard",
+      "managed-object-summary-body",
+      "report-to-dashboard",
+      "report-to-summary-body",
       "materials-result-count",
       "materials-total",
       "materials-frequent-total",
@@ -154,8 +168,15 @@
       "task-group",
       "task-flow",
       "task-ddl",
+      "task-recurrence",
+      "task-recurrence-help",
+      "task-recurrence-start-field",
+      "task-recurrence-start",
+      "task-recurrence-end-field",
+      "task-recurrence-end",
       "task-urgency",
       "task-status",
+      "task-status-help",
       "task-completed-at",
       "task-report-to",
       "task-report-to-options",
@@ -213,6 +234,9 @@
       "excel-import-preview",
       "excel-import-confirm",
       "json-file-input",
+      "ddl-reminder",
+      "ddl-reminder-summary",
+      "ddl-reminder-list",
       "toast-region"
     ].forEach(function (id) {
       dom[id] = document.getElementById(id);
@@ -222,9 +246,19 @@
   function initialize() {
     cacheDom();
     bindEvents();
+    var recurrenceSync = automation.syncRecurringTaskStates(data, new Date());
+    if (recurrenceSync.changed) {
+      try {
+        data = storage.save(data);
+      } catch (_error) {
+        /* 后续正常渲染，并由保存流程报告具体存储问题。 */
+      }
+    }
     renderAll();
     var warning = storage.getLastWarning();
     if (warning) toast(warning, "warning", 7000);
+    showDdlReminder();
+    scheduleNextPeriodRefresh();
   }
 
   function bindEvents() {
@@ -282,6 +316,7 @@
       populateTaskFlowSelect(dom["task-group"].value, null);
     });
     dom["task-flow"].addEventListener("change", handleTaskFlowSelection);
+    dom["task-recurrence"].addEventListener("change", syncTaskRecurrenceFields);
     dom["task-status"].addEventListener("change", syncCompletedDate);
     dom["link-form"].addEventListener("submit", saveManagedLinks);
     dom["progress-form"].addEventListener("submit", saveProgressNote);
@@ -450,6 +485,7 @@
       "close-progress-dialog": function () {
         dom["progress-dialog"].close();
       },
+      "close-ddl-reminder": closeDdlReminder,
       "delete-group": requestDeleteCurrentGroup,
       "delete-flow": requestDeleteCurrentFlow,
       "delete-task": requestDeleteCurrentTask,
@@ -497,6 +533,12 @@
         clearMaterialFilter("taskIds");
       },
       "clear-material-filters": clearMaterialFilters,
+      "toggle-dashboard-module": function () {
+        toggleDashboardModule(actionNode.dataset.dashboardModule);
+      },
+      "export-person-task-status": function () {
+        exportPersonTaskStatus(actionNode);
+      },
       "export-excel": function () {
         exportExcel(actionNode);
       },
@@ -535,6 +577,7 @@
 
   function persistAndRender(message) {
     try {
+      automation.syncRecurringTaskStates(data, new Date());
       data = storage.save(data);
       sanitizeUiState();
       renderAll();
@@ -549,8 +592,11 @@
   }
 
   function findTimelineAnchorRow(kind, id) {
-    var selector = kind === "group" ? ".group-row" : ".flow-row";
-    var datasetKey = kind === "group" ? "groupId" : "flowId";
+    var selectors = { group: ".group-row", flow: ".flow-row", task: ".task-row" };
+    var datasetKeys = { group: "groupId", flow: "flowId", task: "taskId" };
+    var selector = selectors[kind];
+    var datasetKey = datasetKeys[kind];
+    if (!selector || !datasetKey) return null;
     return queryAll(selector, dom["timeline-board"]).find(function (row) {
       return row.dataset[datasetKey] === id;
     });
@@ -592,8 +638,12 @@
   }
 
   function persistAndRenderTimelineCollapse(kind, id) {
+    return persistAndRenderTimelineAction(kind, id);
+  }
+
+  function persistAndRenderTimelineAction(kind, id, message) {
     var viewport = captureTimelineViewport(kind, id);
-    var saved = persistAndRender();
+    var saved = persistAndRender(message);
     restoreTimelineViewport(viewport);
     return saved;
   }
@@ -1270,8 +1320,12 @@
   }
 
   function createTaskRow(task, group, weeks, flow, stepNumber) {
-    var overdue = dates.isOverdue(task, new Date());
-    var completed = task.status === "completed";
+    var now = new Date();
+    var today = dates.todayISO(now);
+    var periodState = dates.getTaskPeriodState(task, now);
+    var recurring = periodState.recurring;
+    var overdue = periodState.overdue;
+    var completed = periodState.completed;
     var rowClass = "task-row";
     if (flow) rowClass += " is-flow-task";
     if (overdue) rowClass += " is-overdue";
@@ -1287,7 +1341,21 @@
     var checkbox = utils.el("input");
     checkbox.type = "checkbox";
     checkbox.checked = completed;
-    checkbox.setAttribute("aria-label", completed ? "恢复为未完成" : "标记为已完成");
+    checkbox.disabled = recurring && !periodState.checkboxEnabled;
+    checkbox.setAttribute(
+      "aria-label",
+      recurring
+        ? periodState.checkboxEnabled
+          ? (completed ? "取消" : "确认") +
+            "当前自然" +
+            (periodState.cadence === "weekly" ? "周" : "月") +
+            "的 DDL 完成状态"
+          : "当前不在周期 Task 的可确认范围内"
+        : completed
+          ? "恢复为未完成"
+          : "标记为已完成"
+    );
+    if (checkbox.disabled) checkbox.title = "进入有效自然周期后可确认本期完成状态";
     checkbox.addEventListener("change", function () {
       toggleTaskCompleted(task.id, checkbox.checked);
     });
@@ -1305,10 +1373,43 @@
         utils.el("span", "flow-step-label", "STEP " + String(stepNumber || 1).padStart(2, "0"))
       );
     }
-    meta.appendChild(utils.el("span", "", "DDL " + task.ddl));
-    if (overdue) meta.appendChild(utils.el("span", "status-label overdue", "⚠ 逾期"));
-    else if (completed) meta.appendChild(utils.el("span", "status-label completed", "✓ 已完成"));
-    else meta.appendChild(utils.el("span", "status-label", "未完成"));
+    meta.appendChild(
+      utils.el("span", "", (recurring ? "DDL 基准 " : "DDL ") + task.ddl)
+    );
+    if (recurring) {
+      meta.appendChild(
+        utils.el(
+          "span",
+          "recurrence-badge",
+          automation.CADENCE_LABELS[periodState.cadence] +
+            " · " +
+            task.recurrenceStart +
+            " 至 " +
+            task.recurrenceEnd
+        )
+      );
+    }
+    if (overdue) {
+      meta.appendChild(utils.el("span", "status-label overdue", "⚠ 本期逾期"));
+    } else if (completed) {
+      meta.appendChild(
+        utils.el("span", "status-label completed", recurring ? "✓ 本期已完成" : "✓ 已完成")
+      );
+    } else if (recurring && !periodState.checkboxEnabled) {
+      meta.appendChild(
+        utils.el(
+          "span",
+          "status-label",
+          today < task.recurrenceStart
+            ? "周期未开始"
+            : today > task.recurrenceEnd
+              ? "周期已结束"
+              : "本期无 DDL"
+        )
+      );
+    } else {
+      meta.appendChild(utils.el("span", "status-label", recurring ? "本期未完成" : "未完成"));
+    }
     titleWrap.append(title, meta);
     main.append(checkLabel, titleWrap);
 
@@ -1330,17 +1431,29 @@
     info.append(main, urgency, progressButton, materialButton, editButton);
     row.appendChild(info);
 
-    var taskFriday = dates.getWeekFriday(task.ddl);
+    var occurrences = recurring
+      ? dates.getRecurringOccurrences(task)
+      : [{ ddl: task.ddl, periodKey: "" }];
+    var occurrencesByFriday = new Map();
+    occurrences.forEach(function (occurrence) {
+      var friday = dates.getWeekFriday(occurrence.ddl);
+      if (!occurrencesByFriday.has(friday)) occurrencesByFriday.set(friday, []);
+      occurrencesByFriday.get(friday).push(occurrence);
+    });
     var currentFriday = dates.getWeekFriday(new Date());
     weeks.forEach(function (friday) {
       var cell = utils.el(
         "div",
         "timeline-cell" + (friday === currentFriday ? " is-current" : "")
       );
-      if (friday === taskFriday) {
-        var nodeState = overdue
+      (occurrencesByFriday.get(friday) || []).forEach(function (occurrence) {
+        var occurrenceCompleted = recurring
+          ? Boolean(dates.getRecurringCompletion(task, occurrence))
+          : completed;
+        var occurrenceOverdue = !occurrenceCompleted && occurrence.ddl < today;
+        var nodeState = occurrenceOverdue
           ? "overdue"
-          : completed
+          : occurrenceCompleted
             ? "completed"
             : task.urgency;
         var nodeSymbols = {
@@ -1352,7 +1465,14 @@
         };
         var node = utils.el("button", "task-node node-" + nodeState);
         node.type = "button";
-        node.title = buildTaskTooltip(task, group, overdue, flow);
+        node.title = buildTaskTooltip(
+          task,
+          group,
+          occurrence,
+          occurrenceCompleted,
+          occurrenceOverdue,
+          flow
+        );
         node.append(
           utils.el("i", "task-node-symbol", nodeSymbols[nodeState]),
           utils.el("span", "task-node-label", task.name)
@@ -1361,20 +1481,25 @@
           openEditTask(task.id);
         });
         cell.appendChild(node);
-      }
+      });
       row.appendChild(cell);
     });
     return row;
   }
 
-  function buildTaskTooltip(task, group, overdue, flow) {
+  function buildTaskTooltip(task, group, occurrence, completed, overdue, flow) {
+    var recurring = dates.isRecurringTask(task);
     return [
       task.name,
       "分组：" + group.name,
       flow ? "Flow：" + flow.name + " · STEP " + String(task.flowOrder || 1).padStart(2, "0") : "",
-      "DDL：" + task.ddl + "（周五 " + dates.getWeekFriday(task.ddl) + "）",
+      recurring
+        ? "周期：" + automation.CADENCE_LABELS[dates.recurrenceCadence(task)] +
+          " · " + task.recurrenceStart + " 至 " + task.recurrenceEnd
+        : "",
+      "DDL：" + occurrence.ddl + "（周五 " + dates.getWeekFriday(occurrence.ddl) + "）",
       "紧急程度：" + urgencyLabels[task.urgency],
-      "状态：" + (overdue ? "逾期" : statusLabels[task.status]),
+      "状态：" + (overdue ? "逾期" : completed ? "已完成" : "未完成"),
       task.reportTo ? "汇报对象：" + task.reportTo : "",
       task.managedObject ? "管理对象：" + task.managedObject : "",
       task.deliverable ? "交付物：" + task.deliverable : "",
@@ -1505,10 +1630,28 @@
   function toggleTaskCompleted(taskId, completed) {
     var task = getTask(taskId);
     if (!task) return;
-    task.status = completed ? "completed" : "pending";
-    task.completedAt = completed ? dates.todayISO() : null;
+    if (dates.isRecurringTask(task)) {
+      var result = automation.setCurrentPeriodCompleted(task, completed, new Date());
+      if (!result.changed) {
+        toast("当前不在该周期 Task 的可确认范围内", "warning");
+        return;
+      }
+    } else {
+      task.status = completed ? "completed" : "pending";
+      task.completedAt = completed ? dates.todayISO() : null;
+    }
     task.updatedAt = new Date().toISOString();
-    persistAndRender(completed ? "Task 已标记完成" : "Task 已恢复为未完成");
+    persistAndRenderTimelineAction(
+      "task",
+      task.id,
+      dates.isRecurringTask(task)
+        ? completed
+          ? "本期 DDL 已确认完成"
+          : "本期 DDL 已恢复为未完成"
+        : completed
+          ? "Task 已标记完成"
+          : "Task 已恢复为未完成"
+    );
   }
 
   function shiftTimeline(weeks) {
@@ -1545,7 +1688,24 @@
     renderMetricCards(summary);
     renderGroupDashboard();
     renderFlowDashboard();
+    renderTaskFieldDashboard("managedObject", {
+      cardContainerId: "managed-object-dashboard",
+      tableBodyId: "managed-object-summary-body",
+      emptyLabel: "未填写管理对象",
+      fieldLabel: "管理对象",
+      emblem: "管",
+      color: "#0AA6B5"
+    });
+    renderTaskFieldDashboard("reportTo", {
+      cardContainerId: "report-to-dashboard",
+      tableBodyId: "report-to-summary-body",
+      emptyLabel: "未填写汇报对象",
+      fieldLabel: "汇报对象",
+      emblem: "汇",
+      color: "#665CFF"
+    });
     dom["dashboard-scope"].textContent = "统计全部 " + summary.total + " 条 Task（不受时间轴筛选影响）";
+    syncDashboardModuleView();
   }
 
   function renderMetricCards(summary) {
@@ -1675,6 +1835,158 @@
       cardContainer.appendChild(createFlowCard(item));
       tableBody.appendChild(createFlowTableRow(item));
     });
+  }
+
+  function toggleDashboardModule(module) {
+    if (!["group", "flow", "managedObject", "reportTo"].includes(module)) return;
+    ui.dashboardModule = ui.dashboardModule === module ? null : module;
+    syncDashboardModuleView();
+  }
+
+  function syncDashboardModuleView() {
+    var panels = {
+      group: "dashboard-group-panel",
+      flow: "dashboard-flow-panel",
+      managedObject: "dashboard-managed-panel",
+      reportTo: "dashboard-report-panel"
+    };
+    Object.keys(panels).forEach(function (module) {
+      dom[panels[module]].hidden = ui.dashboardModule !== module;
+    });
+    queryAll("[data-dashboard-module]", dom["dashboard-module-nav"]).forEach(
+      function (button) {
+        var active = button.dataset.dashboardModule === ui.dashboardModule;
+        button.classList.toggle("is-active", active);
+        button.setAttribute("aria-expanded", String(active));
+        button.setAttribute("aria-pressed", String(active));
+      }
+    );
+  }
+
+  function renderTaskFieldDashboard(field, config) {
+    var cardContainer = utils.clear(dom[config.cardContainerId]);
+    var tableBody = utils.clear(dom[config.tableBodyId]);
+    var summaries = stats.summarizeByTaskField(
+      data.tasks,
+      field,
+      new Date(),
+      config.emptyLabel
+    );
+    if (!summaries.length) {
+      cardContainer.appendChild(
+        createEmptyState(
+          "还没有 Task",
+          "创建 Task 并填写" + config.fieldLabel + "后，这里会显示对应进度。",
+          "前往时间轴",
+          function () {
+            switchView("timeline");
+          }
+        )
+      );
+      var emptyRow = utils.el("tr");
+      var emptyCell = utils.el("td", "", "暂无" + config.fieldLabel + "数据");
+      emptyCell.colSpan = 7;
+      emptyRow.appendChild(emptyCell);
+      tableBody.appendChild(emptyRow);
+      return;
+    }
+    summaries.forEach(function (item) {
+      cardContainer.appendChild(createPersonCard(field, item, config));
+      tableBody.appendChild(createPersonTableRow(field, item, config));
+    });
+  }
+
+  function createPersonExportButton(field, item, config, className, text) {
+    var button = utils.el("button", className, text);
+    button.type = "button";
+    button.dataset.action = "export-person-task-status";
+    button.dataset.scopeField = field;
+    button.dataset.scopeValue = item.value;
+    button.dataset.scopeLabel = item.label;
+    button.style.setProperty("--group-color", config.color);
+    button.setAttribute(
+      "aria-label",
+      "导出" + config.fieldLabel + "“" + item.label + "”的 Task 状态"
+    );
+    return button;
+  }
+
+  function createPersonCard(field, item, config) {
+    var card = utils.el("article", "group-card person-card");
+    card.style.setProperty("--group-color", config.color);
+    card.style.setProperty("--group-soft", utils.rgba(config.color, 0.1));
+    card.style.setProperty("--group-progress", item.completionRate + "%");
+    var head = utils.el("div", "group-card-head");
+    var identity = utils.el("div", "group-card-identity");
+    identity.append(
+      utils.el("span", "group-card-emblem", config.emblem),
+      utils.el("div", "group-card-copy")
+    );
+    identity.lastChild.append(
+      utils.el("strong", "", item.label),
+      utils.el("small", "", item.total + " TASKS")
+    );
+    var ring = utils.el("span", "group-card-ring");
+    ring.appendChild(utils.el("b", "", Math.round(item.completionRate) + "%"));
+    head.append(identity, ring);
+
+    var active = Math.max(0, item.pending - item.overdue);
+    var progress = utils.el("div", "group-card-stack");
+    [
+      ["is-completed", item.completed],
+      ["is-active", active],
+      ["is-overdue", item.overdue]
+    ].forEach(function (part) {
+      var bar = utils.el("i", part[0]);
+      bar.style.width = percentage(part[1], item.total) + "%";
+      progress.appendChild(bar);
+    });
+    var footer = utils.el("div", "group-card-stats");
+    footer.append(
+      utils.el("span", "completed", "✓ 完成 " + item.completed),
+      utils.el("span", "active", "○ 进行 " + active),
+      utils.el("span", "overdue", "逾期 " + item.overdue)
+    );
+    var actions = utils.el("div", "person-card-actions");
+    actions.appendChild(
+      createPersonExportButton(
+        field,
+        item,
+        config,
+        "dashboard-export-button",
+        "⇩ 导出 Task 状态"
+      )
+    );
+    card.append(head, progress, footer, actions);
+    return card;
+  }
+
+  function createPersonTableRow(field, item, config) {
+    var row = utils.el("tr");
+    var nameCell = utils.el("td");
+    var identity = utils.el("span", "person-table-name");
+    var swatch = utils.el("i", "group-swatch");
+    swatch.style.setProperty("--swatch", config.color);
+    identity.append(swatch, utils.el("span", "", item.label));
+    nameCell.appendChild(identity);
+    row.appendChild(nameCell);
+    row.appendChild(utils.el("td", "", item.total));
+    row.appendChild(utils.el("td", "", item.completed));
+    row.appendChild(utils.el("td", "", item.pending));
+    row.appendChild(utils.el("td", "", item.overdue));
+    row.appendChild(utils.el("td", "", item.completionRate + "%"));
+    var exportCell = utils.el("td");
+    exportCell.appendChild(
+      createPersonExportButton(
+        field,
+        item,
+        config,
+        "dashboard-table-export",
+        "导出"
+      )
+    );
+    row.appendChild(exportCell);
+    return row;
   }
 
   function createGroupCard(item) {
@@ -2272,8 +2584,15 @@
   }
 
   function switchView(view) {
-    ui.view = ["home", "timeline", "dashboard", "materials"].includes(view) ? view : "home";
+    var nextView = ["home", "timeline", "dashboard", "materials"].includes(view)
+      ? view
+      : "home";
+    if (nextView === "dashboard" && ui.view !== "dashboard") {
+      ui.dashboardModule = null;
+    }
+    ui.view = nextView;
     syncView();
+    if (ui.view === "dashboard") syncDashboardModuleView();
     if (ui.view === "timeline") requestAnimationFrame(scrollToCurrentWeek);
   }
 
@@ -3026,6 +3345,31 @@
     openNewFlow(dom["task-group"].value, true);
   }
 
+  function syncTaskRecurrenceFields() {
+    var cadence = dom["task-recurrence"].value;
+    var recurring = automation.isCadence(cadence);
+    dom["task-recurrence-start-field"].hidden = !recurring;
+    dom["task-recurrence-end-field"].hidden = !recurring;
+    dom["task-recurrence-start"].required = recurring;
+    dom["task-recurrence-end"].required = recurring;
+    if (recurring && !dom["task-recurrence-start"].value) {
+      dom["task-recurrence-start"].value = dom["task-ddl"].value || dates.todayISO();
+    }
+    dom["task-status"].disabled = recurring;
+    dom["task-recurrence-help"].textContent = recurring
+      ? automation.CADENCE_LABELS[cadence] +
+        "显示多个 DDL，但只统计为一个 Task；完成勾选仅对应当前自然" +
+        (cadence === "weekly" ? "周" : "月") +
+        "。"
+      : "不重复的 Task 只在其 DDL 所在周显示一次。";
+    dom["task-status-help"].textContent = recurring
+      ? "周期 Task 的状态由当前自然" +
+        (cadence === "weekly" ? "周" : "月") +
+        "完成记录自动维护，请在时间轴勾选。"
+      : "非周期 Task 可在此设置整体完成状态。";
+    syncCompletedDate();
+  }
+
   function openNewTask() {
     if (!data.groups.length) {
       toast("请先新建一个分组，再创建 Task。", "warning");
@@ -3045,10 +3389,13 @@
     populateTaskGroupSelect(initialGroupId);
     populateTaskFlowSelect(initialGroupId, filteredFlow ? filteredFlow.id : null);
     dom["task-ddl"].value = dates.todayISO();
+    dom["task-recurrence"].value = "none";
+    dom["task-recurrence-start"].value = "";
+    dom["task-recurrence-end"].value = "";
     dom["task-urgency"].value = "";
     dom["task-status"].value = "pending";
     dom["task-completed-at"].value = "";
-    dom["task-completed-at"].disabled = true;
+    syncTaskRecurrenceFields();
     dom["task-report-to"].value = "";
     dom["task-managed-object"].value = "";
     dom["task-deliverable"].value = "";
@@ -3071,10 +3418,13 @@
     populateTaskGroupSelect(task.groupId);
     populateTaskFlowSelect(task.groupId, task.flowId);
     dom["task-ddl"].value = task.ddl;
+    dom["task-recurrence"].value = dates.recurrenceCadence(task);
+    dom["task-recurrence-start"].value = task.recurrenceStart || "";
+    dom["task-recurrence-end"].value = task.recurrenceEnd || "";
     dom["task-urgency"].value = task.urgency;
     dom["task-status"].value = task.status;
     dom["task-completed-at"].value = task.completedAt || "";
-    dom["task-completed-at"].disabled = task.status !== "completed";
+    syncTaskRecurrenceFields();
     dom["task-report-to"].value = task.reportTo;
     dom["task-managed-object"].value = task.managedObject;
     dom["task-deliverable"].value = task.deliverable;
@@ -3089,6 +3439,10 @@
   }
 
   function syncCompletedDate() {
+    if (automation.isCadence(dom["task-recurrence"].value)) {
+      dom["task-completed-at"].disabled = true;
+      return;
+    }
     var completed = dom["task-status"].value === "completed";
     dom["task-completed-at"].disabled = !completed;
     if (completed && !dom["task-completed-at"].value) {
@@ -3282,6 +3636,10 @@
     var selectedFlow = flowId ? getFlow(flowId) : null;
     var ddl = dates.formatDate(dom["task-ddl"].value);
     var urgency = dom["task-urgency"].value;
+    var recurrenceCadence = dom["task-recurrence"].value;
+    var recurrenceStart = dates.formatDate(dom["task-recurrence-start"].value);
+    var recurrenceEnd = dates.formatDate(dom["task-recurrence-end"].value);
+    var isRecurring = automation.isCadence(recurrenceCadence);
     var reportTo = dom["task-report-to"].value.trim();
     var deliverable = dom["task-deliverable"].value.trim();
     var isValid = true;
@@ -3300,6 +3658,48 @@
     if (!ddl) {
       setFieldError("task-ddl", "请选择有效 DDL。");
       isValid = false;
+    }
+    if (recurrenceCadence !== "none" && !isRecurring) {
+      setFieldError("task-recurrence", "请选择有效的周期。");
+      isValid = false;
+    }
+    if (isRecurring) {
+      if (!recurrenceStart) {
+        setFieldError("task-recurrence-start", "请选择周期开始日期。");
+        isValid = false;
+      }
+      if (!recurrenceEnd) {
+        setFieldError("task-recurrence-end", "请选择周期结束日期。");
+        isValid = false;
+      }
+      if (recurrenceStart && recurrenceEnd && recurrenceStart > recurrenceEnd) {
+        setFieldError("task-recurrence-end", "周期结束日期不能早于开始日期。");
+        isValid = false;
+      }
+      if (
+        ddl &&
+        recurrenceStart &&
+        recurrenceEnd &&
+        (ddl < recurrenceStart || ddl > recurrenceEnd)
+      ) {
+        setFieldError("task-ddl", "周期 Task 的 DDL 必须位于周期起止日期内。");
+        isValid = false;
+      }
+      if (
+        ddl &&
+        recurrenceStart &&
+        recurrenceEnd &&
+        recurrenceStart <= recurrenceEnd &&
+        !dates.getRecurringOccurrences({
+          ddl: ddl,
+          recurrenceCadence: recurrenceCadence,
+          recurrenceStart: recurrenceStart,
+          recurrenceEnd: recurrenceEnd
+        }).length
+      ) {
+        setFieldError("task-ddl", "当前 DDL 与周期范围无法形成任何周期节点。");
+        isValid = false;
+      }
     }
     if (!["high", "medium", "low"].includes(urgency)) {
       setFieldError("task-urgency", "请选择紧急程度。");
@@ -3327,7 +3727,8 @@
 
     ui.isSavingTask = true;
     dom["task-save-button"].disabled = true;
-    var status = dom["task-status"].value === "completed" ? "completed" : "pending";
+    var status =
+      !isRecurring && dom["task-status"].value === "completed" ? "completed" : "pending";
     var stamp = new Date().toISOString();
     var existing = id ? getTask(id) : null;
     var flowOrder = null;
@@ -3362,6 +3763,15 @@
       status: status,
       completedAt:
         status === "completed" ? dom["task-completed-at"].value || dates.todayISO() : null,
+      recurrenceCadence: isRecurring ? recurrenceCadence : "none",
+      recurrenceStart: isRecurring ? recurrenceStart : null,
+      recurrenceEnd: isRecurring ? recurrenceEnd : null,
+      recurrenceCompletions: retainRecurringCompletions(existing, {
+        ddl: ddl,
+        recurrenceCadence: isRecurring ? recurrenceCadence : "none",
+        recurrenceStart: isRecurring ? recurrenceStart : null,
+        recurrenceEnd: isRecurring ? recurrenceEnd : null
+      }),
       progressNote: existing ? existing.progressNote : "",
       progressUpdatedAt: existing ? existing.progressUpdatedAt : null,
       createdAt: existing ? existing.createdAt : stamp,
@@ -3381,6 +3791,29 @@
     }
     ui.isSavingTask = false;
     dom["task-save-button"].disabled = false;
+  }
+
+  function retainRecurringCompletions(existing, schedule) {
+    if (!existing || !dates.isRecurringTask(schedule)) return [];
+    var occurrences = new Map(
+      dates.getRecurringOccurrences(schedule).map(function (occurrence) {
+        return [occurrence.periodKey, occurrence.ddl];
+      })
+    );
+    return (Array.isArray(existing.recurrenceCompletions)
+      ? existing.recurrenceCompletions
+      : []
+    )
+      .filter(function (record) {
+        return occurrences.has(record.periodKey);
+      })
+      .map(function (record) {
+        return {
+          periodKey: record.periodKey,
+          occurrenceDdl: occurrences.get(record.periodKey),
+          completedAt: dates.formatDate(record.completedAt) || occurrences.get(record.periodKey)
+        };
+      });
   }
 
   function requestDeleteCurrentTask() {
@@ -4138,13 +4571,20 @@
 
   function exportMaterialLibrary() {
     closeDetailsMenus();
-    try {
-      var filename = "Weekflow_资料库_" + dates.dateTimeStamp(new Date()) + ".xlsx";
-      materialExcel.exportWorkbook(data, filename);
-      toast("资料库已下载：" + filename);
-    } catch (error) {
-      toast("资料库下载失败：" + error.message, "error", 7000);
+    if (!materialExcel || typeof materialExcel.exportWorkbook !== "function") {
+      toast("资料库 Excel 组件未加载，请刷新页面后重试。", "error", 6500);
+      return;
     }
+    var filename = "Weekflow_资料库_" + dates.dateTimeStamp(new Date()) + ".xlsx";
+    materialExcel
+      .exportWorkbook(data, window.JSZip, filename)
+      .then(function (result) {
+        utils.downloadBlob(result.blob, result.filename);
+        toast("资料库已下载：" + result.filename);
+      })
+      .catch(function (error) {
+        toast("资料库下载失败：" + error.message, "error", 7000);
+      });
   }
 
   function normalizeImportName(value) {
@@ -4265,6 +4705,7 @@
         row.flowName || "—",
         row.taskName,
         row.ddl || "—",
+        automation.CADENCE_LABELS[row.recurrenceCadence] || "不重复",
         urgencyLabels[row.urgency] || "中"
       ].forEach(function (value) {
         tableRow.appendChild(utils.el("td", "", value));
@@ -4278,7 +4719,7 @@
         "import-preview-more",
         "另有 " + (result.rows.length - 20) + " 条 Task，将在确认后一起导入"
       );
-      moreCell.colSpan = 6;
+      moreCell.colSpan = 7;
       moreRow.appendChild(moreCell);
       preview.appendChild(moreRow);
     }
@@ -4346,6 +4787,77 @@
     );
     data.materials.push(material);
     return material;
+  }
+
+  function importedRecurrenceState(row, existing) {
+    var useLegacyRecurrence = Boolean(
+      !row.recurrenceSpecified &&
+        existing &&
+        dates.isRecurringTask(existing) &&
+        row.ddl >= existing.recurrenceStart &&
+        row.ddl <= existing.recurrenceEnd
+    );
+    var cadence = useLegacyRecurrence
+      ? dates.recurrenceCadence(existing)
+      : row.recurrenceCadence;
+    if (!automation.isCadence(cadence)) {
+      return {
+        recurrenceCadence: "none",
+        recurrenceStart: null,
+        recurrenceEnd: null,
+        recurrenceCompletions: [],
+        status: row.status,
+        completedAt:
+          row.status === "completed" ? row.completedAt || dates.todayISO() : null
+      };
+    }
+
+    var taskLike = {
+      ddl: row.ddl,
+      recurrenceCadence: cadence,
+      recurrenceStart: useLegacyRecurrence
+        ? existing.recurrenceStart
+        : row.recurrenceStart,
+      recurrenceEnd: useLegacyRecurrence ? existing.recurrenceEnd : row.recurrenceEnd,
+      recurrenceCompletions: useLegacyRecurrence
+        ? utils.clone(existing.recurrenceCompletions || [])
+        : utils.clone(row.recurrenceCompletions || [])
+    };
+    if (row.status === "completed" && !taskLike.recurrenceCompletions.length) {
+      var today = dates.todayISO();
+      var completionDate = row.completedAt || today;
+      var occurrences = dates.getRecurringOccurrences(taskLike);
+      var currentKey = dates.recurrencePeriodKey(cadence, today);
+      var targetIndex = occurrences.findIndex(function (occurrence) {
+        return occurrence.periodKey === currentKey;
+      });
+      if (targetIndex < 0) {
+        occurrences.forEach(function (occurrence, index) {
+          if (occurrence.ddl <= completionDate) targetIndex = index;
+        });
+      }
+      if (targetIndex >= 0) {
+        taskLike.recurrenceCompletions = occurrences
+          .slice(0, targetIndex + 1)
+          .map(function (occurrence) {
+            return {
+              periodKey: occurrence.periodKey,
+              occurrenceDdl: occurrence.ddl,
+              completedAt: completionDate
+            };
+          });
+      }
+    }
+    taskLike.recurrenceCompletions = automation.normalizeCompletions(taskLike);
+    var state = dates.getTaskPeriodState(taskLike, new Date());
+    return {
+      recurrenceCadence: cadence,
+      recurrenceStart: taskLike.recurrenceStart,
+      recurrenceEnd: taskLike.recurrenceEnd,
+      recurrenceCompletions: taskLike.recurrenceCompletions,
+      status: state.completed ? "completed" : "pending",
+      completedAt: state.completedAt || null
+    };
   }
 
   function appendExcelRows(rows) {
@@ -4452,6 +4964,7 @@
           Math.max(maxTaskOrderByFlow.get(flow.id) || 0, flowOrder)
         );
       }
+      var recurrence = importedRecurrenceState(row, null);
       var importedTask = {
         id: utils.uid("task"),
         groupId: group.id,
@@ -4463,9 +4976,12 @@
         deliverable: row.deliverable,
         ddl: row.ddl,
         urgency: row.urgency,
-        status: row.status,
-        completedAt:
-          row.status === "completed" ? row.completedAt || dates.todayISO() : null,
+        status: recurrence.status,
+        completedAt: recurrence.completedAt,
+        recurrenceCadence: recurrence.recurrenceCadence,
+        recurrenceStart: recurrence.recurrenceStart,
+        recurrenceEnd: recurrence.recurrenceEnd,
+        recurrenceCompletions: recurrence.recurrenceCompletions,
         progressNote: row.progressNote,
         progressUpdatedAt: row.progressNote ? stamp : null,
         createdAt: stamp,
@@ -4590,6 +5106,7 @@
         taskImportKey(row.groupName, row.flowName, row.taskName)
       );
       var existing = queue && queue.length ? queue.shift() : null;
+      var recurrence = importedRecurrenceState(row, existing);
       var flowOrder = null;
       if (flow) {
         flowOrder = row.flowOrder || (maxTaskOrderByFlow.get(flow.id) || 0) + 1;
@@ -4609,9 +5126,12 @@
         deliverable: row.deliverable,
         ddl: row.ddl,
         urgency: row.urgency,
-        status: row.status,
-        completedAt:
-          row.status === "completed" ? row.completedAt || dates.todayISO() : null,
+        status: recurrence.status,
+        completedAt: recurrence.completedAt,
+        recurrenceCadence: recurrence.recurrenceCadence,
+        recurrenceStart: recurrence.recurrenceStart,
+        recurrenceEnd: recurrence.recurrenceEnd,
+        recurrenceCompletions: recurrence.recurrenceCompletions,
         progressNote: row.progressNote,
         progressUpdatedAt: row.progressNote
           ? existing &&
@@ -4770,14 +5290,17 @@
       toast("可回导 Excel 组件未加载，请刷新页面后重试。", "error", 6500);
       return;
     }
-    try {
-      var filename =
-        "Weekflow_Task当前数据_" + dates.dateTimeStamp(new Date()) + ".xlsx";
-      excelImport.exportWorkbook(data, filename);
-      toast("已按导入模板下载当前数据：" + filename);
-    } catch (error) {
-      toast("当前数据下载失败：" + error.message, "error", 7000);
-    }
+    var filename =
+      "Weekflow_Task当前数据_" + dates.dateTimeStamp(new Date()) + ".xlsx";
+    excelImport
+      .exportWorkbook(data, window.JSZip, filename)
+      .then(function (result) {
+        utils.downloadBlob(result.blob, result.filename);
+        toast("已按导入模板下载当前数据：" + result.filename);
+      })
+      .catch(function (error) {
+        toast("当前数据下载失败：" + error.message, "error", 7000);
+      });
   }
 
   function exportExcel(button) {
@@ -4798,6 +5321,39 @@
         })
         .finally(function () {
           ui.isExporting = false;
+          button.disabled = false;
+          button.textContent = original;
+        });
+    }, 30);
+  }
+
+  function exportPersonTaskStatus(button) {
+    if (ui.isExportingPersonStatus || !button) return;
+    if (!excelExport || typeof excelExport.exportTaskStatusWorkbook !== "function") {
+      toast("人员 Task 状态导出组件未加载，请刷新页面后重试。", "error", 6500);
+      return;
+    }
+    var config = {
+      field: button.dataset.scopeField,
+      value: button.dataset.scopeValue || "",
+      label: button.dataset.scopeLabel || ""
+    };
+    ui.isExportingPersonStatus = true;
+    button.disabled = true;
+    var original = button.textContent;
+    button.textContent = "导出中…";
+    window.setTimeout(function () {
+      excelExport
+        .exportTaskStatusWorkbook(data, window.JSZip, config, new Date())
+        .then(function (result) {
+          utils.downloadBlob(result.blob, result.filename);
+          toast("Task 状态已导出：" + result.filename);
+        })
+        .catch(function (error) {
+          toast("Task 状态导出失败：" + error.message, "error", 7000);
+        })
+        .finally(function () {
+          ui.isExportingPersonStatus = false;
           button.disabled = false;
           button.textContent = original;
         });
@@ -4846,7 +5402,7 @@
         }
         try {
           localStorage.setItem(
-            "weekflow-v2.1:pre-import-backup",
+            "weekflow-v2.3:pre-import-backup",
             JSON.stringify(data)
           );
         } catch (_error) {
@@ -4868,6 +5424,79 @@
     queryAll("details[open]").forEach(function (details) {
       details.open = false;
     });
+  }
+
+  function closeDdlReminder() {
+    if (ui.ddlReminderTimer) {
+      window.clearTimeout(ui.ddlReminderTimer);
+      ui.ddlReminderTimer = null;
+    }
+    dom["ddl-reminder"].hidden = true;
+  }
+
+  function scheduleNextPeriodRefresh() {
+    if (ui.recurrenceRefreshTimer) {
+      window.clearTimeout(ui.recurrenceRefreshTimer);
+    }
+    var now = new Date();
+    var nextDay = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate() + 1,
+      0,
+      0,
+      2
+    );
+    ui.recurrenceRefreshTimer = window.setTimeout(function () {
+      var result = automation.syncRecurringTaskStates(data, new Date());
+      if (result.changed) {
+        try {
+          data = storage.save(data);
+        } catch (error) {
+          toast("周期状态刷新失败：" + error.message, "error", 6500);
+        }
+      }
+      renderAll();
+      showDdlReminder();
+      scheduleNextPeriodRefresh();
+    }, Math.max(1000, nextDay.getTime() - now.getTime()));
+  }
+
+  function dueReminderLabel(ddl, today) {
+    var days = dates.daysBetween(today, ddl);
+    if (days === 0) return "今天";
+    if (days === 1) return "明天";
+    return days + " 天后";
+  }
+
+  function showDdlReminder() {
+    closeDdlReminder();
+    var today = dates.todayISO();
+    var tasks = automation.getDueSoonTasks(data, new Date(), 7);
+    var list = utils.clear(dom["ddl-reminder-list"]);
+    dom["ddl-reminder-summary"].textContent = tasks.length
+      ? tasks.length + " 条未完成 Task 即将到期"
+      : "当前没有临期未完成 Task";
+    if (!tasks.length) {
+      list.appendChild(utils.el("p", "ddl-reminder-empty", "未来 7 天可以从容安排。"));
+    } else {
+      tasks.slice(0, 5).forEach(function (entry) {
+        var task = entry.task;
+        var item = utils.el("div", "ddl-reminder-item");
+        item.append(
+          utils.el("span", "", task.name),
+          utils.el("time", "", entry.ddl + " · " + dueReminderLabel(entry.ddl, today))
+        );
+        list.appendChild(item);
+      });
+      if (tasks.length > 5) {
+        list.appendChild(
+          utils.el("p", "ddl-reminder-empty", "另有 " + (tasks.length - 5) + " 条未显示")
+        );
+      }
+    }
+    dom["ddl-reminder"].hidden = false;
+    ui.ddlReminderTimer = window.setTimeout(closeDdlReminder, 10000);
   }
 
   function toast(message, type, duration) {

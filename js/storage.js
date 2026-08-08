@@ -27,10 +27,16 @@
 })(typeof self !== "undefined" ? self : globalThis, function (dates, utils, materialTools) {
   "use strict";
 
-  var STORAGE_KEY = "weekflow-v2.1:data:v3";
-  var LEGACY_STORAGE_KEY = "weekflow-v2.1:data:v2";
-  var CORRUPT_KEY = "weekflow-v2.1:corrupt-backup";
+  var STORAGE_KEY = "weekflow-v2.3:data:v3";
+  var LEGACY_STORAGE_KEY = "weekflow-v2.3:data:v2";
+  var CORRUPT_KEY = "weekflow-v2.3:corrupt-backup";
   var PREVIOUS_STORAGE_KEYS = [
+    "weekflow-v2.3:data:v2",
+    "weekflow-v2.3:data:v1",
+    "weekflow-v2.2:data:v3",
+    "weekflow-v2.2:data:v2",
+    "weekflow-v2.2:data:v1",
+    "weekflow-v2.1:data:v3",
     "weekflow-v2.1:data:v2",
     "weekflow-v2.1:data:v1",
     "weekflow-v2.0:data:v3",
@@ -102,6 +108,14 @@
     };
   }
 
+  function normalizeRecurrenceCompletion(record) {
+    return {
+      periodKey: String((record && record.periodKey) || "").trim().slice(0, 20),
+      occurrenceDdl: dates.formatDate(record && record.occurrenceDdl),
+      completedAt: dates.formatDate(record && record.completedAt)
+    };
+  }
+
   function normalizeTask(task) {
     var created = String((task && task.createdAt) || nowISO());
     var status = task && task.status === "completed" ? "completed" : "pending";
@@ -119,6 +133,11 @@
       ? task.urgency
       : "medium";
     var rawFlowOrder = Number(task && task.flowOrder);
+    var recurrenceCadence = ["weekly", "monthly"].includes(
+      task && task.recurrenceCadence
+    )
+      ? task.recurrenceCadence
+      : "none";
     return {
       id: safeId(task && task.id, "task"),
       groupId: String((task && task.groupId) || ""),
@@ -137,6 +156,15 @@
           : null,
       progressNote: progressNote,
       progressUpdatedAt: progressTimestamp,
+      recurrenceCadence: recurrenceCadence,
+      recurrenceStart:
+        recurrenceCadence === "none" ? null : dates.formatDate(task && task.recurrenceStart),
+      recurrenceEnd:
+        recurrenceCadence === "none" ? null : dates.formatDate(task && task.recurrenceEnd),
+      recurrenceCompletions:
+        recurrenceCadence !== "none" && Array.isArray(task && task.recurrenceCompletions)
+          ? task.recurrenceCompletions.map(normalizeRecurrenceCompletion)
+          : [],
       documentLinks: Array.isArray(task && task.documentLinks)
         ? task.documentLinks.map(normalizeLink)
         : [],
@@ -218,6 +246,47 @@
         }
       }
       var rawTask = input.tasks[index] || {};
+      var rawCadence = String(rawTask.recurrenceCadence || "none");
+      if (!["none", "weekly", "monthly"].includes(rawCadence)) {
+        errors.push("Task「" + (task.name || index + 1) + "」的周期类型无效。");
+      }
+      if (task.recurrenceCadence !== "none") {
+        if (!task.recurrenceStart || !task.recurrenceEnd) {
+          errors.push("Task「" + (task.name || index + 1) + "」缺少周期开始或结束日期。");
+        } else if (task.recurrenceStart > task.recurrenceEnd) {
+          errors.push("Task「" + (task.name || index + 1) + "」的周期开始日期晚于结束日期。");
+        } else if (task.ddl < task.recurrenceStart || task.ddl > task.recurrenceEnd) {
+          errors.push("Task「" + (task.name || index + 1) + "」的 DDL 必须位于周期起止日期内。");
+        } else if (!dates.getRecurringOccurrences(task).length) {
+          errors.push("Task「" + (task.name || index + 1) + "」在周期范围内没有可用 DDL。");
+        }
+        if (
+          rawTask.recurrenceCompletions !== undefined &&
+          !Array.isArray(rawTask.recurrenceCompletions)
+        ) {
+          errors.push("Task「" + (task.name || index + 1) + "」的周期完成记录必须是数组。");
+        }
+        var validOccurrenceKeys = new Set(
+          dates.getRecurringOccurrences(task).map(function (occurrence) {
+            return occurrence.periodKey;
+          })
+        );
+        var seenCompletionKeys = new Set();
+        task.recurrenceCompletions.forEach(function (record) {
+          if (
+            !record.periodKey ||
+            !record.occurrenceDdl ||
+            !record.completedAt ||
+            !validOccurrenceKeys.has(record.periodKey)
+          ) {
+            errors.push("Task「" + (task.name || index + 1) + "」包含无效周期完成记录。");
+          }
+          if (seenCompletionKeys.has(record.periodKey)) {
+            errors.push("Task「" + (task.name || index + 1) + "」包含重复周期完成记录。");
+          }
+          seenCompletionKeys.add(record.periodKey);
+        });
+      }
       if (
         task.progressNote &&
         rawTask.progressUpdatedAt !== undefined &&
@@ -364,7 +433,7 @@
       if (!checked.valid) throw new Error(checked.errors.join("\n"));
       if (loadedFromLegacy) {
         var migrated = persist(checked.data);
-        lastWarning = "已自动迁移 Weekflow v2.0/v1.1/v1.0 或旧版数据到 v2.1，并保留统一资料库。";
+        lastWarning = "已自动迁移 Weekflow v2.2/v2.1/v2.0/v1.1/v1.0 或旧版数据到 v2.3，并保留统一资料库。";
         return migrated;
       }
       memoryData = checked.data;

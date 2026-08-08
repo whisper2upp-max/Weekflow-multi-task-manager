@@ -3,11 +3,23 @@
   var xlsx =
     root.XLSX ||
     (typeof require === "function" ? require("../vendor/xlsx.full.min.js") : null);
-  var api = factory(xlsx);
+  var dates =
+    root.App && root.App.dateUtils
+      ? root.App.dateUtils
+      : typeof require === "function"
+        ? require("./date-utils.js")
+        : null;
+  var xlsxSafe =
+    root.App && root.App.xlsxSafe
+      ? root.App.xlsxSafe
+      : typeof require === "function"
+        ? require("./xlsx-safe.js")
+        : null;
+  var api = factory(xlsx, dates, xlsxSafe);
   if (typeof module === "object" && module.exports) module.exports = api;
   root.App = root.App || {};
   root.App.excelImport = api;
-})(typeof self !== "undefined" ? self : globalThis, function (XLSX) {
+})(typeof self !== "undefined" ? self : globalThis, function (XLSX, dates, xlsxSafe) {
   "use strict";
 
   var SHEET_NAME = "Task导入";
@@ -20,6 +32,10 @@
     ["flowOrder", "Flow步骤", false],
     ["taskName", "Task name*", true],
     ["ddl", "DDL*", true],
+    ["recurrenceCadence", "周期", false],
+    ["recurrenceStart", "周期开始", false],
+    ["recurrenceEnd", "周期结束", false],
+    ["recurrenceCompletions", "周期完成记录", false],
     ["urgency", "紧急程度*", true],
     ["status", "完成状态", false],
     ["completedAt", "完成日期", false],
@@ -30,8 +46,9 @@
     ["documentLinks", "说明文档链接", false],
     ["deliverableLinks", "交付物链接", false]
   ];
-  var COLUMN_WIDTHS = [18, 14, 20, 14, 11, 30, 14, 13, 13, 14, 18, 20, 26, 34, 38, 38];
+  var COLUMN_WIDTHS = [18, 14, 20, 14, 11, 30, 14, 12, 14, 14, 32, 13, 13, 14, 18, 20, 26, 34, 38, 38];
   var urgencyLabels = { high: "高", medium: "中", low: "低" };
+  var recurrenceLabels = { none: "不重复", weekly: "每周", monthly: "每月" };
   var GUIDE_ROWS = [
     ["分组*", "是", "补充导入会复用同名分组；完整覆盖会按文件重建分组范围", "产品与项目"],
     ["分组颜色", "否", "格式为 #RRGGBB；留空时沿用匹配分组颜色或自动分配", "#665CFF"],
@@ -40,11 +57,15 @@
     ["Flow步骤", "否", "Task 在 Flow 中的步骤序号，填写大于 0 的整数", "1"],
     ["Task name*", "是", "Task 名称，最多 160 个字符", "完成发布前检查"],
     ["DDL*", "是", "截止日期，建议使用 yyyy-mm-dd", "2026-08-07"],
+    ["周期", "否", "不重复、每周或每月；留空按不重复", "每周"],
+    ["周期开始", "周期时是", "周期 Task 的开始日期，须与周期结束同时填写", "2026-08-01"],
+    ["周期结束", "周期时是", "周期 Task 的结束日期；DDL 必须位于起止范围内", "2026-09-30"],
+    ["周期完成记录", "否", "格式：周期DDL|完成日期；多期用换行或中文分号分隔。新建时可留空，当前数据下载会自动填写", "2026-08-07|2026-08-08"],
     ["紧急程度*", "是", "仅支持高、中、低", "高"],
     ["完成状态", "否", "未完成或已完成；留空默认为未完成", "未完成"],
     ["完成日期", "否", "仅已完成 Task 使用；建议使用 yyyy-mm-dd", "2026-08-06"],
-    ["汇报对象*", "是", "会与既有同名对象统一，便于筛选", "项目负责人"],
-    ["管理对象", "否", "会与既有同名对象统一，便于筛选", "发布小组"],
+    ["汇报对象*", "是", "填写人员姓名；会与既有同名人员统一，便于筛选", "Wesley Yan"],
+    ["管理对象", "否", "填写人员姓名；会与既有同名人员统一，便于筛选", "Amy Chen"],
     ["交付物*", "是", "简要描述交付成果，最多 500 个字符", "发布确认单"],
     ["进度记录", "否", "可填写当前进度或备注，最多 4000 个字符", "已完成联调"],
     ["说明文档链接", "否", "格式：标题|https://...；多个链接用换行或中文分号分隔", "操作说明|https://example.com/guide"],
@@ -87,6 +108,11 @@
       ["task", "taskName"],
       ["任务名称", "taskName"],
       ["截止日期", "ddl"],
+      ["周期生成", "recurrenceCadence"],
+      ["重复周期", "recurrenceCadence"],
+      ["周期起始", "recurrenceStart"],
+      ["周期截止", "recurrenceEnd"],
+      ["已完成周期ddl", "recurrenceCompletions"],
       ["状态", "status"],
       ["进度", "progressNote"],
       ["说明文档", "documentLinks"],
@@ -168,6 +194,75 @@
     return Number.isInteger(number) && number >= 1 ? number : undefined;
   }
 
+  function parseRecurrenceCadence(value) {
+    var text = cleanText(value, 30).toLocaleLowerCase();
+    if (!text || ["不重复", "无", "none"].includes(text)) return "none";
+    if (["每周", "周", "weekly"].includes(text)) return "weekly";
+    if (["每月", "月", "monthly"].includes(text)) return "monthly";
+    return null;
+  }
+
+  function parseRecurrenceCompletions(value) {
+    var text = cleanMultiline(value, 12000);
+    if (!text) return { records: [], errors: [] };
+    var records = [];
+    var errors = [];
+    var seen = new Set();
+    text
+      .split(/\n|；/)
+      .map(function (part) {
+        return part.trim();
+      })
+      .filter(Boolean)
+      .forEach(function (part, index) {
+        var pieces = part.split("|");
+        var occurrenceDdl = parseDate(pieces[0]);
+        var completedAt = pieces.length > 1 ? parseDate(pieces[1]) : occurrenceDdl;
+        if (!occurrenceDdl || !completedAt) {
+          errors.push("周期完成记录第 " + (index + 1) + " 项必须是 周期DDL|完成日期");
+          return;
+        }
+        if (seen.has(occurrenceDdl)) {
+          errors.push("周期完成记录包含重复 DDL " + occurrenceDdl);
+          return;
+        }
+        seen.add(occurrenceDdl);
+        records.push({ occurrenceDdl: occurrenceDdl, completedAt: completedAt });
+      });
+    return { records: records, errors: errors };
+  }
+
+  function normalizeRecurrenceHistory(config, records) {
+    if (!dates || !config || config.recurrenceCadence === "none") return [];
+    var occurrences = dates.getRecurringOccurrences(config);
+    var occurrenceIndex = new Map(
+      occurrences.map(function (occurrence, index) {
+        return [occurrence.ddl, index];
+      })
+    );
+    var recordMap = new Map();
+    var latestIndex = -1;
+    (records || []).forEach(function (record) {
+      var index = occurrenceIndex.get(record.occurrenceDdl);
+      if (index === undefined) return;
+      latestIndex = Math.max(latestIndex, index);
+      recordMap.set(record.occurrenceDdl, record);
+    });
+    if (latestIndex < 0) return [];
+    var latestRecord = recordMap.get(occurrences[latestIndex].ddl);
+    return occurrences.slice(0, latestIndex + 1).map(function (occurrence) {
+      var record = recordMap.get(occurrence.ddl);
+      return {
+        periodKey: occurrence.periodKey,
+        occurrenceDdl: occurrence.ddl,
+        completedAt:
+          (record && record.completedAt) ||
+          (latestRecord && latestRecord.completedAt) ||
+          occurrence.ddl
+      };
+    });
+  }
+
   function parseLinks(value, label) {
     var text = cleanMultiline(value, 12000);
     if (!text) return { links: [], errors: [] };
@@ -220,6 +315,10 @@
     var flowName = cleanText(raw.flowName, 80);
     var taskName = cleanText(raw.taskName, 160);
     var ddl = parseDate(raw.ddl);
+    var recurrenceCadence = parseRecurrenceCadence(raw.recurrenceCadence);
+    var recurrenceStart = parseDate(raw.recurrenceStart);
+    var recurrenceEnd = parseDate(raw.recurrenceEnd);
+    var recurrenceHistory = parseRecurrenceCompletions(raw.recurrenceCompletions);
     var groupColor = parseColor(raw.groupColor);
     var flowColor = parseColor(raw.flowColor);
     var flowOrder = parseFlowOrder(raw.flowOrder);
@@ -234,6 +333,13 @@
     if (!groupName) errors.push("分组不能为空");
     if (!taskName) errors.push("Task name 不能为空");
     if (!ddl) errors.push("DDL 必须是有效日期");
+    if (!recurrenceCadence) errors.push("周期仅支持不重复、每周、每月");
+    if (cleanText(raw.recurrenceStart, 40) && !recurrenceStart) {
+      errors.push("周期开始必须是有效日期");
+    }
+    if (cleanText(raw.recurrenceEnd, 40) && !recurrenceEnd) {
+      errors.push("周期结束必须是有效日期");
+    }
     if (groupColor === null) errors.push("分组颜色必须是 #RRGGBB");
     if (flowColor === null) errors.push("Flow颜色必须是 #RRGGBB");
     if (flowOrder === undefined) errors.push("Flow步骤必须是大于 0 的整数");
@@ -246,7 +352,57 @@
     if (cleanText(raw.completedAt, 40) && !completedAt) {
       errors.push("完成日期必须是有效日期");
     }
-    errors = errors.concat(documents.errors, deliverables.errors);
+    errors = errors.concat(
+      recurrenceHistory.errors,
+      documents.errors,
+      deliverables.errors
+    );
+
+    var recurrenceCompletions = [];
+    if (recurrenceCadence === "none") {
+      if (recurrenceStart || recurrenceEnd || recurrenceHistory.records.length) {
+        errors.push("不重复 Task 不能填写周期开始、周期结束或周期完成记录");
+      }
+    } else if (recurrenceCadence) {
+      if (!recurrenceStart) errors.push("周期 Task 必须填写周期开始");
+      if (!recurrenceEnd) errors.push("周期 Task 必须填写周期结束");
+      if (recurrenceStart && recurrenceEnd && recurrenceStart > recurrenceEnd) {
+        errors.push("周期开始不能晚于周期结束");
+      }
+      if (
+        ddl &&
+        recurrenceStart &&
+        recurrenceEnd &&
+        (ddl < recurrenceStart || ddl > recurrenceEnd)
+      ) {
+        errors.push("周期 Task 的 DDL 必须位于周期起止日期内");
+      }
+      if (ddl && recurrenceStart && recurrenceEnd && recurrenceStart <= recurrenceEnd) {
+        var recurrenceConfig = {
+          ddl: ddl,
+          recurrenceCadence: recurrenceCadence,
+          recurrenceStart: recurrenceStart,
+          recurrenceEnd: recurrenceEnd,
+          recurrenceCompletions: []
+        };
+        var occurrences = dates.getRecurringOccurrences(recurrenceConfig);
+        var occurrenceDdls = new Set(
+          occurrences.map(function (occurrence) {
+            return occurrence.ddl;
+          })
+        );
+        if (!occurrences.length) errors.push("DDL 与周期范围无法形成周期节点");
+        recurrenceHistory.records.forEach(function (record) {
+          if (!occurrenceDdls.has(record.occurrenceDdl)) {
+            errors.push("周期完成记录中的 " + record.occurrenceDdl + " 不是该 Task 的周期 DDL");
+          }
+        });
+        recurrenceCompletions = normalizeRecurrenceHistory(
+          recurrenceConfig,
+          recurrenceHistory.records
+        );
+      }
+    }
 
     return {
       sourceRow: sourceRow,
@@ -259,6 +415,11 @@
         flowOrder: flowOrder || null,
         taskName: taskName,
         ddl: ddl,
+        recurrenceCadence: recurrenceCadence || "none",
+        recurrenceStart: recurrenceCadence === "none" ? "" : recurrenceStart,
+        recurrenceEnd: recurrenceCadence === "none" ? "" : recurrenceEnd,
+        recurrenceCompletions: recurrenceCompletions,
+        recurrenceSpecified: Boolean(raw.recurrenceSpecified),
         urgency: urgency || "",
         status: status || "pending",
         completedAt: status === "completed" ? completedAt : "",
@@ -345,6 +506,14 @@
         COLUMNS.forEach(function (column) {
           var columnIndex = columnIndexes[column[0]];
           raw[column[0]] = columnIndex === undefined ? "" : item.row[columnIndex];
+        });
+        raw.recurrenceSpecified = [
+          "recurrenceCadence",
+          "recurrenceStart",
+          "recurrenceEnd",
+          "recurrenceCompletions"
+        ].some(function (key) {
+          return columnIndexes[key] !== undefined;
         });
         return normalizeRow(raw, item.sourceRow);
       });
@@ -445,6 +614,23 @@
       .join("\n");
   }
 
+  function exportRecurrenceHistory(task) {
+    if (!dates.isRecurringTask(task)) return "";
+    var occurrenceMap = new Map(
+      dates.getRecurringOccurrences(task).map(function (occurrence) {
+        return [occurrence.periodKey, occurrence];
+      })
+    );
+    return (Array.isArray(task.recurrenceCompletions) ? task.recurrenceCompletions : [])
+      .map(function (record) {
+        var occurrence = occurrenceMap.get(record.periodKey);
+        if (!occurrence) return "";
+        return occurrence.ddl + "|" + (parseDate(record.completedAt) || occurrence.ddl);
+      })
+      .filter(Boolean)
+      .join("\n");
+  }
+
   function buildExportRows(data) {
     var groupMap = new Map(
       (Array.isArray(data && data.groups) ? data.groups : []).map(function (group) {
@@ -468,6 +654,10 @@
         flow ? task.flowOrder || "" : "",
         task.name,
         task.ddl,
+        recurrenceLabels[dates.recurrenceCadence(task)] || "不重复",
+        dates.isRecurringTask(task) ? task.recurrenceStart : "",
+        dates.isRecurringTask(task) ? task.recurrenceEnd : "",
+        exportRecurrenceHistory(task),
         urgencyLabels[task.urgency] || task.urgency || "",
         task.status === "completed" ? "已完成" : "未完成",
         task.status === "completed" ? task.completedAt || "" : "",
@@ -496,15 +686,18 @@
       ].concat(rows)
     );
     taskSheet["!merges"] = [
-      { s: { r: 0, c: 0 }, e: { r: 0, c: 15 } },
-      { s: { r: 1, c: 0 }, e: { r: 1, c: 15 } },
-      { s: { r: 2, c: 0 }, e: { r: 2, c: 15 } }
+      { s: { r: 0, c: 0 }, e: { r: 0, c: COLUMNS.length - 1 } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: COLUMNS.length - 1 } },
+      { s: { r: 2, c: 0 }, e: { r: 2, c: COLUMNS.length - 1 } }
     ];
     taskSheet["!cols"] = COLUMN_WIDTHS.map(function (width) {
       return { wch: width };
     });
     taskSheet["!autofilter"] = {
-      ref: "A4:P" + Math.max(4, rows.length + 4)
+      ref:
+        "A4:" +
+        XLSX.utils.encode_col(COLUMNS.length - 1) +
+        Math.max(4, rows.length + 4)
     };
     taskSheet["!freeze"] = { xSplit: 0, ySplit: 4 };
 
@@ -533,16 +726,29 @@
     XLSX.utils.book_append_sheet(workbook, guideSheet, "填写说明");
     workbook.Props = {
       Title: "Weekflow Task 当前数据",
-      Subject: "Weekflow v2.1 re-importable Task data",
+      Subject: "Weekflow v2.3 re-importable Task data",
       Author: "Wesley Yan",
       Comments: "与 Weekflow Task 导入模板结构一致，可再次批量导入。"
     };
     return workbook;
   }
 
-  function exportWorkbook(data, filename) {
-    XLSX.writeFile(buildWorkbook(data), filename || "Weekflow_Task当前数据.xlsx", {
-      compression: true
+  function buildXlsxPackage(data, ZipConstructor, outputType) {
+    if (!xlsxSafe || typeof xlsxSafe.buildWorkbookPackage !== "function") {
+      return Promise.reject(new Error("Excel 安全打包组件未加载。"));
+    }
+    return xlsxSafe.buildWorkbookPackage(
+      buildWorkbook(data),
+      XLSX,
+      ZipConstructor,
+      outputType
+    );
+  }
+
+  function exportWorkbook(data, ZipConstructor, filename) {
+    var outputName = filename || "Weekflow_Task当前数据.xlsx";
+    return buildXlsxPackage(data, ZipConstructor, "blob").then(function (blob) {
+      return { filename: outputName, blob: blob };
     });
   }
 
@@ -557,6 +763,7 @@
     parseWorkbook: parseWorkbook,
     buildExportRows: buildExportRows,
     buildWorkbook: buildWorkbook,
+    buildXlsxPackage: buildXlsxPackage,
     exportWorkbook: exportWorkbook
   };
 });

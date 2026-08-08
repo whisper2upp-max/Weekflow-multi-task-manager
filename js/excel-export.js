@@ -1,4 +1,4 @@
-/* 使用本地 JSZip 生成带样式、冻结窗格和精确周时间轴的 OOXML .xlsx 文件。 */
+/* 使用本地 JSZip 生成带样式、开放视图和精确周时间轴的 OOXML .xlsx 文件。 */
 (function (root, factory) {
   var deps = {
     dates:
@@ -37,6 +37,9 @@
     "交付物",
     "DDL",
     "DDL 对应周五",
+    "周期",
+    "周期开始",
+    "周期结束",
     "紧急程度",
     "完成状态",
     "完成日期",
@@ -44,9 +47,10 @@
     "进度记录",
     "相关资料"
   ];
-  var FIXED_WIDTHS = [18, 22, 10, 34, 16, 18, 28, 13, 15, 11, 12, 13, 11, 48, 60];
+  var FIXED_WIDTHS = [18, 22, 10, 34, 16, 18, 28, 13, 15, 12, 13, 13, 11, 12, 13, 11, 48, 60];
   var XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
   var urgencyLabels = { high: "高", medium: "中", low: "低" };
+  var recurrenceLabels = { none: "不重复", weekly: "每周", monthly: "每月" };
 
   function formatMaterials(materials) {
     return (Array.isArray(materials) ? materials : [])
@@ -64,24 +68,28 @@
   }
 
   function timelineWeeks(tasks, now) {
-    var valid = (Array.isArray(tasks) ? tasks : []).filter(function (task) {
-      return dates.parseISODate(task.ddl);
+    var ddls = [];
+    (Array.isArray(tasks) ? tasks : []).forEach(function (task) {
+      if (dates.isRecurringTask(task)) {
+        dates.getRecurringOccurrences(task).forEach(function (occurrence) {
+          ddls.push(occurrence.ddl);
+        });
+      } else if (dates.parseISODate(task.ddl)) {
+        ddls.push(task.ddl);
+      }
     });
-    if (!valid.length) return [dates.getWeekFriday(now || new Date())];
-    var ddls = valid
-      .map(function (task) {
-        return task.ddl;
-      })
-      .sort();
+    if (!ddls.length) return [dates.getWeekFriday(now || new Date())];
+    ddls.sort();
     return dates.buildWeekRange(ddls[0], ddls[ddls.length - 1], 600);
   }
 
-  function buildOverallRows(data, now) {
+  function buildOverallRows(data, now, options) {
     var summary = stats.summarize(data.tasks, now);
     var groupRows = stats.summarizeByGroup(data.groups, data.tasks, now);
     var flowRows = stats.summarizeByFlow(data.flows || [], data.groups, data.tasks, now);
+    var title = options && options.title ? String(options.title) : "Task 整体看板";
     var rows = [
-      ["Task 整体看板"],
+      [title],
       ["导出时间", new Date(now || Date.now()).toLocaleString("zh-CN")],
       [],
       ["总体统计"],
@@ -180,6 +188,16 @@
       );
       groupTasks.forEach(function (task) {
         var taskFriday = dates.getWeekFriday(task.ddl);
+        var recurring = dates.isRecurringTask(task);
+        var occurrences = recurring
+          ? dates.getRecurringOccurrences(task)
+          : [{ ddl: task.ddl, periodKey: "" }];
+        var occurrencesByFriday = new Map();
+        occurrences.forEach(function (occurrence) {
+          var friday = dates.getWeekFriday(occurrence.ddl);
+          if (!occurrencesByFriday.has(friday)) occurrencesByFriday.set(friday, []);
+          occurrencesByFriday.get(friday).push(occurrence);
+        });
         var flow = task.flowId ? flowMap.get(task.flowId) : null;
         var row = [
           groupMap.get(task.groupId) ? group.name : "未知分组",
@@ -191,6 +209,9 @@
           task.deliverable,
           task.ddl,
           taskFriday,
+          recurrenceLabels[dates.recurrenceCadence(task)] || "不重复",
+          recurring ? task.recurrenceStart : "",
+          recurring ? task.recurrenceEnd : "",
           urgencyLabels[task.urgency] || task.urgency,
           task.status === "completed" ? "已完成" : "未完成",
           task.completedAt || "",
@@ -203,7 +224,17 @@
           )
         ];
         weeks.forEach(function (friday) {
-          row.push(friday === taskFriday ? "● " + task.name : "");
+          row.push(
+            (occurrencesByFriday.get(friday) || [])
+              .map(function (occurrence) {
+                var completed = recurring
+                  ? Boolean(dates.getRecurringCompletion(task, occurrence))
+                  : task.status === "completed";
+                var overdue = !completed && occurrence.ddl < today;
+                return (completed ? "✓" : overdue ? "!" : "●") + " " + task.name;
+              })
+              .join("\n")
+          );
         });
         rows.push(row);
         orderedTasks.push(task);
@@ -387,8 +418,8 @@
     );
   }
 
-  function overallSheetXml(data, now) {
-    var rows = buildOverallRows(data, now);
+  function overallSheetXml(data, now, options) {
+    var rows = buildOverallRows(data, now, options);
     var styles = groupStyleMap(data);
     var sortedGroups = data.groups.slice().sort(function (a, b) {
       return Number(a.order || 0) - Number(b.order || 0);
@@ -453,8 +484,7 @@
       '<dimension ref="A1:G' +
       rows.length +
       '"/><sheetViews><sheetView tabSelected="1" workbookViewId="0">' +
-      '<pane ySplit="9" topLeftCell="A10" activePane="bottomLeft" state="frozen"/>' +
-      '<selection pane="bottomLeft" activeCell="A10" sqref="A10"/></sheetView></sheetViews>' +
+      '<selection activeCell="A1" sqref="A1"/></sheetView></sheetViews>' +
       '<sheetFormatPr defaultRowHeight="15"/>' +
       columnsXml([28, 28, 16, 16, 16, 16, 14]) +
       "<sheetData>" +
@@ -484,7 +514,8 @@
         var overdue = task ? dates.isOverdue(task, today) : false;
         var cells = row.map(function (value, col) {
           var style;
-          var dateColumn = rowIndex > 0 && (col === 7 || col === 8 || col === 11);
+          var dateColumn =
+            rowIndex > 0 && [7, 8, 10, 11, 14].includes(col);
           if (rowIndex === 0) style = 2;
           else if (col === 0 && task) style = styles.get(task.groupId) || 1;
           else if (dateColumn) style = overdue ? 8 : 7;
@@ -497,7 +528,6 @@
       .join("");
     var lastColumn = columnName(timeline.rows[0].length - 1);
     var lastRow = timeline.rows.length;
-    var frozenColumn = columnName(FIXED_HEADERS.length);
     var widths = FIXED_WIDTHS.concat(
       timeline.weeks.map(function () {
         return 15;
@@ -510,22 +540,7 @@
       lastColumn +
       lastRow +
       '"/><sheetViews><sheetView workbookViewId="0">' +
-      '<pane xSplit="' +
-      FIXED_HEADERS.length +
-      '" ySplit="1" topLeftCell="' +
-      frozenColumn +
-      '2" activePane="bottomRight" state="frozen"/>' +
-      '<selection pane="topRight" activeCell="' +
-      frozenColumn +
-      '1" sqref="' +
-      frozenColumn +
-      '1"/>' +
-      '<selection pane="bottomLeft" activeCell="A2" sqref="A2"/>' +
-      '<selection pane="bottomRight" activeCell="' +
-      frozenColumn +
-      '2" sqref="' +
-      frozenColumn +
-      '2"/>' +
+      '<selection activeCell="A1" sqref="A1"/>' +
       "</sheetView></sheetViews><sheetFormatPr defaultRowHeight=\"15\"/>" +
       columnsXml(widths) +
       "<sheetData>" +
@@ -595,14 +610,15 @@
     );
   }
 
-  function corePropertiesXml(now) {
+  function corePropertiesXml(now, options) {
     var created = (now instanceof Date ? now : new Date()).toISOString();
+    var title = options && options.title ? String(options.title) : "Weekflow Task 看板";
     return (
       '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
       '<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" ' +
       'xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" ' +
       'xmlns:dcmitype="http://purl.org/dc/dcmitype/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">' +
-      "<dc:title>Weekflow Task 看板</dc:title><dc:creator>Wesley Yan</dc:creator>" +
+      "<dc:title>" + xmlEscape(title) + "</dc:title><dc:creator>Wesley Yan</dc:creator>" +
       "<cp:lastModifiedBy>Wesley Yan</cp:lastModifiedBy>" +
       '<dcterms:created xsi:type="dcterms:W3CDTF">' +
       created +
@@ -626,7 +642,7 @@
     );
   }
 
-  function buildXlsxPackage(data, ZipConstructor, now, outputType) {
+  function buildXlsxPackage(data, ZipConstructor, now, outputType, options) {
     if (typeof ZipConstructor !== "function") {
       return Promise.reject(new Error("Excel 压缩组件未加载。"));
     }
@@ -634,12 +650,12 @@
     var zip = new ZipConstructor();
     zip.file("[Content_Types].xml", contentTypesXml());
     zip.file("_rels/.rels", packageRelationshipsXml());
-    zip.file("docProps/core.xml", corePropertiesXml(date));
+    zip.file("docProps/core.xml", corePropertiesXml(date, options));
     zip.file("docProps/app.xml", appPropertiesXml());
     zip.file("xl/workbook.xml", workbookXml(data, date));
     zip.file("xl/_rels/workbook.xml.rels", workbookRelationshipsXml());
     zip.file("xl/styles.xml", styleSheetXml(data));
-    zip.file("xl/worksheets/sheet1.xml", overallSheetXml(data, date));
+    zip.file("xl/worksheets/sheet1.xml", overallSheetXml(data, date, options));
     zip.file("xl/worksheets/sheet2.xml", timelineSheetXml(data, date));
     return zip.generateAsync({
       type: outputType || "blob",
@@ -657,6 +673,121 @@
     });
   }
 
+  function buildScopedTaskData(data, field, value) {
+    if (!["managedObject", "reportTo"].includes(field)) {
+      throw new Error("不支持的人员汇总维度。");
+    }
+    var expected = String(value || "").trim();
+    var tasks = (data.tasks || []).filter(function (task) {
+      return String(task[field] || "").trim() === expected;
+    });
+    var taskIds = new Set(
+      tasks.map(function (task) {
+        return task.id;
+      })
+    );
+    var groupIds = new Set(
+      tasks.map(function (task) {
+        return task.groupId;
+      })
+    );
+    var flowIds = new Set(
+      tasks
+        .map(function (task) {
+          return task.flowId;
+        })
+        .filter(Boolean)
+    );
+    return {
+      version: data.version,
+      groups: (data.groups || []).filter(function (group) {
+        return groupIds.has(group.id);
+      }),
+      flows: (data.flows || []).filter(function (flow) {
+        return flowIds.has(flow.id);
+      }),
+      tasks: tasks,
+      materials: (data.materials || []).filter(function (material) {
+        return (material.taskIds || []).some(function (taskId) {
+          return taskIds.has(taskId);
+        });
+      }),
+      updatedAt: data.updatedAt
+    };
+  }
+
+  function safeFilenamePart(value) {
+    return (
+      String(value || "未填写")
+        .trim()
+        .replace(/[\\/:*?"<>|\u0000-\u001F]/g, "_")
+        .replace(/\s+/g, "_")
+        .replace(/_+/g, "_")
+        .replace(/^[._]+|[._]+$/g, "")
+        .slice(0, 60) || "未填写"
+    );
+  }
+
+  function taskStatusConfig(config) {
+    var source = config || {};
+    var field = source.field;
+    if (!["managedObject", "reportTo"].includes(field)) {
+      throw new Error("不支持的人员汇总维度。");
+    }
+    var fieldLabel = field === "managedObject" ? "管理对象" : "汇报对象";
+    var value = String(source.value || "").trim();
+    var label = String(source.label || value || "未填写" + fieldLabel).trim();
+    return {
+      field: field,
+      fieldLabel: fieldLabel,
+      value: value,
+      label: label,
+      title: fieldLabel + "：" + label + " · Task 状态"
+    };
+  }
+
+  function buildTaskStatusXlsxPackage(
+    data,
+    ZipConstructor,
+    config,
+    now,
+    outputType
+  ) {
+    var scope = taskStatusConfig(config);
+    var scopedData = buildScopedTaskData(data, scope.field, scope.value);
+    if (!scopedData.tasks.length) {
+      return Promise.reject(new Error(scope.fieldLabel + "“" + scope.label + "”没有 Task。"));
+    }
+    return buildXlsxPackage(
+      scopedData,
+      ZipConstructor,
+      now,
+      outputType,
+      { title: scope.title }
+    );
+  }
+
+  function exportTaskStatusWorkbook(data, ZipConstructor, config, now) {
+    var date = now instanceof Date ? now : new Date();
+    var scope = taskStatusConfig(config);
+    var filename =
+      scope.fieldLabel +
+      "_" +
+      safeFilenamePart(scope.label) +
+      "_Task状态_" +
+      dates.dateTimeStamp(date) +
+      ".xlsx";
+    return buildTaskStatusXlsxPackage(
+      data,
+      ZipConstructor,
+      scope,
+      date,
+      "blob"
+    ).then(function (blob) {
+      return { filename: filename, blob: blob, title: scope.title };
+    });
+  }
+
   return {
     FIXED_HEADERS: FIXED_HEADERS.slice(),
     formatMaterials: formatMaterials,
@@ -665,6 +796,9 @@
     buildTimelineRows: buildTimelineRows,
     buildXlsxPackage: buildXlsxPackage,
     exportWorkbook: exportWorkbook,
+    buildScopedTaskData: buildScopedTaskData,
+    buildTaskStatusXlsxPackage: buildTaskStatusXlsxPackage,
+    exportTaskStatusWorkbook: exportTaskStatusWorkbook,
     _test: {
       xmlEscape: xmlEscape,
       columnName: columnName,
@@ -672,7 +806,8 @@
       workbookXml: workbookXml,
       styleSheetXml: styleSheetXml,
       overallSheetXml: overallSheetXml,
-      timelineSheetXml: timelineSheetXml
+      timelineSheetXml: timelineSheetXml,
+      safeFilenamePart: safeFilenamePart
     }
   };
 });
