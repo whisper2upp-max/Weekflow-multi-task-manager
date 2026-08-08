@@ -19,7 +19,7 @@
 ### 优化与修复
 
 - 修复点击任意 Task 完成框后时间轴跳回首个分组的问题；重绘前后锁定被操作 Task 行、横向滚动和页面位置。
-- 修复 Windows 显示缩放触发 1280px 响应式断点后，时间轴“新建分组 / Flow / Task”和资料库操作按钮组错误停留在左侧的问题；两组操作在桌面宽度下统一保持靠右。
+- 修复 Windows 显示缩放触发 1280px 响应式断点后，时间轴“新建分组 / Flow / Task”错误停留在中部、资料库操作按钮另起一整行的问题；新建按钮保持页头最右，资料库标题与整组操作保持同一行且操作区靠右。
 - 修复较早开始的周期 Task 在完成本期后，此前标签仍显示逾期的问题；旧的间断完成记录会在启动时自动补齐。
 - 可回导 Task 当前数据和资料库下载统一移除底层库无实际用途的 `macroEnabled`/`ThisWorkbook` 标记，并显式写入 `DocSecurity=0`，避免 Windows Excel 误判为需要启用内容。
 - 数据 v3 将 `recurrenceCadence、recurrenceStart、recurrenceEnd、recurrenceCompletions` 保存在 Task 内；JSON 备份恢复会校验周期范围和完成历史。

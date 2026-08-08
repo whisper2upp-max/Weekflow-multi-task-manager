@@ -24,7 +24,7 @@ This is the clean release build.
 - Re-importable Task data and materials-library downloads are repackaged without SheetJS's unused macro-enabled content marker or workbook code name, and explicitly set document security to zero for Windows Excel compatibility.
 - Expanding or collapsing an individual Group/Flow preserves the operated row, timeline horizontal position, and page scroll position.
 - Completing or reopening any Task now preserves the operated Task row, timeline horizontal position, and page scroll position instead of jumping to the first Group.
-- At Windows display-scaling breakpoints, the timeline create-actions and materials-library action group remain right-aligned without horizontal page overflow.
+- At Windows display-scaling breakpoints, timeline create-actions stay at the far right while the materials title and action group remain on one row without horizontal page overflow.
 - Selecting or clearing individual materials updates selection controls in place without rebuilding the table or resetting its scroll position.
 - The materials library supports Group → Flow → Task cascading relations, two-way Task linkage, natural-week recent-use filtering, supplement/overwrite import, and double-confirm bulk deletion.
 - Timeline filters share one high-contrast popover style and auto-close when another menu or blank page area is clicked.
