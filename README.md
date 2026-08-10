@@ -1,6 +1,6 @@
-# Weekflow v2.3 · Task management
+# Weekflow v2.4 · Task management
 
-Weekflow 是一个桌面端优先、无需后端的本地 Task 管理程序。它以自然周时间轴为主视图，通过“分组 → 可选 Flow → 有序 Task”组织工作，并提供整体看板、统一资料库、Excel 批量录入与本地备份。
+Weekflow 是一个桌面端优先、无需后端的本地 Task 管理程序。它以自然周总览和单周日粒度下钻组织时间，通过“分组 → 可选 Flow → 有序 Task”组织工作，并提供整体看板、统一资料库、Excel 批量录入与本地备份。
 
 程序由原生 HTML、CSS 和 JavaScript 构建，不需要安装前端依赖。本正式版从空白数据启动，不包含示例分组、Flow、Task、资料或恢复示例数据入口。
 
@@ -38,8 +38,12 @@ http://localhost:8080/Weekflow.html
 
 ![时间轴看板](readme配图/时间轴看板.png)
 
-- 自然周按周一至周日计算，周列表头显示该周周五；周末 DDL 映射到同一自然周。
-- 支持前后浏览、回到本周和全部范围；全部范围最多生成 600 周。
+- 主界面名称为 `Task by Week`。自然周按周一至周日计算，周列表头显示该周周五；周末 DDL 映射到同一自然周。
+- `Task by Week` 支持前后浏览、回到本周和全部范围；全部范围最多生成 600 周。
+- 双击任意周日期框进入该周的 `Task by Day`。日视图只显示 DDL 位于该周的 Task，并按周一至周日显示日期、星期和精确 DDL 落点。
+- 周期 Task 会按所选周实际生成的周期 DDL 参与日视图筛选，仍然只保存和统计为一条 Task；其他周的 Task 不显示。
+- `Task by Day` 保留分组、Flow、Task、筛选、编辑、完成以及展开折叠功能，不显示“回到本周”和“全部范围”，通过“返回 Task by Week”回到周时间轴。
+- 从日视图返回会恢复进入前的周时间轴滚动位置；两个视图在完成 Task 或展开折叠后都保持被操作行位置，不会跳回首个分组。
 - 分组和 Flow 均显示完成率环、状态堆叠条、精确数量与展开/折叠控制。
 - 支持一键展开或折叠全部分组与 Flow，折叠状态会保存。
 - 时间轴上方采用紧凑命令栏；分组、Flow、状态和紧急程度使用统一的高对比筛选弹层，点击其他筛选或页面空白处会自动收起。
@@ -107,12 +111,15 @@ http://localhost:8080/Weekflow.html
 正式版业务数据保存在当前浏览器、当前页面来源的 `localStorage`：
 
 ```text
-weekflow-v2.3:data:v3
+weekflow-v2.4:data:v3
 ```
 
 相关迁移与安全备份键：
 
 ```text
+weekflow-v2.4:data:v2
+weekflow-v2.4:data:v1
+weekflow-v2.3:data:v3
 weekflow-v2.3:data:v2
 weekflow-v2.3:data:v1
 weekflow-v2.2:data:v3
@@ -128,15 +135,15 @@ weekflow-v1.1:data:v2
 weekflow-v1.1:data:v1
 weekflow-v1.0:data:v2
 weekflow-v1.0:data:v1
-weekflow-v2.3:pre-import-backup
-weekflow-v2.3:corrupt-backup
+weekflow-v2.4:pre-import-backup
+weekflow-v2.4:corrupt-backup
 ```
 
 - 当前数据结构版本为 `version: 3`，顶层包含 `groups、flows、tasks、materials`。周期配置与按期完成记录直接保存在对应 Task 的 `recurrenceCadence、recurrenceStart、recurrenceEnd、recurrenceCompletions` 字段中，因此多个周期 DDL 不会增加 Task 数量。
 - 旧 v3 数据仍可读取；旧式顶层周期规则和 Flow 模板字段会被安全忽略，既有 Task 不会被删除。
 - v1/v2 数据会自动迁移；旧 Task 内的说明文档与交付物链接会转成统一资料并保留 Task 关联。
 - 每次业务修改都会立即保存。若主数据损坏，原始内容会尝试写入 `corrupt-backup`。
-- 首次打开时会优先迁移同一页面来源下的 Weekflow v2.2 正式数据，也兼容 v2.1/v2.0/v1.1/v1.0；旧键保留用于回退。
+- 首次打开时会优先迁移同一页面来源下的 Weekflow v2.3 正式数据，也兼容 v2.2/v2.1/v2.0/v1.1/v1.0；旧键保留用于回退。
 - 清除网站数据、使用无痕窗口、更换浏览器或启动地址，会改变可见数据。
 
 ## 数据备份与恢复
@@ -232,18 +239,18 @@ Weekflow_资料库_YYYYMMDD_HHmm.xlsx
 
 - 开发团队：Wesley Yan
 - 首个正式版本（v1.0）：2026年7月30日
-- 最新版本（v2.3）更新时间：2026年8月8日
+- 最新版本（v2.4）更新时间：2026年8月10日
 
 ## 程序文件
 
-- 本文件夹是 Weekflow v2.3 空白正式发布版。
+- 本文件夹是 Weekflow v2.4 空白正式发布版。
 - 程序需要保留整个文件夹结构，不能只移动 `Weekflow.html`；页面依赖 `css、js、templates、vendor` 子目录。
-- 如果收到 `Weekflow v2.3.zip`，请完整解压后再使用。
+- 如果收到 `Weekflow v2.4.zip`，请完整解压后再使用。
 
 ## 文件结构
 
 ```text
-Weekflow v2.3/
+Weekflow v2.4/
 ├── Weekflow.html
 ├── css/styles.css
 ├── js/

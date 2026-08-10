@@ -26,8 +26,11 @@
       urgency: "all",
       overdueOnly: false
     },
+    timelineGranularity: "week",
     timelineMode: "window",
     timelineAnchor: dates.getWeekFriday(new Date()),
+    timelineDayAnchor: dates.getWeekFriday(new Date()),
+    weekTimelineViewport: null,
     windowPastWeeks: 4,
     windowFutureWeeks: 11,
     dashboardModule: null,
@@ -102,7 +105,12 @@
       "header-actions",
       "header-pending",
       "header-overdue",
+      "timeline-heading",
+      "timeline-subtitle",
+      "timeline-current-label",
       "range-label",
+      "timeline-week-range-controls",
+      "timeline-week-return",
       "visible-result-count",
       "timeline-scroll",
       "timeline-board",
@@ -431,6 +439,14 @@
 
     var viewButton = event.target.closest("[data-view]");
     if (viewButton) {
+      if (
+        viewButton.dataset.view === "timeline" &&
+        ui.view === "timeline" &&
+        ui.timelineGranularity === "day"
+      ) {
+        returnToWeekTimeline();
+        return;
+      }
       switchView(viewButton.dataset.view);
       return;
     }
@@ -497,6 +513,7 @@
       },
       "timeline-today": returnToCurrentWeek,
       "timeline-all": showAllTaskRange,
+      "timeline-week-return": returnToWeekTimeline,
       "groups-expand-all": function () {
         setAllGroupsCollapsed(false);
       },
@@ -974,9 +991,36 @@
     return materialTools.forTask(data.materials, taskId);
   }
 
+  function getTaskTimelineOccurrences(task) {
+    return dates.isRecurringTask(task)
+      ? dates.getRecurringOccurrences(task)
+      : [{ ddl: dates.formatDate(task && task.ddl), periodKey: "" }];
+  }
+
+  function getTimelineDays() {
+    var monday = dates.startOfWeek(ui.timelineDayAnchor || ui.timelineAnchor);
+    if (!monday) return [];
+    return Array.from({ length: 7 }, function (_item, index) {
+      return dates.addDays(monday, index);
+    });
+  }
+
+  function scopeTasksToTimelineGranularity(tasks) {
+    if (ui.timelineGranularity !== "day") return tasks;
+    var days = getTimelineDays();
+    var start = days[0];
+    var end = days[days.length - 1];
+    if (!start || !end) return [];
+    return tasks.filter(function (task) {
+      return getTaskTimelineOccurrences(task).some(function (occurrence) {
+        return occurrence.ddl >= start && occurrence.ddl <= end;
+      });
+    });
+  }
+
   function getVisibleTasks() {
     var visible = stats.filterTasks(data.tasks, ui.filters, new Date(), data.flows);
-    if (!ui.filters.search) return visible;
+    if (!ui.filters.search) return scopeTasksToTimelineGranularity(visible);
     var materialTaskIds = new Set();
     var needle = utils.normalizeText(ui.filters.search);
     data.materials.forEach(function (material) {
@@ -1003,7 +1047,7 @@
         visibleIds.add(task.id);
       }
     });
-    return stats.sortTasks(visible, new Date());
+    return scopeTasksToTimelineGranularity(stats.sortTasks(visible, new Date()));
   }
 
   function getTimelineWeeks() {
@@ -1015,15 +1059,39 @@
     return dates.buildWeekRange(start, end);
   }
 
+  function getTimelineColumns() {
+    return ui.timelineGranularity === "day" ? getTimelineDays() : getTimelineWeeks();
+  }
+
+  function syncTimelineGranularityChrome(columns) {
+    var dayMode = ui.timelineGranularity === "day";
+    dom["timeline-heading"].textContent = dayMode ? "Task by Day" : "Task by Week";
+    dom["timeline-subtitle"].textContent = dayMode
+      ? "周一至周日 · DDL 精确到天"
+      : "周一至周日 · 表头显示周五 · 双击周表头查看每天";
+    dom["timeline-current-label"].textContent = dayMode ? "今天" : "本周";
+    dom["timeline-week-range-controls"].hidden = dayMode;
+    dom["timeline-week-return"].hidden = !dayMode;
+    var rangeText = "";
+    if (columns.length) {
+      rangeText = dayMode
+        ? columns[0] + " — " + columns[columns.length - 1] + " · 周一至周日"
+        : columns[0] + " — " + columns[columns.length - 1] + " · " + columns.length + " 周";
+    }
+    dom["range-label"].textContent = rangeText;
+    dom["range-label"].title = rangeText;
+  }
+
   function renderTimeline() {
     var visibleTasks = getVisibleTasks();
-    var weeks = getTimelineWeeks();
+    var columns = getTimelineColumns();
+    var dayMode = ui.timelineGranularity === "day";
     var board = utils.clear(dom["timeline-board"]);
-    board.style.setProperty("--week-count", weeks.length);
+    board.classList.toggle("is-day-view", dayMode);
+    board.style.setProperty("--week-count", columns.length);
+    board.dataset.timelineGranularity = dayMode ? "day" : "week";
+    syncTimelineGranularityChrome(columns);
     dom["visible-result-count"].textContent = visibleTasks.length + " 条可见 Task";
-    dom["range-label"].textContent = weeks.length
-      ? weeks[0] + " — " + weeks[weeks.length - 1] + " · " + weeks.length + " 周"
-      : "";
 
     if (!data.groups.length) {
       board.appendChild(
@@ -1032,6 +1100,20 @@
           "Task 必须归属分组。建立分组后即可开始安排周时间轴。",
           "新建分组",
           openNewGroup
+        )
+      );
+      return;
+    }
+    if (dayMode && visibleTasks.length === 0) {
+      board.appendChild(createTimelineHeader(columns));
+      board.appendChild(
+        createEmptyState(
+          hasActiveFilters() ? "该周没有符合筛选条件的 Task" : "该周没有 Task DDL",
+          hasActiveFilters()
+            ? "清空筛选后可继续查看该周，或返回 Task by Week 选择其他周。"
+            : "返回 Task by Week 后，可双击其他周的日期框继续查看。",
+          hasActiveFilters() ? "清空筛选" : "返回 Task by Week",
+          hasActiveFilters() ? clearFilters : returnToWeekTimeline
         )
       );
       return;
@@ -1048,14 +1130,15 @@
       return;
     }
 
-    board.appendChild(createTimelineHeader(weeks));
+    board.appendChild(createTimelineHeader(columns));
     var visibleIds = new Set(
       visibleTasks.map(function (task) {
         return task.id;
       })
     );
+    var scopedTimeline = hasActiveFilters() || dayMode;
     var groupsToShow = getSortedGroups().filter(function (group) {
-      if (!hasActiveFilters()) return true;
+      if (!scopedTimeline) return true;
       return visibleTasks.some(function (task) {
         return task.groupId === group.id;
       });
@@ -1066,7 +1149,7 @@
       });
       var groupFlows = getSortedFlows(group.id).filter(function (flow) {
         return (
-          !hasActiveFilters() ||
+          !scopedTimeline ||
           groupTasks.some(function (task) {
             return task.flowId === flow.id;
           })
@@ -1078,7 +1161,7 @@
         }),
         new Date()
       );
-      board.appendChild(createGroupRow(group, groupTasks, weeks));
+      board.appendChild(createGroupRow(group, groupTasks, columns));
       if (!group.collapsed) {
         groupFlows.forEach(function (flow) {
           var flowTasks = stats.sortFlowTasks(
@@ -1087,41 +1170,78 @@
             }),
             new Date()
           );
-          board.appendChild(createFlowRow(flow, group, flowTasks, weeks));
+          board.appendChild(createFlowRow(flow, group, flowTasks, columns));
           if (!flow.collapsed) {
-            if (!flowTasks.length) board.appendChild(createEmptyFlowRow(flow, group, weeks));
+            if (!flowTasks.length) board.appendChild(createEmptyFlowRow(flow, group, columns));
             flowTasks.forEach(function (task) {
-              board.appendChild(createTaskRow(task, group, weeks, flow, task.flowOrder));
+              board.appendChild(createTaskRow(task, group, columns, flow, task.flowOrder));
             });
           }
         });
         standaloneTasks.forEach(function (task) {
-          board.appendChild(createTaskRow(task, group, weeks, null, null));
+          board.appendChild(createTaskRow(task, group, columns, null, null));
         });
         if (!groupTasks.length && !groupFlows.length) {
-          board.appendChild(createEmptyGroupRow(group, weeks));
+          board.appendChild(createEmptyGroupRow(group, columns));
         }
       }
     });
   }
 
-  function createTimelineHeader(weeks) {
+  function weekdayLabel(value) {
+    var date = dates.parseISODate(value);
+    return date
+      ? ["周日", "周一", "周二", "周三", "周四", "周五", "周六"][date.getDay()]
+      : "";
+  }
+
+  function createTimelineHeader(columns) {
     var row = utils.el("div", "timeline-header");
     var corner = utils.el("div", "timeline-corner");
     ["Task / DDL", "紧急", "进度记录", "相关资料", "编辑"].forEach(function (label) {
       corner.appendChild(utils.el("span", "", label));
     });
     row.appendChild(corner);
+    if (ui.timelineGranularity === "day") {
+      var today = dates.todayISO();
+      columns.forEach(function (day) {
+        var head = utils.el("div", "week-head day-head" + (day === today ? " is-current" : ""));
+        head.dataset.day = day;
+        head.appendChild(utils.el("small", "week-range", day.slice(0, 4) + " 年"));
+        head.appendChild(utils.el("strong", "week-date", day.slice(5).replace("-", "/")));
+        head.appendChild(utils.el("span", "week-year", weekdayLabel(day)));
+        if (day === today) {
+          head.appendChild(utils.el("b", "week-current-badge", "今天"));
+        }
+        row.appendChild(head);
+      });
+      return row;
+    }
     var currentFriday = dates.getWeekFriday(new Date());
-    weeks.forEach(function (friday) {
-      var head = utils.el("div", "week-head" + (friday === currentFriday ? " is-current" : ""));
+    columns.forEach(function (friday) {
+      var head = utils.el(
+        "div",
+        "week-head is-drillable" + (friday === currentFriday ? " is-current" : "")
+      );
       head.dataset.week = friday;
+      head.tabIndex = 0;
+      head.setAttribute("role", "button");
+      head.setAttribute("aria-label", "双击查看 " + dates.friendlyWeekLabel(friday) + " 的日时间轴");
+      head.title = "双击进入该周的 Task by Day";
       head.appendChild(utils.el("small", "week-range", dates.friendlyWeekLabel(friday)));
       head.appendChild(utils.el("strong", "week-date", friday.slice(5).replace("-", "/")));
       head.appendChild(utils.el("span", "week-year", friday.slice(0, 4) + " · 周五"));
       if (friday === currentFriday) {
         head.appendChild(utils.el("b", "week-current-badge", "本周"));
       }
+      head.addEventListener("dblclick", function () {
+        openDayTimeline(friday);
+      });
+      head.addEventListener("keydown", function (event) {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        openDayTimeline(friday);
+      });
       row.appendChild(head);
     });
     return row;
@@ -1143,7 +1263,13 @@
     node.style.setProperty("--flow-medium", utils.rgba(flow.color, 0.16));
   }
 
-  function createGroupRow(group, groupTasks, weeks) {
+  function isCurrentTimelineColumn(column) {
+    return ui.timelineGranularity === "day"
+      ? column === dates.todayISO()
+      : column === dates.getWeekFriday(new Date());
+  }
+
+  function createGroupRow(group, groupTasks, columns) {
     var summary = stats.summarize(groupTasks, new Date());
     var row = utils.el("div", "group-row" + (group.collapsed ? " is-collapsed" : ""));
     row.dataset.groupId = group.id;
@@ -1197,16 +1323,15 @@
     left.append(collapse, emblem, identity, ring, stackPanel, edit);
     row.appendChild(left);
 
-    var currentFriday = dates.getWeekFriday(new Date());
-    weeks.forEach(function (friday) {
+    columns.forEach(function (column) {
       row.appendChild(
-        utils.el("div", "group-week-cell" + (friday === currentFriday ? " is-current" : ""))
+        utils.el("div", "group-week-cell" + (isCurrentTimelineColumn(column) ? " is-current" : ""))
       );
     });
     return row;
   }
 
-  function createFlowRow(flow, group, flowTasks, weeks) {
+  function createFlowRow(flow, group, flowTasks, columns) {
     var summary = stats.summarize(flowTasks, new Date());
     var row = utils.el("div", "flow-row" + (flow.collapsed ? " is-collapsed" : ""));
     row.dataset.flowId = flow.id;
@@ -1263,10 +1388,9 @@
     left.append(hierarchy, collapse, emblem, identity, ring, stackPanel, edit);
     row.appendChild(left);
 
-    var currentFriday = dates.getWeekFriday(new Date());
-    weeks.forEach(function (friday) {
+    columns.forEach(function (column) {
       row.appendChild(
-        utils.el("div", "flow-week-cell" + (friday === currentFriday ? " is-current" : ""))
+        utils.el("div", "flow-week-cell" + (isCurrentTimelineColumn(column) ? " is-current" : ""))
       );
     });
     return row;
@@ -1282,7 +1406,7 @@
     return total > 0 ? Math.max(0, Math.min(100, (Number(value || 0) / total) * 100)) : 0;
   }
 
-  function createEmptyGroupRow(group, weeks) {
+  function createEmptyGroupRow(group, columns) {
     var row = utils.el("div", "task-row");
     applyGroupVariables(row, group);
     var info = utils.el("div", "task-info");
@@ -1290,16 +1414,15 @@
     message.appendChild(utils.el("span", "task-meta", "该分组还没有 Task"));
     info.appendChild(message);
     row.appendChild(info);
-    var currentFriday = dates.getWeekFriday(new Date());
-    weeks.forEach(function (friday) {
+    columns.forEach(function (column) {
       row.appendChild(
-        utils.el("div", "timeline-cell" + (friday === currentFriday ? " is-current" : ""))
+        utils.el("div", "timeline-cell" + (isCurrentTimelineColumn(column) ? " is-current" : ""))
       );
     });
     return row;
   }
 
-  function createEmptyFlowRow(flow, group, weeks) {
+  function createEmptyFlowRow(flow, group, columns) {
     var row = utils.el("div", "task-row is-flow-task is-empty-flow");
     applyGroupVariables(row, group);
     applyFlowVariables(row, flow);
@@ -1310,16 +1433,15 @@
     );
     info.appendChild(message);
     row.appendChild(info);
-    var currentFriday = dates.getWeekFriday(new Date());
-    weeks.forEach(function (friday) {
+    columns.forEach(function (column) {
       row.appendChild(
-        utils.el("div", "timeline-cell" + (friday === currentFriday ? " is-current" : ""))
+        utils.el("div", "timeline-cell" + (isCurrentTimelineColumn(column) ? " is-current" : ""))
       );
     });
     return row;
   }
 
-  function createTaskRow(task, group, weeks, flow, stepNumber) {
+  function createTaskRow(task, group, columns, flow, stepNumber) {
     var now = new Date();
     var today = dates.todayISO(now);
     var periodState = dates.getTaskPeriodState(task, now);
@@ -1431,22 +1553,22 @@
     info.append(main, urgency, progressButton, materialButton, editButton);
     row.appendChild(info);
 
-    var occurrences = recurring
-      ? dates.getRecurringOccurrences(task)
-      : [{ ddl: task.ddl, periodKey: "" }];
-    var occurrencesByFriday = new Map();
+    var occurrences = getTaskTimelineOccurrences(task);
+    var occurrencesByColumn = new Map();
     occurrences.forEach(function (occurrence) {
-      var friday = dates.getWeekFriday(occurrence.ddl);
-      if (!occurrencesByFriday.has(friday)) occurrencesByFriday.set(friday, []);
-      occurrencesByFriday.get(friday).push(occurrence);
+      var column = ui.timelineGranularity === "day"
+        ? occurrence.ddl
+        : dates.getWeekFriday(occurrence.ddl);
+      if (!occurrencesByColumn.has(column)) occurrencesByColumn.set(column, []);
+      occurrencesByColumn.get(column).push(occurrence);
     });
-    var currentFriday = dates.getWeekFriday(new Date());
-    weeks.forEach(function (friday) {
+    columns.forEach(function (column) {
       var cell = utils.el(
         "div",
-        "timeline-cell" + (friday === currentFriday ? " is-current" : "")
+        "timeline-cell" + (isCurrentTimelineColumn(column) ? " is-current" : "")
       );
-      (occurrencesByFriday.get(friday) || []).forEach(function (occurrence) {
+      cell.dataset.date = column;
+      (occurrencesByColumn.get(column) || []).forEach(function (occurrence) {
         var occurrenceCompleted = recurring
           ? Boolean(dates.getRecurringCompletion(task, occurrence))
           : completed;
@@ -1497,7 +1619,7 @@
         ? "周期：" + automation.CADENCE_LABELS[dates.recurrenceCadence(task)] +
           " · " + task.recurrenceStart + " 至 " + task.recurrenceEnd
         : "",
-      "DDL：" + occurrence.ddl + "（周五 " + dates.getWeekFriday(occurrence.ddl) + "）",
+      "DDL：" + occurrence.ddl + "（" + weekdayLabel(occurrence.ddl) + "）",
       "紧急程度：" + urgencyLabels[task.urgency],
       "状态：" + (overdue ? "逾期" : completed ? "已完成" : "未完成"),
       task.reportTo ? "汇报对象：" + task.reportTo : "",
@@ -1654,13 +1776,38 @@
     );
   }
 
+  function openDayTimeline(friday) {
+    var normalized = dates.getWeekFriday(friday);
+    if (!normalized) return;
+    ui.weekTimelineViewport = captureTimelineViewport(null, null);
+    ui.timelineGranularity = "day";
+    ui.timelineDayAnchor = normalized;
+    renderTimeline();
+    window.requestAnimationFrame(function () {
+      dom["timeline-scroll"].scrollTop = 0;
+      dom["timeline-scroll"].scrollLeft = 0;
+    });
+  }
+
+  function returnToWeekTimeline() {
+    if (ui.timelineGranularity !== "day") return;
+    var viewport = ui.weekTimelineViewport;
+    ui.timelineGranularity = "week";
+    ui.timelineDayAnchor = ui.timelineAnchor;
+    ui.weekTimelineViewport = null;
+    renderTimeline();
+    restoreTimelineViewport(viewport);
+  }
+
   function shiftTimeline(weeks) {
+    ui.timelineGranularity = "week";
     ui.timelineMode = "window";
     ui.timelineAnchor = dates.addWeeksFriday(ui.timelineAnchor, weeks);
     renderTimeline();
   }
 
   function returnToCurrentWeek() {
+    ui.timelineGranularity = "week";
     ui.timelineMode = "window";
     ui.timelineAnchor = dates.getWeekFriday(new Date());
     renderTimeline();
@@ -1668,12 +1815,14 @@
   }
 
   function showAllTaskRange() {
+    ui.timelineGranularity = "week";
     ui.timelineMode = "all";
     renderTimeline();
     toast("已显示最早至最晚 DDL 的全部周范围");
   }
 
   function scrollToCurrentWeek() {
+    if (ui.timelineGranularity !== "week") return;
     var current = query('.week-head[data-week="' + dates.getWeekFriday(new Date()) + '"]');
     if (!current) return;
     var leftRail = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--left-rail"));
@@ -2587,8 +2736,18 @@
     var nextView = ["home", "timeline", "dashboard", "materials"].includes(view)
       ? view
       : "home";
+    var resetDayTimeline =
+      nextView === "timeline" &&
+      ui.view !== "timeline" &&
+      ui.timelineGranularity === "day";
     if (nextView === "dashboard" && ui.view !== "dashboard") {
       ui.dashboardModule = null;
+    }
+    if (resetDayTimeline) {
+      ui.timelineGranularity = "week";
+      ui.timelineDayAnchor = ui.timelineAnchor;
+      ui.weekTimelineViewport = null;
+      renderTimeline();
     }
     ui.view = nextView;
     syncView();
@@ -5402,7 +5561,7 @@
         }
         try {
           localStorage.setItem(
-            "weekflow-v2.3:pre-import-backup",
+            "weekflow-v2.4:pre-import-backup",
             JSON.stringify(data)
           );
         } catch (_error) {

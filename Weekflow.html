@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Weekflow v2.3 本地 Task 管理工具，支持周时间轴、分组、Flow、资料库、双向联动、看板、备份和 Excel 批量导入导出。"
+      content="Weekflow v2.4 本地 Task 管理工具，支持周/日双时间轴、分组、Flow、资料库、双向联动、看板、备份和 Excel 批量导入导出。"
     />
-    <title>Weekflow v2.3 · Task management</title>
+    <title>Weekflow v2.4 · Task management</title>
     <link rel="stylesheet" href="./css/styles.css" />
   </head>
   <body>
@@ -242,7 +242,7 @@
         <section id="home-view" class="view-panel home-view" aria-labelledby="home-heading">
           <div class="home-hero">
             <div class="home-hero-copy">
-              <p class="eyebrow">Weekflow v2.3</p>
+              <p class="eyebrow">Weekflow v2.4</p>
               <h1 id="home-heading">把工作拆成清晰的下一步</h1>
               <p>
                 用分组建立工作版图，用 Flow 串起执行步骤，再用周时间轴看清每一个 DDL。
@@ -292,7 +292,7 @@
               <span class="home-entry-copy">
                 <small>PLAN BY WEEK</small>
                 <strong>时间轴看板</strong>
-                <span>按周查看 DDL、推进状态和工作步骤</span>
+                <span>按周总览 DDL，双击周表头查看每日安排</span>
               </span>
               <span class="home-entry-arrow" aria-hidden="true">→</span>
             </button>
@@ -328,7 +328,7 @@
               <span class="home-entry-copy">
                 <small>WHAT'S NEW</small>
                 <strong>更新日志</strong>
-                <span>查看 Weekflow v2.3 的发布内容</span>
+                <span>查看 Weekflow v2.4 的发布内容</span>
               </span>
               <span class="home-entry-arrow" aria-hidden="true">↗</span>
             </button>
@@ -339,11 +339,11 @@
           <div class="view-toolbar timeline-toolbar">
             <div class="timeline-title-group">
               <div class="timeline-title-copy">
-                <h1 id="timeline-heading">Task 时间轴</h1>
-                <span>周一至周日 · 表头显示周五</span>
+                <h1 id="timeline-heading">Task by Week</h1>
+                <span id="timeline-subtitle">周一至周日 · 表头显示周五 · 双击周表头查看每天</span>
               </div>
               <div class="timeline-legend" aria-label="图例">
-                <span><i class="legend-dot current"></i>本周</span>
+                <span><i class="legend-dot current"></i><span id="timeline-current-label">本周</span></span>
                 <span><i class="legend-dot overdue"></i>逾期</span>
                 <span><i class="legend-dot complete"></i>完成</span>
                 <span id="visible-result-count">0 条可见 Task</span>
@@ -360,13 +360,24 @@
                   <span aria-hidden="true">↥</span> 折叠全部
                 </button>
               </div>
-              <div class="segmented" aria-label="时间轴范围控制">
-                <button type="button" data-action="timeline-prev" title="向前 4 周">←</button>
-                <button type="button" data-action="timeline-today">回到本周</button>
-                <button type="button" data-action="timeline-next" title="向后 4 周">→</button>
+              <div id="timeline-week-range-controls" class="timeline-week-range-controls">
+                <div class="segmented" aria-label="时间轴范围控制">
+                  <button type="button" data-action="timeline-prev" title="向前 4 周">←</button>
+                  <button type="button" data-action="timeline-today">回到本周</button>
+                  <button type="button" data-action="timeline-next" title="向后 4 周">→</button>
+                </div>
+                <button class="button button-quiet" type="button" data-action="timeline-all">
+                  全部范围
+                </button>
               </div>
-              <button class="button button-quiet" type="button" data-action="timeline-all">
-                全部范围
+              <button
+                id="timeline-week-return"
+                class="button button-quiet timeline-week-return"
+                type="button"
+                data-action="timeline-week-return"
+                hidden
+              >
+                ← 返回 Task by Week
               </button>
             </div>
           </div>
@@ -708,7 +719,7 @@
         <section>
           <h3>主要功能</h3>
           <ul>
-            <li><b>时间轴看板：</b>按自然周查看 Task DDL，支持前后浏览、回到本周、全部范围以及分组和 Flow 展开折叠。</li>
+            <li><b>时间轴看板：</b>主界面 Task by Week 按自然周查看 Task DDL；双击任意周表头进入 Task by Day，只显示该周 DDL，并按周一至周日精确落到具体日期。日视图通过“返回 Task by Week”回到周时间轴。</li>
             <li><b>Task 管理：</b>创建和编辑 Task，可记录进度、完成状态和相关资料；紧急程度、汇报对象和交付物为必填项，汇报对象与管理对象均按人员姓名录入。周期可选每周或每月，需指定周期开始和结束日期。</li>
             <li><b>周期 DDL：</b>周期 Task 仍只统计为一条 Task，但时间轴会按基准 DDL 的星期或日期显示多个 DDL；勾选本期完成会同时视同此前各期完成，下一周期自动恢复未勾选并保留之前的连续完成记录。</li>
             <li><b>Flow 工作流：</b>在分组和 Task 之间增加可选步骤层，支持拖动排序；新 Flow 默认继承所属分组颜色。</li>
@@ -724,7 +735,7 @@
         <section>
           <h3>数据保存位置</h3>
           <p>数据保存在当前浏览器、当前页面来源的 <code>localStorage</code> 中，主数据键为：</p>
-          <pre>weekflow-v2.3:data:v3</pre>
+          <pre>weekflow-v2.4:data:v3</pre>
           <p>清除浏览器网站数据、使用无痕窗口、更换浏览器或更换启动地址，都会影响可见数据。</p>
         </section>
         <section>
@@ -761,7 +772,7 @@
           <h3>开发团队</h3>
           <p>开发团队：Wesley Yan</p>
           <p>首个正式版本（v1.0）：2026年7月30日</p>
-          <p>最新版本（v2.3）更新时间：2026年8月8日</p>
+          <p>最新版本（v2.4）更新时间：2026年8月10日</p>
         </section>
       </article>
       <div class="modal-actions">
@@ -778,6 +789,31 @@
         <button class="icon-button" type="button" data-action="close-changelog" aria-label="关闭">×</button>
       </div>
       <article class="document-content changelog-content">
+        <div class="release-entry" data-version="2.4">
+          <div class="release-heading">
+            <span>v2.4 Week / Day 双时间轴版</span>
+            <time datetime="2026-08-10">2026-08-10</time>
+          </div>
+          <p class="release-lead">在原周时间轴基础上增加单周日粒度下钻，保持分组、Flow、Task 和既有导入导出逻辑不变。</p>
+          <section>
+            <h3>新增与调整</h3>
+            <ul>
+              <li>原时间轴主界面更名为 Task by Week，继续保留周范围浏览、回到本周、全部范围及全部展开折叠。</li>
+              <li>双击任意周日期框可进入该周 Task by Day；表头按周一至周日显示日期和星期，Task DDL 标签落在具体日期列。</li>
+              <li>Task by Day 只显示在所选自然周内存在 DDL 的 Task；周期 Task 按该周的实际 DDL 参与筛选，其他周 Task 不显示。</li>
+              <li>日视图保留分组、Flow、Task、筛选、编辑、完成和展开折叠功能，并以“返回 Task by Week”替代周范围控制。</li>
+              <li>正式版升级为独立 v2.4 存储空间并自动迁移 v2.3 及更早版本；Excel 模板、上传和下载格式均未改变。</li>
+            </ul>
+          </section>
+          <section>
+            <h3>稳定性</h3>
+            <ul>
+              <li>Task by Week 与 Task by Day 均沿用被操作 Task 行锚点；在长列表底部勾选或取消完成后不会跳回首个分组。</li>
+              <li>从日视图返回周视图会恢复进入前的周时间轴滚动位置；从其他主页面重新进入时间轴时默认回到 Task by Week。</li>
+            </ul>
+          </section>
+        </div>
+
         <div class="release-entry" data-version="2.3">
           <div class="release-heading">
             <span>v2.3 周期任务与临期提醒版</span>
