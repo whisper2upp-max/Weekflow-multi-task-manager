@@ -1,289 +1,222 @@
-# Weekflow v2.4 · Task management
+# Weekflow v2.4 · Bilingual Task Management
 
-Weekflow 是一个桌面端优先、无需后端的本地 Task 管理程序。它以自然周总览和单周日粒度下钻组织时间，通过“分组 → 可选 Flow → 有序 Task”组织工作，并提供整体看板、统一资料库、Excel 批量录入与本地备份。
+Weekflow is a desktop-first, backend-free Multi-task management cockpit for tracking several workstreams and organizing all Task-related documents in one place. It combines weekly and daily deadline timelines, `Group → optional Flow → ordered Task` workflows, an Overall Dashboard, a unified Document Library, Excel bulk import/export, and local JSON backup.
 
-程序由原生 HTML、CSS 和 JavaScript 构建，不需要安装前端依赖。本正式版从空白数据启动，不包含示例分组、Flow、Task、资料或恢复示例数据入口。
+The bilingual interface changes language only. It does not change the v2.4 data model, business rules, recurrence logic, storage behavior, filtering, linking, or scrolling mechanisms.
 
-## 快速启动
+## Quick Start
 
-在本目录打开终端：
+Keep the whole release folder together. Open a terminal in this folder and run:
 
 ```bash
 npm run serve
 ```
 
-然后访问：
+Then open `http://localhost:8080/Weekflow.html`. You may also open `Weekflow.html` directly. `file://`, `http://localhost:8080`, another port, and another browser are different storage origins and may show different data.
 
-```text
-http://localhost:8080/Weekflow.html
-```
+## Language Switch
 
-也可以直接双击 `Weekflow.html`。如果 Safari 对 `file://` 下载或存储有限制，请使用静态服务器并访问 `http://localhost:8080/Weekflow.html`。`file://`、`http://localhost:8080` 和其他地址各自拥有独立的浏览器存储空间。
+The `Chinese / EN` switch sits immediately to the right of **Document Library** in the main navigation. English is the default language. The selected language is stored separately under `weekflow-v2.4:language` and never rewrites user-entered Group, Flow, Task, document, person, Deliverable, progress, or note content.
 
-这是一款 Multi-task 管理的座舱程序，具备多任务进度管理、任务相关资料汇总整理的功能。
+The selected language applies to:
 
-## 主要功能
+- Navigation, timeline, dashboards, Document Library, forms, filters, dialogs, validation feedback, reminders, User Guide, and Changelog.
+- Blank Task and Document import templates.
+- Re-importable current Task data and full Document Library downloads.
+- Dashboard reports and Managed Person / Report To Task status reports.
+- Workbook sheet names, headers, labels, metadata, and downloaded filenames.
 
-### 主页与导航
+Both English and Chinese import headers and supported field values remain accepted, so existing Chinese workbooks can still be uploaded in English mode.
 
-![Weekflow 主页](readme配图/主页.png)
+## Key Features
 
-- 主页显示 Task、分组、Flow、资料数量和完成率。
-- 提供时间轴看板、整体看板、资料库、使用说明和更新日志入口。
-- 每次进入程序会在右下角显示未来 7 天内未完成 Task 的 DDL 提醒；提醒 10 秒后自动关闭，悬浮期间不阻断任何操作，关闭按钮采用清晰的图形化样式。
-- 程序内更新日志按版本号从新到旧展示完整历史，而不是只显示当前版本内容。
-- `Command/Ctrl + K` 在主页进入时间轴搜索，在资料库聚焦资料名称搜索。
+### Home and Navigation
 
-### 时间轴看板
+![Weekflow Home](readme配图/主页.png)
 
-![时间轴看板](readme配图/时间轴看板.png)
+- Home displays Task, Group, Flow, document, and completion-rate totals.
+- Direct entries open Task by Week, Overall Dashboard, Document Library, User Guide, and Changelog.
+- A non-blocking bottom-right reminder lists incomplete Tasks due within seven days and closes automatically after ten seconds.
+- `Command/Ctrl + K` opens timeline search from Home or focuses document-name search in the Document Library.
 
-- 主界面名称为 `Task by Week`。自然周按周一至周日计算，周列表头显示该周周五；周末 DDL 映射到同一自然周。
-- `Task by Week` 支持前后浏览、回到本周和全部范围；全部范围最多生成 600 周。
-- 双击任意周日期框进入该周的 `Task by Day`。日视图只显示 DDL 位于该周的 Task，并按周一至周日显示日期、星期和精确 DDL 落点。
-- 周期 Task 会按所选周实际生成的周期 DDL 参与日视图筛选，仍然只保存和统计为一条 Task；其他周的 Task 不显示。
-- `Task by Day` 保留分组、Flow、Task、筛选、编辑、完成以及展开折叠功能，不显示“回到本周”和“全部范围”，通过“返回 Task by Week”回到周时间轴。
-- 从日视图返回会恢复进入前的周时间轴滚动位置；两个视图在完成 Task 或展开折叠后都保持被操作行位置，不会跳回首个分组。
-- 分组和 Flow 均显示完成率环、状态堆叠条、精确数量与展开/折叠控制。
-- 支持一键展开或折叠全部分组与 Flow，折叠状态会保存。
-- 时间轴上方采用紧凑命令栏；分组、Flow、状态和紧急程度使用统一的高对比筛选弹层，点击其他筛选或页面空白处会自动收起。
-- 时间轴的数据操作与筛选栏只在时间轴看板显示，整体看板不会展示无效控件；筛选状态显示在“可见 Task”数量右侧。
-- 左侧表头为 `Task / DDL、紧急、进度记录、相关资料、编辑`，使用固定列宽和单行省略。
+### Task by Week and Task by Day
 
-### Task、分组与 Flow
+![Task by Week timeline](readme配图/时间轴看板.png)
 
-![新建 Task](readme配图/新建task.png)
+- Task by Week calculates natural weeks from Monday through Sunday; its header date is Friday.
+- Browse earlier or later weeks, return to this week, or show the full Task range (up to 600 weeks).
+- Double-click a week header to open Task by Day. The selected week is split into Monday through Sunday, and every deadline node lands on its exact date.
+- Task by Day shows only Tasks with a deadline occurrence in the selected week, including generated weekly or monthly occurrences.
+- Both views retain Group, Flow, Task, filtering, editing, completion, and expand/collapse behavior.
+- Completing or reopening a Task preserves the operated Task row, horizontal position, and page position. Expanding or collapsing an individual Group or Flow preserves the operated hierarchy row.
 
-- Task 支持创建、编辑、删除、完成/恢复、DDL、紧急程度、汇报对象、管理对象、交付物和自由文本进度记录；汇报对象和管理对象均填写人员姓名。
-- 紧急程度、汇报对象和交付物为必填字段。
-- 已使用过的汇报对象和管理对象会自动成为可选历史值，同时仍可输入新值。
-- Task 可设置每周或每月周期，并必须填写周期开始、周期结束日期。表单中的 DDL 是周期锚点：每周沿用其星期，每月沿用其日期，短月份自动取月末。
-- 周期 Task 始终只保存并统计为一条 Task，但会在时间轴范围内显示多个 DDL 标签。勾选当前自然周或自然月完成时，会视同本期及此前各期均已完成；进入下一周期后完成框自动恢复为未勾选，之前各期的完成记录继续保留。取消本期勾选只撤销本期及其后的异常记录，不影响更早已完成周期。
-- 旧数据若存在“较晚一期已完成、此前周期仍逾期”的间断记录，程序启动或刷新周期状态时会自动补齐为连续完成历史。
-- 周期范围外不能勾选当前周期完成状态；程序每天跨日会自动刷新周期状态。季度周期不再提供。
-- Flow 是分组与 Task 之间的可选层级；Task 可不加入 Flow。
-- Flow 可在 Task 前单独创建，也可在新建 Task 时即时创建。
-- 新 Flow 默认继承分组颜色；主动改色后保留自定义色。
-- Flow 内 Task 具有步骤顺序，可在 Flow 编辑界面拖动或使用上下按钮调整。
-- 删除 Flow 会保留 Task 并取消其 Flow 归属；删除分组时可移动或删除其中内容。
+### Groups, Flows, and Tasks
 
-![编辑 Flow 与步骤排序](readme配图/编辑Flow.png)
+![Create a Task](readme配图/新建task.png)
 
-### 相关资料
+- Tasks support create, edit, delete, complete/reopen, DDL, Urgency, Report To, Managed Person, Deliverable, progress notes, and related documents.
+- Urgency, Report To, and Deliverable are required. Report To and Managed Person are person names, and previously used names become suggestions.
+- Flow is an optional ordered layer between a Group and its Tasks. A new Flow inherits its Group color unless the user customizes it.
+- Reorder Tasks inside a Flow by drag-and-drop or move controls.
+- Weekly and monthly recurring Tasks require recurrence start and end dates. The form DDL is the weekday or day-of-month anchor.
+- A recurring Task remains one stored and counted Task while rendering all scheduled deadlines. Completing the current natural week or month completes that occurrence and all earlier ones; the next period starts incomplete.
 
-- 时间轴把原“说明文档”和“交付物”合并为一个“相关资料”入口。
-- 双击按钮或按回车打开，资料按 `说明文档、交付物、控制表、文件夹` 分组；空分组不显示。
-- 每条资料包含链接名称、HTTP/HTTPS 地址、类型和备注。
-- 从 Task 编辑资料时会同步到资料库；从当前 Task 移除仅解除该 Task 的关联，不会误删资料库中的共享资料。
+![Edit a Flow and reorder steps](readme配图/编辑Flow.png)
 
-### 资料库
+### Related Documents and Document Library
 
-![资料库](readme配图/资料库.png)
+![Document Library](readme配图/资料库.png)
 
-- 大列表字段包括链接名称、地址、类型、相关 Task、相关 Flow、分组和备注；点击名称编辑，点击地址打开。
-- 表头、类型、相关 Flow、分组和备注使用与资料名称一致的主字号；较长的链接地址和可能包含多项的相关 Task 保持紧凑字号。
-- 资料库标题上方提供独立的搜索与筛选栏；链接名称支持搜索，类型、Task、Flow、分组支持多选筛选，表格表头仅保留字段名称。
-- 资料筛选沿用时间轴“筛选分组”的高对比弹层；点击其他筛选或页面空白处会自动收起，备注仅展示、不参与搜索。
-- 一条资料可关联多个 Task、Flow 和分组，选项只来自时间轴中已经存在的内容。
-- 新建或编辑资料时按“分组 → Flow → Task”选择关联；先选分组，才会显示所选分组内的 Flow 和 Task。
-- 资料名称、地址、类型、备注和关联关系从时间轴或资料库任一入口修改后使用同一数据源。
-- 点击资料链接会记录打开时间；本自然周或上个自然周至少打开过一次即属于“最近常用”。
-- 支持通过表头复选框全选当前筛选结果和批量删除；批量删除需要连续确认两次。
-- “下载”菜单整合空白模板和资料库清单下载，“上传”用于导入 Excel。
+- Documentation, Deliverables, Control Sheets, and Folders share one document record and can relate to multiple Tasks, Flows, and Groups.
+- Editing from a Task or the Document Library updates the same data source.
+- The library supports name search and Type, Group, Flow, and Task multi-select filters; Notes are displayed but are not searched.
+- New or edited relations follow Group → Flow → Task cascading selection.
+- Recently Used includes links opened at least once in the current or previous natural week.
+- Select the current result set from the header checkbox. Individual checkbox changes update in place and do not rebuild or scroll the table to the top.
+- Bulk deletion and overwrite-all import each require two confirmations.
 
-### 筛选与整体看板
+### Overall Dashboard
 
-![整体看板](readme配图/整体看板.png)
+![Overall Dashboard](readme配图/整体看板.png)
 
-- 时间轴可组合使用分组多选、Flow、关键词、完成状态、紧急程度和仅看逾期。
-- 关键词覆盖 Task、Flow、汇报对象、管理对象、交付物、进度记录及相关资料。
-- 整体看板进入后常驻显示 Task 总数、已完成、未完成、当前逾期和完成率；其他明细通过“分组进度、Flow 进度、管理对象、汇报对象”四个按钮按需显示，同一时间只展开一个维度。
-- 管理对象和汇报对象按人员姓名分别显示图形进度、精确数量与完成率；每个人员都可一键导出只属于该人员的完整 Task 状态。
-- 整体看板聚焦统计内容，不显示仅对时间轴有效的搜索、筛选、导入、备份或 Excel 导出命令栏。
-- 点击分组、Flow 或逾期指标可返回时间轴并自动应用筛选。
+- The five overview metrics—Total Tasks, Completed, Incomplete, Currently Overdue, and Completion Rate—are always visible.
+- Open one detail dimension at a time: Group, Flow, Managed Person, or Report To.
+- Person summaries show counts and completion rate and export that person's full Task status, sorted by Group.
 
-#### 按汇报对象导出
+![Export by Report To](readme配图/整体看板-按汇报对象导出.png)
 
-![整体看板按汇报对象导出](readme配图/整体看板-按汇报对象导出.png)
+## Data Storage Location
 
-## 数据保存位置
-
-正式版业务数据保存在当前浏览器、当前页面来源的 `localStorage`：
+Business data is stored in `localStorage` for the current browser and page origin under:
 
 ```text
 weekflow-v2.4:data:v3
 ```
 
-相关迁移与安全备份键：
+The top-level data structure is `version: 3` with `groups`, `flows`, `tasks`, and `materials`. Recurrence settings and occurrence completion history live on each Task, so recurring deadlines do not create duplicate Tasks. Weekflow can migrate same-origin v2.3, v2.2, v2.1, v2.0, v1.1, and v1.0 data while leaving older keys available for rollback.
+
+Clearing site data, using a private window, changing browsers, or changing the launch origin changes which data is visible.
+
+## Data Backup and Restore
+
+Before bulk import, complete replacement, overwrite-all Document import, browser migration, or large deletion:
+
+1. Open the `•••` data menu.
+2. Select **Export JSON Backup**.
+3. Store the `.json` file in a controlled location.
+
+Use **Restore from JSON** to restore. Weekflow validates versions, unique IDs, dates, Group/Flow/Task relations, recurrence ranges and completion history, document types, URLs, relations, and open events before asking for confirmation. It attempts a `pre-import-backup` before replacement.
+
+The JSON backup includes the complete data object, including documents that are not linked to a Task. For backward compatibility, these records remain stored under the internal `materials` property.
+
+## Excel Bulk Import
+
+### Task Import
+
+Open `••• → Bulk Import`:
+
+- **Download Excel Import Template** creates a blank 20-column workbook in the active language.
+- **Download Current Data in Import Format** exports every current Task in the same structure for editing and re-upload.
+- **Upload Excel for Bulk Import** validates a workbook, shows errors and a preview, then offers Supplement Import or double-confirm Complete Replacement.
+
+Each row represents one Task. `Group*`, `Task Name*`, `DDL*`, `Urgency*`, `Report To*`, and `Deliverable*` are required. Flow is optional. Recurring Tasks require Recurrence Start and Recurrence End. `Recurrence Completion History` uses `occurrence DDL|completion date`, with periods separated by new lines or semicolons. One upload supports up to 1,000 Tasks.
+
+Supplement Import keeps existing data and adds Tasks. Complete Replacement replaces all Groups, Flows, and Tasks but does not delete Document Library entries; matching hierarchy IDs are reused when possible to preserve relations. Legacy 16-column files remain accepted.
+
+### Document Import
+
+Use `Document Library → Download → Download Blank Template`, then upload from **Upload**.
+
+- `Link Name*` and `Link URL*` are required.
+- Type is Documentation, Deliverable, Control Sheet, or Folder; blank defaults to Documentation.
+- Related Tasks, Flows, and Groups must already exist on the timeline. Use full paths such as `Group/Flow/Task` when names are ambiguous.
+- Multiple relations use new lines or semicolons. A blank relation set is Ungrouped.
+- Supplement Import can replace or skip duplicate URLs. Overwrite All removes the existing library after two confirmations and imports the workbook.
+- One upload supports up to 2,000 documents.
+
+## Excel Export
+
+### Dashboard Report
+
+**Export Dashboard Report** creates:
 
 ```text
-weekflow-v2.4:data:v2
-weekflow-v2.4:data:v1
-weekflow-v2.3:data:v3
-weekflow-v2.3:data:v2
-weekflow-v2.3:data:v1
-weekflow-v2.2:data:v3
-weekflow-v2.2:data:v2
-weekflow-v2.2:data:v1
-weekflow-v2.1:data:v3
-weekflow-v2.1:data:v2
-weekflow-v2.1:data:v1
-weekflow-v2.0:data:v3
-weekflow-v2.0:data:v2
-weekflow-v2.0:data:v1
-weekflow-v1.1:data:v2
-weekflow-v1.1:data:v1
-weekflow-v1.0:data:v2
-weekflow-v1.0:data:v1
-weekflow-v2.4:pre-import-backup
-weekflow-v2.4:corrupt-backup
+Task_Dashboard_YYYYMMDD_HHmm.xlsx
 ```
 
-- 当前数据结构版本为 `version: 3`，顶层包含 `groups、flows、tasks、materials`。周期配置与按期完成记录直接保存在对应 Task 的 `recurrenceCadence、recurrenceStart、recurrenceEnd、recurrenceCompletions` 字段中，因此多个周期 DDL 不会增加 Task 数量。
-- 旧 v3 数据仍可读取；旧式顶层周期规则和 Flow 模板字段会被安全忽略，既有 Task 不会被删除。
-- v1/v2 数据会自动迁移；旧 Task 内的说明文档与交付物链接会转成统一资料并保留 Task 关联。
-- 每次业务修改都会立即保存。若主数据损坏，原始内容会尝试写入 `corrupt-backup`。
-- 首次打开时会优先迁移同一页面来源下的 Weekflow v2.3 正式数据，也兼容 v2.2/v2.1/v2.0/v1.1/v1.0；旧键保留用于回退。
-- 清除网站数据、使用无痕窗口、更换浏览器或启动地址，会改变可见数据。
+The workbook contains:
 
-## 数据备份与恢复
+1. `Overall Dashboard`: export time, overall metrics, Group summary, and Flow summary.
+2. `Timeline Dashboard`: fixed Task fields, recurrence settings, progress, related documents, and the complete weekly deadline range.
 
-建议在批量导入、全部覆盖资料库或大批量删除前：
+The report always includes all Tasks regardless of timeline filters. It is a presentation workbook, not an import file; use **Download Current Data in Import Format** for re-import.
 
-1. 点击顶部 `•••`。
-2. 选择“导出 JSON 备份”。
-3. 将 `.json` 文件保存到受控位置。
+### Managed Person and Report To Reports
 
-恢复时选择“从 JSON 恢复”。程序会校验数据版本、唯一 ID、日期、分组/Flow/Task 关系、Task 周期起止日期与完成记录、资料类型、URL、关联对象和打开时间，再请求确认。确认恢复前会尝试保存当前数据到 `pre-import-backup`。
-
-## Excel 批量导入
-
-### Task 导入
-
-顶部 `•••` 的“批量录入”区域提供三项操作：
-
-- “下载 Excel 导入模板”：下载空白 `templates/Weekflow_Task导入模板.xlsx`。
-- “按导入模板下载当前数据”：按相同 20 列结构下载全部当前 Task，可编辑后直接再次上传。
-- “上传 Excel 批量导入”：读取空白模板或当前数据文件，校验后选择补充导入或完整覆盖。
-
-- 每行代表 1 条 Task。
-- `分组*、Task name*、DDL*、紧急程度*、汇报对象*、交付物*` 为必填字段。
-- Flow 可留空；填写 Flow 后可用“Flow步骤”指定顺序。
-- `周期` 可选不重复、每周或每月；周期 Task 必须填写 `周期开始、周期结束`，DDL 仍作为星期或日期锚点。
-- `周期完成记录` 为可选高级列，格式为 `周期DDL|完成日期`，多期用换行或中文分号分隔。下载当前数据时会自动写入，用于在空白环境完整恢复历史；手工新建周期 Task 时可留空。
-- 同名分组或同一分组内的同名 Flow 会复用，不存在时自动创建。
-- 新 Flow 未指定颜色时继承分组色，不会覆盖已有自定义色。
-- 支持完成状态、完成日期、管理对象、进度记录和说明文档/交付物链接。
-- 上传后先显示错误清单、统计和前 20 条预览；单次最多 1000 条 Task。
-- “补充导入”保留现有分组、Flow 和 Task，并新增文件中的 Task；同名分组与 Flow 会复用。
-- “完整覆盖”连续确认两次，以文件内容替换全部时间轴分组、Flow 和 Task。资料库条目不会删除；同名层级会沿用原 ID 以尽量保留资料关联。新版 20 列文件会按文件中的周期配置和历史重建；旧 16 列文件仍可上传，匹配到同一既有周期 Task 时会尽量保留其周期设置和历史。无法匹配的旧关联会移除。
-
-### 资料库导入
-
-在资料库的“下载”菜单选择空白模板，获取 `templates/Weekflow_资料库导入模板.xlsx`：
-
-- 每行代表 1 条资料，`链接名称*` 和 `链接地址*` 必填。
-- 类型只能是说明文档、交付物、控制表或文件夹；留空默认说明文档。
-- Task、Flow、分组只能填写时间轴中已经存在的名称；多个值用换行或中文分号分隔。
-- 重名时使用 `分组/Flow/Task` 或 `分组/Flow` 完整路径。
-- 留空所有关联时自动归为未分组；单次最多 2000 条资料。
-- “补充导入”会新增资料。相同链接地址出现时，用户可选择用新上传资料替换或跳过。
-- “全部覆盖”会删除资料库全部现有资料再导入本次文件，并连续确认两次。
-- 同一上传文件内部出现重复链接、关联对象不存在或重名有歧义时会阻止导入。
-
-## Excel 导出
-
-### 时间轴与整体看板
-
-点击“导出看板报告”生成：
+The corresponding Overall Dashboard dimensions export:
 
 ```text
-Task看板_YYYYMMDD_HHmm.xlsx
+Managed_Person_Name_Task_Status_YYYYMMDD_HHmm.xlsx
+Report_To_Name_Task_Status_YYYYMMDD_HHmm.xlsx
 ```
 
-工作簿包含：
+Each workbook includes only the selected person’s Tasks, sorted by Group, with Flow/step, Task Name, people fields, Deliverable, DDL, recurrence, Urgency, completion, overdue state, progress notes, and related document names and URLs.
 
-1. `整体看板`：导出时间、总体统计、分组统计和 Flow 统计。
-2. `时间表看板`：18 个固定 Task 字段（含周期、周期开始、周期结束）、完整进度记录、统一相关资料，以及从最早到最晚 DDL 的周时间轴。时间轴标签用 `✓、!、●` 区分已完成、逾期和待完成周期。
+### Document Library
 
-导出包含全部 Task，不受当前筛选影响。多个资料以 `[类型] 名称：URL` 换行写入同一单元格。
-
-看板报告是阅读与汇报文件，不是批量导入格式。需要编辑后重新上传时，应使用“按导入模板下载当前数据”。整体看板和时间表看板均不设置冻结窗格；报告不包含宏、外部工作簿链接或数据连接，并包含与时间表 AutoFilter 对应的标准工作簿级筛选名称，以兼容 Windows Excel 的严格 OOXML 校验。
-
-所有程序生成的 `.xlsx` 都会检查并移除无实际宏却可能被 Windows Excel 误判的宏内容类型和工作簿代码名；可回导 Task 数据与资料库下载显式设置 `DocSecurity=0`。空白模板、可回导数据、三类看板报告和资料库清单均纳入 ZIP/XML、openpyxl 与 LibreOffice 回归。
-
-### 管理对象与汇报对象 Task 状态
-
-在整体看板点击“管理对象”或“汇报对象”，再点击对象卡片或汇总表中的“导出”，生成：
+`Document Library → Download → Download Document Library` creates:
 
 ```text
-管理对象_名称_Task状态_YYYYMMDD_HHmm.xlsx
-汇报对象_名称_Task状态_YYYYMMDD_HHmm.xlsx
+Weekflow_Document_Library_YYYYMMDD_HHmm.xlsx
 ```
 
-文件只包含所选人员的 Task，并按分组顺序排列。工作簿包含总体统计和时间表两张表，均不设置冻结窗格；带出分组、Flow、步骤、Task name、汇报对象、管理对象、交付物、DDL、周期及起止日期、紧急程度、完成状态、完成日期、逾期状态、进度记录和相关资料名称及 URL。
+It includes Link Name, URL, Type, complete Task/Flow paths, Groups, and Notes. URLs remain clickable.
 
-### 资料库
+### Windows Excel Compatibility
 
-在资料库的“下载”菜单选择“下载资料库”生成：
+Every generated `.xlsx` is repackaged through the same safety path. The package removes false macro markers and workbook code names, sets `DocSecurity=0`, and rejects VBA, external workbook links, data connections, ActiveX, and embedded OLE content. Dashboard and person reports include standard workbook views and AutoFilter defined names and do not open with frozen panes.
 
-```text
-Weekflow_资料库_YYYYMMDD_HHmm.xlsx
-```
+## Program Files
 
-导出包含名称、地址、类型、完整 Task/Flow 路径、分组和备注。链接地址单元格保留可点击超链接。
-
-所有 Excel 功能均使用项目内置的 SheetJS CE 和 JSZip，不访问 CDN。
-
-## 开发团队
-
-- 开发团队：Wesley Yan
-- 首个正式版本（v1.0）：2026年7月30日
-- 最新版本（v2.4）更新时间：2026年8月10日
-
-## 程序文件
-
-- 本文件夹是 Weekflow v2.4 空白正式发布版。
-- 程序需要保留整个文件夹结构，不能只移动 `Weekflow.html`；页面依赖 `css、js、templates、vendor` 子目录。
-- 如果收到 `Weekflow v2.4.zip`，请完整解压后再使用。
-
-## 文件结构
+The entire folder is required; do not move only `Weekflow.html`. It depends on `css`, `js`, `vendor`, and the release files. The two legacy Chinese template files under `templates/` remain for offline compatibility, while UI template downloads are generated dynamically in the active language.
 
 ```text
-Weekflow v2.4/
+Weekflow/
 ├── Weekflow.html
 ├── css/styles.css
-├── js/
-│   ├── app.js
-│   ├── automation.js
-│   ├── date-utils.js
-│   ├── excel-export.js
-│   ├── excel-import.js
-│   ├── material-excel.js
-│   ├── materials.js
-│   ├── stats.js
-│   ├── storage.js
-│   ├── xlsx-safe.js
-│   └── utils.js
+├── js/i18n.js
+├── js/app.js
+├── js/automation.js
+├── js/date-utils.js
+├── js/excel-export.js
+├── js/excel-import.js
+├── js/material-excel.js
+├── js/materials.js
+├── js/stats.js
+├── js/storage.js
+├── js/xlsx-safe.js
+├── js/utils.js
 ├── templates/
-│   ├── Weekflow_Task导入模板.xlsx
-│   └── Weekflow_资料库导入模板.xlsx
 ├── vendor/
+├── tests/
 ├── CHANGELOG.md
 ├── RELEASE.txt
-├── package.json
-└── README.md
+└── package.json
 ```
 
-正式版发布前已执行 Node 单元/结构测试、Playwright Chromium 真实浏览器测试、空白启动与旧版迁移测试，以及压缩包解压验收。
+## Development Team
 
-## 安全与限制
+- Developer: Wesley Yan
+- First release (v1.0): July 30, 2026
+- Latest base release (v2.4): August 10, 2026
+- Bilingual interface update: August 12, 2026
 
-- 动态业务内容通过 `textContent` 和 DOM API 渲染，不拼接用户输入到 `innerHTML`。
-- 链接仅接受 `http:` 和 `https:`；新标签页使用 `noopener,noreferrer`。
-- 数据恢复、导入和持久化均执行结构校验。
-- 删除 Task/Flow/分组按影响范围确认；资料批量删除和全部覆盖使用双重确认。
-- 本程序没有后端、账号、云同步或多人协作；SharePoint 地址作为 HTTPS 链接保存，不调用 SharePoint API。
-- 已自动化验证 Chromium；应用面向 1280px 以上桌面窗口，较窄窗口保留横向滚动。
+## Security and Limits
 
-开发协作署名：Wesley Yan
+- User content is rendered with DOM APIs rather than inserted as executable HTML.
+- Links accept only `http:` and `https:` and open with `noopener,noreferrer`.
+- Restore, import, and persistence paths validate structured data.
+- Weekflow has no backend, account, cloud synchronization, or multi-user collaboration. SharePoint URLs are stored only as HTTPS links; the app does not call SharePoint APIs.
+- The desktop UI is validated at 1280 px and wider; narrower screens retain horizontal scrolling where needed.
+
+Development collaboration attribution: Wesley Yan

@@ -1,168 +1,101 @@
-# Weekflow 更新日志
+# Weekflow Changelog
 
-## Weekflow v2.4 — 2026-08-10
+## v2.4 Bilingual Interface Update — 2026-08-12
 
-Week / Day 双时间轴版本，在原周时间轴上增加单周日粒度下钻，不改变分组、Flow、Task 数据结构及 Excel 上传下载格式。
+Complete bilingual language layer based on Weekflow v2.4. This update changes language only and preserves the v2.4 business data structure and mechanisms.
 
-### 新增与调整
+### Added
 
-- 原时间轴主界面更名为 `Task by Week`，周范围前后浏览、回到本周、全部范围和全部展开折叠功能保持不变。
-- 双击任意周日期框可进入所选自然周的 `Task by Day`；表头按周一至周日显示日期与星期，DDL 标签落在具体日期列。
-- `Task by Day` 只显示所选周内存在 DDL 的 Task；不重复 Task 使用自身 DDL，周期 Task 使用该周实际生成的周期 DDL，其他周 Task 不显示。
-- 日视图保留分组、Flow、Task、组合筛选、编辑、完成及展开折叠功能；周范围控制替换为“返回 Task by Week”。
-- 从日视图返回周视图时恢复进入前的周时间轴滚动位置；从主页、整体看板或资料库重新进入时间轴时默认打开 `Task by Week`。
-- 正式版升级为独立 `weekflow-v2.4:*` 存储空间，并自动迁移 v2.3、v2.2、v2.1、v2.0、v1.1 和 v1.0 数据。
+- Added a Chinese / English switch immediately to the right of Document Library; English is the default and the selection is stored separately from business data.
+- Translated navigation, Home, Task by Week, Task by Day, Overall Dashboard, Document Library, all forms and dialogs, filters, validation feedback, reminders, User Guide, and the full in-app Changelog.
+- Made Task and Document blank templates, re-importable current Task data, Document Library downloads, dashboard reports, and per-person Task status reports follow the selected language.
+- English workbooks use English sheet names, headers, instructions, labels, metadata, and filenames; imports continue to accept both English and Chinese headers and values.
+- Rewrote README, release notes, and automated regression documentation for the bilingual release.
 
-### 稳定性与兼容
+### Compatibility and regression protection
 
-- `Task by Week` 与 `Task by Day` 均复用 Task 行锚点恢复机制；在长列表底部勾选或取消完成后，被操作行、纵向滚动、横向滚动和页面位置保持稳定。
-- 分组和 Flow 的单项展开折叠继续保留被操作行位置，两个时间轴视图共用同一套持久化折叠状态。
-- Task Excel 模板、可回导当前数据、批量上传、资料库上传下载和三类看板报告格式均未修改。
-- 版本号、内置说明、README、正式版目录、迁移测试和验收记录升级为 v2.4。
+- Fixed the English `This Week` badge so it no longer overlaps the week range or date at narrow week-column widths and Windows display scaling.
+- Kept Windows-safe XLSX packaging, including `DocSecurity=0`, workbook properties, AutoFilter defined names, no VBA/external links/data connections, and no default frozen panes in dashboard/person reports.
+- Kept Task completion viewport anchoring in Task by Week and Task by Day.
+- Kept individual Group and Flow expand/collapse viewport anchoring.
+- Kept individual document selection as an in-place update without table rebuild or scroll reset.
+- Kept 1280 px Windows-width header actions at the far right and Document Library title/actions on one line.
+- User-entered business content is never translated or rewritten.
 
-## Weekflow v2.3 — 2026-08-08
+## v2.4 Week / Day Timeline — 2026-08-10
 
-周期任务与临期提醒版本，建立每周、每月周期 Task 的连续完成模型，并强化批量回导、长时间轴交互与 Windows Excel 兼容。
+- Renamed the main timeline Task by Week while retaining week navigation, this-week, full-range, filters, and expand/collapse controls.
+- Added Task by Day by double-clicking a week header. It shows Monday through Sunday and only deadline occurrences inside that selected natural week.
+- Recurring Tasks participate with their generated weekly/monthly occurrence, while other-week Tasks remain hidden.
+- Preserved Group, Flow, Task, filters, edit, completion, and expand/collapse behavior in the daily view.
+- Returning to Task by Week restores the prior weekly timeline position; entering from another main view starts in Task by Week.
+- Moved the release to the isolated `weekflow-v2.4:*` storage namespace and retained earlier-version migration.
+- Reused row anchoring in both timeline views so completion and hierarchy collapse do not jump to the first Group.
+- Left existing Excel import/export formats and mechanisms unchanged.
 
-### 新增与调整
+## v2.3 Recurring Tasks and Deadline Reminder — 2026-08-08
 
-- 周期 Task 支持每周或每月模式，并新增必填的周期开始、周期结束日期；季度周期已移除。
-- 表单 DDL 作为周期锚点：每周沿用其星期，每月沿用其日期，短月份自动取当月最后一天。
-- 一个周期 Task 只保存和统计为一条记录，时间轴在周期范围内显示多个 DDL 标签，不再克隆多条 Task。
-- 勾选当前自然周或自然月完成时，会同步把本期及此前全部周期视为完成；下一周期自动恢复未勾选，同时保留此前连续完成历史。旧版本留下的间断完成记录会在启动时自动修复。
-- Task 空白导入模板与“按导入模板下载当前数据”由 16 列升级为 20 列，新增周期、周期开始、周期结束和周期完成记录；旧 16 列文件保持兼容。
-- 时间轴看板报告、管理对象报告和汇报对象报告统一增加周期及起止日期，周标签使用 `✓、!、●` 区分完成、逾期和待完成。
-- 每次进入程序在右下角显示未来 7 天内未完成 Task 的临期提醒，10 秒后自动关闭；关闭按钮改为清晰的图形化样式，悬浮期间不遮挡或锁定页面操作。
-- 移除未采用的 Flow 模板入口、弹窗与数据结构，保留 Flow 创建、编辑和步骤拖动排序。
-- 正式版升级为独立 `weekflow-v2.3:*` 存储空间，并自动迁移 v2.2、v2.1、v2.0、v1.1 和 v1.0 数据。
+- Added weekly and monthly recurring Tasks with required recurrence start/end dates; removed quarterly recurrence.
+- Used the Task DDL as the weekday or day-of-month anchor and rendered every occurrence while storing/counting only one Task.
+- Completing the current period completes that period and all earlier periods; the next period starts incomplete while history remains continuous.
+- Expanded the Task template/current-data format from 16 to 20 columns with recurrence and completion history; retained legacy 16-column import.
+- Added recurrence fields and status-aware timeline markers to dashboard and person reports.
+- Added a non-blocking seven-day deadline reminder that closes after ten seconds.
+- Removed the unused Flow-template feature while retaining Flow creation, editing, and Task ordering.
+- Fixed Task completion jumping to the top and repaired legacy gapped recurrence histories.
+- Fixed Windows scaling layouts so create actions stay at the right and Document Library actions remain aligned with the title.
+- Removed false macro markers/code names from re-importable Task and Document Library workbooks and set document security to zero.
 
-### 优化与修复
+## v2.2 People Progress and Report Compatibility — 2026-08-08
 
-- 修复点击任意 Task 完成框后时间轴跳回首个分组的问题；重绘前后锁定被操作 Task 行、横向滚动和页面位置。
-- 修复 Windows 显示缩放触发 1280px 响应式断点后，时间轴“新建分组 / Flow / Task”错误停留在中部、资料库操作按钮另起一整行的问题；新建按钮保持页头最右，资料库标题与整组操作保持同一行且操作区靠右。
-- 修复较早开始的周期 Task 在完成本期后，此前标签仍显示逾期的问题；旧的间断完成记录会在启动时自动补齐。
-- 可回导 Task 当前数据和资料库下载统一移除底层库无实际用途的 `macroEnabled`/`ThisWorkbook` 标记，并显式写入 `DocSecurity=0`，避免 Windows Excel 误判为需要启用内容。
-- 数据 v3 将 `recurrenceCadence、recurrenceStart、recurrenceEnd、recurrenceCompletions` 保存在 Task 内；JSON 备份恢复会校验周期范围和完成历史。
-- 旧 v3 顶层周期规则与 Flow 模板字段可安全读取并忽略，既有 Task 不会丢失。
-- 版本号、内置说明、模板元数据、README、正式版目录和验收记录升级为 v2.3。
+- Kept five Overall Dashboard metrics permanently visible and opened one detail dimension at a time.
+- Added Managed Person and Report To progress summaries with exact counts and completion rate.
+- Added person-specific Task status exports sorted by Group with deadlines, progress, Deliverables, and related documents.
+- Defined Report To and Managed Person as person-name fields throughout forms, documentation, and templates.
+- Removed default frozen panes from dashboard and person reports.
+- Retained Windows-required workbook properties and filter definitions without macros, external workbook links, or data connections.
 
-## Weekflow v2.2 — 2026-08-08
+## v2.1 Portable Data and Stable Long Lists — 2026-08-03
 
-人员进度与报表兼容版本，增加按管理对象和汇报对象的汇总与单人报告，并强化 Windows Excel 报表兼容。
+- Added current Task data download in the same structure as the Task import template.
+- Added Supplement Import and double-confirm Complete Replacement for Task Excel uploads.
+- Renamed the presentation export to Export Dashboard Report to distinguish it from re-importable data.
+- Fixed Windows Excel repair prompts by adding the standard AutoFilter defined name, 1900 date system, workbook view, and application metadata.
+- Confirmed reports contain no VBA, external workbook links, or data connections.
+- Fixed individual Group/Flow expand/collapse jumping to the first Group.
+- Fixed individual document selection rebuilding the table and jumping to the top.
 
-### 新增与调整
+## v2.0 Document Collaboration — 2026-07-31
 
-- 整体看板改为总览常驻、四个维度按钮按需展开，避免分组、Flow 和人员汇总同时堆叠。
-- 新增管理对象和汇报对象两种 Task 进度汇总；每个对象均提供图形进度、精确数量和完成率。
-- 管理对象与汇报对象支持一键导出独立 Task 状态报告，包含 DDL、完成状态、进度、交付物和相关资料，并按分组排序。
-- 汇报对象和管理对象明确按人员姓名录入，Task 表单、README、使用说明与 Excel 模板示例同步更新。
-- 开发版 32 条示例 Task 的汇报对象和管理对象全部改为人员姓名，不再使用管理层、产品版本、项目或团队等非人员名称。
-- 正式版升级为独立 `weekflow-v2.2:*` 存储空间，并自动迁移 v2.1、v2.0、v1.1 和 v1.0 数据。
+- Added the Document Library alongside Timeline and Overall Dashboard.
+- Added Documentation, Deliverable, Control Sheet, and Folder document types.
+- Allowed one document to relate to multiple Tasks, Flows, and Groups, with two-way synchronization from the timeline.
+- Added document search and Type, Task, Flow, and Group filters; Notes remain display-only for search.
+- Added current/previous natural-week Recently Used filtering.
+- Added manual entry, blank Excel template, Supplement Import, Overwrite All, and Document Library export.
+- Added duplicate-URL replace/skip choices and double-confirm bulk deletion.
+- Merged Task Documentation and Deliverable links into Related Documents.
+- Added Group → Flow → Task cascading selection and unified high-contrast, auto-closing filter popovers.
+- Moved Document search/filters above the table and removed duplicate top selection controls, Notes search, and action column.
 
-### 优化与修复
+## v1.1 Bulk Entry — 2026-07-30
 
-- 时间轴“导出看板报告”、管理对象 Task 状态报告和汇报对象 Task 状态报告均取消默认冻结窗格，两张工作表打开后均可自由滚动。
-- 延续 v2.1 的 Windows Excel 兼容修复：保留标准工作簿属性、工作簿视图及与 AutoFilter 对应的 `_xlnm._FilterDatabase`，且不生成宏、外部工作簿链接或数据连接。
-- 版本号、内置说明、模板元数据、README、正式版目录和验收记录升级为 v2.2。
+- Added a blank Task Excel template, row validation preview, and bulk import.
+- Added automatic Group/Flow reuse or creation and Flow step ordering.
+- Made Urgency, Report To, and Deliverable required in both the web form and Excel import.
+- Fixed text-formatted Excel dates being rejected as invalid.
+- Migrated formal storage into the isolated `weekflow-v1.1:*` namespace.
 
-## Weekflow v2.1 — 2026-08-03
+## v1.0 First Release — 2026-07-30
 
-数据可移植与交互稳定版本，增强 Task 回导、Windows Excel 兼容性和长列表连续操作体验。
+- Added graphical Home, Timeline, Overall Dashboard, User Guide, and Changelog entries.
+- Added `Group → optional Flow → ordered Task` organization.
+- Added Flow creation, edit, deletion, collapse, progress, and Task step reordering.
+- Added free-text Task progress notes and Documentation/Deliverable links.
+- Added Group, Flow, status, urgency, overdue, and keyword filters.
+- Added Overall Dashboard Task/Group/Flow summaries, JSON backup/restore, and Excel export.
+- Released a clean build without sample data or a restore-sample-data action.
+- Added reusable Report To / Managed Person history and Group-color inheritance for new Flows.
+- Enlarged timeline left-column labels, compacted the header area, and strengthened data relationship validation.
 
-### 新增与调整
-
-- Task 批量录入新增“按导入模板下载当前数据”，输出与空白模板相同的 16 列，可直接再次上传。
-- Task Excel 上传新增“补充导入”和双重确认的“完整覆盖”模式；完整覆盖保留资料库条目，并尽量沿用同名层级 ID。
-- 时间轴主按钮“导出 Excel”改名为“导出看板报告”，与可回导的当前数据文件明确区分。
-- 正式版升级为独立 `weekflow-v2.1:*` 存储空间，并自动迁移 v2.0、v1.1 和 v1.0 数据。
-
-### 优化与修复
-
-- 修复 Windows Excel 打开看板报告时要求修复 `/xl/workbook.xml` 的问题：补齐 AutoFilter 对应的 `_xlnm._FilterDatabase` 工作簿定义，规范 1900 日期系统、工作簿视图和应用版本元数据。
-- 看板报告确认不包含 VBA、外部工作簿链接或数据连接，避免无关的“启用内容”来源。
-- 修复时间轴中展开或收起任意分组/Flow 后滚动回到首个分组的问题；重绘前后以被操作行作为锚点，同时保留时间轴横向位置和页面位置。
-- 修复资料库逐条勾选或取消资料后表格滚动回顶的问题；单条选择改为局部更新选择数量、全选状态和删除按钮，不再重绘整张资料表。
-- 版本号、内置使用说明、模板元数据、README、正式版目录和验收记录升级为 v2.1。
-
-## Weekflow v2.0 — 2026-07-31
-
-资料协同升级版本，把时间轴中的链接统一为可筛选、可统计、可双向编辑的资料库。
-
-### 新增
-
-- 新增与时间轴看板、整体看板并列的资料库模块。
-- 资料支持说明文档、交付物、控制表、文件夹四种类型。
-- 一条资料可关联多个 Task、Flow 和分组；所有关联对象只从时间轴现有内容中选择。
-- 资料库提供链接名称搜索，以及类型、Task、Flow、分组多选筛选；备注保留展示但不参与搜索。
-- 新增最近常用统计：本自然周或上个自然周至少打开过一次的资料可一键筛选。
-- 新增资料手动录入、空白 Excel 模板、补充导入、全部覆盖和资料库 Excel 下载。
-- 补充导入遇到重复链接地址时，可选择用新上传资料替换或跳过。
-- 资料列表支持通过表头复选框全选当前结果和批量删除；批量删除连续确认两次。
-
-### 变更与修复
-
-- 时间轴的“说明文档”和“交付物”合并为一个“相关资料”入口。
-- 相关资料按类型分组显示，无内容类型默认隐藏。
-- 时间轴和资料库共用统一资料实体；名称、地址、类型、备注及 Task/Flow/分组关联双向同步。
-- 旧 v1/v2 Task 内链接自动迁移为 v3 统一资料并保留 Task 归属。
-- 全部覆盖资料库连续确认两次，并建议用户先导出 JSON 备份。
-- 资料打开记录保留有效时间，最近常用按本自然周与上个自然周实时计算。
-- 资料表格在 1440px 桌面窗口内优化列宽，避免名称列因横向偏移而难以阅读。
-- 新建/编辑资料改为“分组 → Flow → Task”级联选择，只展示所选分组内的关联对象。
-- 移除资料库重复的顶部全选按钮、备注搜索框和操作列；名称直接编辑、地址直接打开。
-- “下载模板”和“下载资料库”整合为“下载”菜单，“上传 Excel”精简为“上传”。
-- 资料统计移到标题右侧，资料库表头、层级色与时间轴看板保持同一视觉语言。
-- 整体看板和资料库不再显示全局新建按钮及未完成/逾期数量，三个主界面的顶部控件字号统一。
-- 时间轴的分组、Flow、状态和紧急程度筛选统一为同一套高对比弹层，切换筛选或点击空白处会自动关闭已打开菜单。
-- 整体看板不再显示仅对时间轴有效的搜索、筛选和数据操作栏。
-- 资料库搜索及类型、分组、Flow、Task 筛选移至表格上方独立筛选栏，表头恢复为纯字段标签。
-- 资料筛选弹层统一沿用时间轴“筛选分组”的选项对比度、选中态与自动关闭行为。
-- 压缩资料新建/编辑弹窗的基础信息区与字号，将主要垂直空间留给分组、Flow、Task 关联选择。
-- 资料库表头、类型、相关 Flow、分组和备注统一为资料名称的 12px 主字号；链接地址和相关 Task 保持紧凑字号。
-- 程序内更新日志改为完整版本历史，并按版本号从新到旧展示 v2.0、v1.1 和 v1.0。
-- 使用说明新增 Multi-task 管理座舱定位，以及开发团队、首版日期和最新版本更新时间。
-- 版本号、内置使用说明、模板元数据、README 和验收记录升级为 v2.0。
-
-## Weekflow v1.1 — 2026-07-30
-
-批量录入与字段规则升级版本，减少初始建档操作并统一数据质量要求。
-
-### 新增
-
-- 提供空白 Excel 导入模板、逐行校验预览和 Task 批量导入。
-- 导入时可自动复用或创建分组与 Flow，并支持 Flow 步骤序号。
-- 导入预览显示 Task、新分组和新 Flow 数量；存在错误时禁止确认。
-
-### 变更与修复
-
-- 紧急程度、汇报对象和交付物改为网页表单与 Excel 导入必填项。
-- 紧急程度取消默认选中，创建 Task 时需要主动选择。
-- 修复带 Excel 日期格式的文本日期被误判为无效日期的问题。
-- 正式版存储空间升级为 `weekflow-v1.1:*`，并自动迁移 v1.0 本地数据。
-
-## Weekflow v1.0 — 2026-07-30
-
-第一个完整发布版本，聚焦周时间轴、Workflow 步骤组织和本地数据管理。
-
-### 新增
-
-- 图形化主页，以及时间轴看板、整体看板、使用说明和更新日志四个快捷入口。
-- “分组 → 可选 Flow → Task”的三级工作结构。
-- Flow 创建、编辑、删除、折叠、进度统计和 Task 步骤拖动排序。
-- Task 自由文本进度记录、说明文档链接和交付物链接。
-- 分组、Flow、状态、紧急程度、逾期和关键词组合筛选。
-- 整体看板的 Task、分组与 Flow 进度统计。
-- JSON 数据备份恢复和包含 Flow/步骤信息的 Excel 导出。
-- 独立空白发布目录，不包含示例数据及“恢复示例数据”入口。
-- 发布版使用独立的 `weekflow-v1.0:*` 存储空间，不读取开发版残留示例数据。
-- 汇报对象和管理对象自动提供已使用历史值，减少名称不一致。
-- 新建 Flow 默认继承所属分组颜色，主动改色后保留自定义值。
-### 优化与修复
-
-- 筛选条件移动到“可见 Task”数量右侧，不再额外占用一行。
-- 时间轴左侧六列表头放大到 13px，同时保持固定列宽和单行防溢出。
-- 压缩时间轴上方区域，为 Task 列表释放更多空间。
-- 加强数据版本、分组/Flow/Task 关联和进度更新时间校验。
-- 支持旧版 v1 本地数据自动迁移到 v2。
-
-开发协作署名：Wesley Yan
+Development collaboration attribution: Wesley Yan

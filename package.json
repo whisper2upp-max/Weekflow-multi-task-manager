@@ -2,8 +2,9 @@
   "name": "weekflow-task-manager",
   "version": "2.4.0",
   "private": true,
-  "description": "Weekflow v2.4 空白发布版：带 Week/Day 双时间轴、统一资料库和 Workflow 的本地 Task 管理工具",
+  "description": "Weekflow v2.4 bilingual local Task management with Week/Day timelines, Workflow, dashboards, and a unified Document Library",
   "scripts": {
-    "serve": "python3 -m http.server 8080"
+    "serve": "python3 -m http.server 8080",
+    "test": "node --test tests/*.test.js"
   }
 }

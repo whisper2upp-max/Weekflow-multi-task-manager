@@ -6,15 +6,28 @@
       : typeof require === "function"
         ? require("./date-utils.js")
         : null;
-  var api = factory(dates);
+  var i18n =
+    root.App && root.App.i18n
+      ? root.App.i18n
+      : typeof require === "function"
+        ? require("./i18n.js")
+        : null;
+  var api = factory(dates, i18n);
   if (typeof module === "object" && module.exports) module.exports = api;
   root.App = root.App || {};
   root.App.automation = api;
-})(typeof self !== "undefined" ? self : globalThis, function (dates) {
+})(typeof self !== "undefined" ? self : globalThis, function (dates, i18n) {
   "use strict";
 
   var CADENCES = ["weekly", "monthly"];
   var CADENCE_LABELS = { weekly: "每周", monthly: "每月" };
+
+  function cadenceLabel(cadence) {
+    var labels = i18n && typeof i18n.cadenceLabels === "function"
+      ? i18n.cadenceLabels()
+      : CADENCE_LABELS;
+    return labels[cadence] || cadence;
+  }
 
   function isCadence(value) {
     return CADENCES.includes(String(value || ""));
@@ -152,6 +165,7 @@
   return {
     CADENCES: CADENCES.slice(),
     CADENCE_LABELS: Object.assign({}, CADENCE_LABELS),
+    cadenceLabel: cadenceLabel,
     isCadence: isCadence,
     normalizeCompletions: normalizeCompletions,
     syncRecurringTaskStates: syncRecurringTaskStates,

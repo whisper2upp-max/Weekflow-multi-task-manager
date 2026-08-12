@@ -15,11 +15,17 @@
       : typeof require === "function"
         ? require("./xlsx-safe.js")
         : null;
-  var api = factory(xlsx, dates, xlsxSafe);
+  var i18n =
+    root.App && root.App.i18n
+      ? root.App.i18n
+      : typeof require === "function"
+        ? require("./i18n.js")
+        : null;
+  var api = factory(xlsx, dates, xlsxSafe, i18n);
   if (typeof module === "object" && module.exports) module.exports = api;
   root.App = root.App || {};
   root.App.excelImport = api;
-})(typeof self !== "undefined" ? self : globalThis, function (XLSX, dates, xlsxSafe) {
+})(typeof self !== "undefined" ? self : globalThis, function (XLSX, dates, xlsxSafe, i18n) {
   "use strict";
 
   var SHEET_NAME = "Task导入";
@@ -72,6 +78,45 @@
     ["交付物链接", "否", "格式：标题|https://...；多个链接用换行或中文分号分隔", "交付文件|https://example.com/delivery"]
   ];
 
+  var EN_COLUMNS = [
+    ["groupName", "Group*", true], ["groupColor", "Group Color", false], ["flowName", "Flow", false],
+    ["flowColor", "Flow Color", false], ["flowOrder", "Flow Step", false], ["taskName", "Task Name*", true],
+    ["ddl", "DDL*", true], ["recurrenceCadence", "Recurrence", false], ["recurrenceStart", "Recurrence Start", false],
+    ["recurrenceEnd", "Recurrence End", false], ["recurrenceCompletions", "Recurrence Completion History", false],
+    ["urgency", "Urgency*", true], ["status", "Completion Status", false], ["completedAt", "Completion Date", false],
+    ["reportTo", "Report To*", true], ["managedObject", "Managed Person", false], ["deliverable", "Deliverable*", true],
+    ["progressNote", "Progress Note", false], ["documentLinks", "Documentation Links", false], ["deliverableLinks", "Deliverable Links", false]
+  ];
+
+  var EN_GUIDE_ROWS = [
+    ["Group*", "Yes", "Supplement import reuses a Group with the same name; complete replacement rebuilds Groups from the file", "Products and Projects"],
+    ["Group Color", "No", "Use #RRGGBB; blank reuses a matched Group color or assigns one automatically", "#665CFF"],
+    ["Flow", "No", "Matched by name within the Group; leave blank for a standalone Task", "Release Workflow"],
+    ["Flow Color", "No", "Use #RRGGBB; a new Flow inherits its Group color when blank", "#665CFF"],
+    ["Flow Step", "No", "Task step number within the Flow; enter an integer greater than 0", "1"],
+    ["Task Name*", "Yes", "Task name, up to 160 characters", "Complete pre-release checks"],
+    ["DDL*", "Yes", "Deadline; yyyy-mm-dd is recommended", "2026-08-07"],
+    ["Recurrence", "No", "Does not repeat, Weekly, or Monthly; blank means Does not repeat", "Weekly"],
+    ["Recurrence Start", "For recurring Tasks", "Start date; must be entered with Recurrence End", "2026-08-01"],
+    ["Recurrence End", "For recurring Tasks", "End date; DDL must be inside the date range", "2026-09-30"],
+    ["Recurrence Completion History", "No", "Format: occurrence DDL|completion date. Separate periods with new lines or semicolons", "2026-08-07|2026-08-08"],
+    ["Urgency*", "Yes", "High, Medium, or Low", "High"],
+    ["Completion Status", "No", "Incomplete or Completed; blank defaults to Incomplete", "Incomplete"],
+    ["Completion Date", "No", "For completed Tasks only; yyyy-mm-dd is recommended", "2026-08-06"],
+    ["Report To*", "Yes", "Enter a person's name; matching names are standardized for filtering", "Wesley Yan"],
+    ["Managed Person", "No", "Enter a person's name; matching names are standardized for filtering", "Amy Chen"],
+    ["Deliverable*", "Yes", "Describe the expected output, up to 500 characters", "Release approval record"],
+    ["Progress Note", "No", "Current progress or notes, up to 4,000 characters", "Integration testing completed"],
+    ["Documentation Links", "No", "Format: title|https://...; separate links with new lines or semicolons", "User Guide|https://example.com/guide"],
+    ["Deliverable Links", "No", "Format: title|https://...; separate links with new lines or semicolons", "Delivery File|https://example.com/delivery"]
+  ];
+
+  function english(options) {
+    return options && options.language
+      ? String(options.language).toLowerCase().startsWith("en")
+      : Boolean(i18n && i18n.isEnglish());
+  }
+
   function cleanText(value, maxLength) {
     return String(value === null || value === undefined ? "" : value)
       .trim()
@@ -116,7 +161,26 @@
       ["状态", "status"],
       ["进度", "progressNote"],
       ["说明文档", "documentLinks"],
-      ["交付物链接地址", "deliverableLinks"]
+      ["交付物链接地址", "deliverableLinks"],
+      ["Group Name", "groupName"],
+      ["Group Color", "groupColor"],
+      ["Flow Color", "flowColor"],
+      ["Flow Step", "flowOrder"],
+      ["Task Name", "taskName"],
+      ["Deadline", "ddl"],
+      ["Recurrence", "recurrenceCadence"],
+      ["Recurrence Start", "recurrenceStart"],
+      ["Recurrence End", "recurrenceEnd"],
+      ["Recurrence Completion History", "recurrenceCompletions"],
+      ["Urgency", "urgency"],
+      ["Completion Status", "status"],
+      ["Completion Date", "completedAt"],
+      ["Report To", "reportTo"],
+      ["Managed Person", "managedObject"],
+      ["Deliverable", "deliverable"],
+      ["Progress Note", "progressNote"],
+      ["Documentation Links", "documentLinks"],
+      ["Deliverable Links", "deliverableLinks"]
     ].forEach(function (alias) {
       aliases[normalizeHeader(alias[0])] = alias[1];
     });
@@ -182,8 +246,8 @@
 
   function parseStatus(value) {
     var text = cleanText(value, 30).toLocaleLowerCase();
-    if (!text || text === "未完成" || text === "pending") return "pending";
-    if (text === "已完成" || text === "完成" || text === "completed") return "completed";
+    if (!text || text === "未完成" || text === "pending" || text === "incomplete") return "pending";
+    if (text === "已完成" || text === "完成" || text === "completed" || text === "complete") return "completed";
     return null;
   }
 
@@ -196,7 +260,7 @@
 
   function parseRecurrenceCadence(value) {
     var text = cleanText(value, 30).toLocaleLowerCase();
-    if (!text || ["不重复", "无", "none"].includes(text)) return "none";
+    if (!text || ["不重复", "无", "none", "does not repeat", "no recurrence"].includes(text)) return "none";
     if (["每周", "周", "weekly"].includes(text)) return "weekly";
     if (["每月", "月", "monthly"].includes(text)) return "monthly";
     return null;
@@ -464,7 +528,9 @@
       });
       var sheetName = workbook.Sheets[SHEET_NAME]
         ? SHEET_NAME
-        : workbook.SheetNames[0];
+        : workbook.Sheets["Task Import"]
+          ? "Task Import"
+          : workbook.SheetNames[0];
       if (!sheetName) return { rows: [], errors: ["Excel 中没有工作表。"], sheetName: "" };
       var matrix = sheetToMatrix(workbook.Sheets[sheetName]);
       var headerRowIndex = findHeaderRow(matrix);
@@ -671,17 +737,32 @@
     });
   }
 
-  function buildWorkbook(data) {
+  function buildWorkbook(data, options) {
     if (!XLSX) throw new Error("Excel 组件未加载。");
-    var headers = COLUMNS.map(function (column) {
+    var isTemplate = Boolean(options && options.template);
+    var activeColumns = english(options) ? EN_COLUMNS : COLUMNS;
+    var headers = activeColumns.map(function (column) {
       return column[1];
     });
     var rows = buildExportRows(data);
+    if (english(options)) {
+      rows = rows.map(function (row) {
+        var copy = row.slice();
+        copy[7] = ({ "不重复": "Does not repeat", "每周": "Weekly", "每月": "Monthly" })[copy[7]] || copy[7];
+        copy[11] = ({ "高": "High", "中": "Medium", "低": "Low" })[copy[11]] || copy[11];
+        copy[12] = copy[12] === "已完成" ? "Completed" : "Incomplete";
+        return copy;
+      });
+    }
     var taskSheet = XLSX.utils.aoa_to_sheet(
       [
-        ["Weekflow Task 当前数据（可再次导入）"],
-        ["每行代表 1 条 Task；文件结构与空白导入模板一致，可在“上传 Excel 批量导入”中直接使用。"],
-        ["带 * 为必填列｜请勿修改表头｜日期建议使用 yyyy-mm-dd｜单次最多导入 1000 条 Task"],
+        [english(options)
+          ? isTemplate ? "Weekflow Task Import Template" : "Weekflow Current Task Data (Re-importable)"
+          : isTemplate ? "Weekflow Task 导入模板" : "Weekflow Task 当前数据（可再次导入）"],
+        [english(options)
+          ? isTemplate ? "Enter one Task per row, then upload this workbook through Excel Bulk Import." : "Each row is one Task. This file matches the blank import template and can be uploaded through Excel Bulk Import."
+          : isTemplate ? "每行填写 1 条 Task，完成后可通过“上传 Excel 批量导入”上传。" : "每行代表 1 条 Task；文件结构与空白导入模板一致，可在“上传 Excel 批量导入”中直接使用。"],
+        [english(options) ? "* Required | Do not change headers | Use yyyy-mm-dd dates | Maximum 1,000 Tasks per import" : "带 * 为必填列｜请勿修改表头｜日期建议使用 yyyy-mm-dd｜单次最多导入 1000 条 Task"],
         headers
       ].concat(rows)
     );
@@ -701,14 +782,23 @@
     };
     taskSheet["!freeze"] = { xSplit: 0, ySplit: 4 };
 
-    var guideRows = [
-      ["Weekflow Excel 导入使用说明"],
-      ["1. 回到“Task导入”工作表，每行填写或调整 1 条 Task。"],
-      ["2. 分组、Task name、DDL、紧急程度、汇报对象和交付物为必填。"],
-      ["3. 在 Weekflow 中选择“••• → 上传 Excel 批量导入”，先查看校验预览。"],
-      ["4. 选择补充导入或完整覆盖；完整覆盖会连续确认两次。"],
-      ["字段", "必填", "填写规则", "格式示例（仅供参考）"]
-    ].concat(GUIDE_ROWS);
+    var guideRows = english(options)
+      ? [
+          ["Weekflow Excel Import Guide"],
+          ["1. Open the Task Import sheet and enter or update one Task per row."],
+          ["2. Group, Task Name, DDL, Urgency, Report To, and Deliverable are required."],
+          ["3. In Weekflow, choose ••• → Upload Excel for Bulk Import and review validation results."],
+          ["4. Choose Supplement Import or Complete Replacement; replacement requires two confirmations."],
+          ["Field", "Required", "Instructions", "Example (reference only)"]
+        ].concat(EN_GUIDE_ROWS)
+      : [
+          ["Weekflow Excel 导入使用说明"],
+          ["1. 回到“Task导入”工作表，每行填写或调整 1 条 Task。"],
+          ["2. 分组、Task name、DDL、紧急程度、汇报对象和交付物为必填。"],
+          ["3. 在 Weekflow 中选择“••• → 上传 Excel 批量导入”，先查看校验预览。"],
+          ["4. 选择补充导入或完整覆盖；完整覆盖会连续确认两次。"],
+          ["字段", "必填", "填写规则", "格式示例（仅供参考）"]
+        ].concat(GUIDE_ROWS);
     var guideSheet = XLSX.utils.aoa_to_sheet(guideRows);
     guideSheet["!merges"] = [
       { s: { r: 0, c: 0 }, e: { r: 0, c: 3 } },
@@ -722,23 +812,27 @@
     guideSheet["!freeze"] = { xSplit: 0, ySplit: 6 };
 
     var workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, taskSheet, SHEET_NAME);
-    XLSX.utils.book_append_sheet(workbook, guideSheet, "填写说明");
+    XLSX.utils.book_append_sheet(workbook, taskSheet, english(options) ? "Task Import" : SHEET_NAME);
+    XLSX.utils.book_append_sheet(workbook, guideSheet, english(options) ? "Instructions" : "填写说明");
     workbook.Props = {
-      Title: "Weekflow Task 当前数据",
-      Subject: "Weekflow v2.3 re-importable Task data",
+      Title: english(options)
+        ? isTemplate ? "Weekflow Task Import Template" : "Weekflow Current Task Data"
+        : isTemplate ? "Weekflow Task 导入模板" : "Weekflow Task 当前数据",
+      Subject: "Weekflow v2.4 re-importable Task data",
       Author: "Wesley Yan",
-      Comments: "与 Weekflow Task 导入模板结构一致，可再次批量导入。"
+      Comments: english(options)
+        ? isTemplate ? "Blank Task import template." : "Matches the Weekflow Task import template and can be imported again."
+        : isTemplate ? "空白 Task 导入模板。" : "与 Weekflow Task 导入模板结构一致，可再次批量导入。"
     };
     return workbook;
   }
 
-  function buildXlsxPackage(data, ZipConstructor, outputType) {
+  function buildXlsxPackage(data, ZipConstructor, outputType, options) {
     if (!xlsxSafe || typeof xlsxSafe.buildWorkbookPackage !== "function") {
       return Promise.reject(new Error("Excel 安全打包组件未加载。"));
     }
     return xlsxSafe.buildWorkbookPackage(
-      buildWorkbook(data),
+      buildWorkbook(data, options),
       XLSX,
       ZipConstructor,
       outputType
@@ -746,8 +840,23 @@
   }
 
   function exportWorkbook(data, ZipConstructor, filename) {
-    var outputName = filename || "Weekflow_Task当前数据.xlsx";
-    return buildXlsxPackage(data, ZipConstructor, "blob").then(function (blob) {
+    var options = { language: i18n && i18n.getLanguage ? i18n.getLanguage() : "zh-CN" };
+    var outputName = filename || (english(options) ? "Weekflow_Current_Task_Data.xlsx" : "Weekflow_Task当前数据.xlsx");
+    return buildXlsxPackage(data, ZipConstructor, "blob", options).then(function (blob) {
+      return { filename: outputName, blob: blob };
+    });
+  }
+
+  function exportTemplateWorkbook(ZipConstructor, filename) {
+    var options = {
+      language: i18n && i18n.getLanguage ? i18n.getLanguage() : "zh-CN",
+      template: true
+    };
+    var emptyData = { groups: [], flows: [], tasks: [], materials: [] };
+    var outputName = filename || (english(options)
+      ? "Weekflow_Task_Import_Template_EN.xlsx"
+      : "Weekflow_Task导入模板.xlsx");
+    return buildXlsxPackage(emptyData, ZipConstructor, "blob", options).then(function (blob) {
       return { filename: outputName, blob: blob };
     });
   }
@@ -764,6 +873,7 @@
     buildExportRows: buildExportRows,
     buildWorkbook: buildWorkbook,
     buildXlsxPackage: buildXlsxPackage,
-    exportWorkbook: exportWorkbook
+    exportWorkbook: exportWorkbook,
+    exportTemplateWorkbook: exportTemplateWorkbook
   };
 });

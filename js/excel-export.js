@@ -18,13 +18,19 @@
         ? root.App.materials
         : typeof require === "function"
           ? require("./materials.js")
+          : null,
+    i18n:
+      root.App && root.App.i18n
+        ? root.App.i18n
+        : typeof require === "function"
+          ? require("./i18n.js")
           : null
   };
-  var api = factory(deps.dates, deps.stats, deps.materials);
+  var api = factory(deps.dates, deps.stats, deps.materials, deps.i18n);
   if (typeof module === "object" && module.exports) module.exports = api;
   root.App = root.App || {};
   root.App.excelExport = api;
-})(typeof self !== "undefined" ? self : globalThis, function (dates, stats, materialTools) {
+})(typeof self !== "undefined" ? self : globalThis, function (dates, stats, materialTools, i18n) {
   "use strict";
 
   var FIXED_HEADERS = [
@@ -52,15 +58,49 @@
   var urgencyLabels = { high: "高", medium: "中", low: "低" };
   var recurrenceLabels = { none: "不重复", weekly: "每周", monthly: "每月" };
 
-  function formatMaterials(materials) {
+  function isEnglish(options) {
+    return options && options.language
+      ? String(options.language).toLowerCase().startsWith("en")
+      : Boolean(i18n && i18n.isEnglish());
+  }
+
+  function labels(options) {
+    if (!isEnglish(options)) {
+      return {
+        headers: FIXED_HEADERS.slice(), overallTitle: "Task 整体看板", exportTime: "导出时间",
+        overallStats: "总体统计", totals: ["Task 总数", "已完成数量", "未完成数量", "当前逾期数量", "完成率"],
+        groupStats: "分组统计", groupHeaders: ["分组名称", "Task 总数", "已完成", "未完成", "逾期", "完成率"],
+        flowStats: "Flow 统计", flowHeaders: ["所属分组", "Flow 名称", "步骤数", "已完成", "未完成", "逾期", "完成率"],
+        unknownGroup: "未知分组", yes: "是", no: "否", completed: "已完成", pending: "未完成",
+        urgency: { high: "高", medium: "中", low: "低" }, recurrence: recurrenceLabels,
+        sheets: ["整体看板", "时间表看板"], workbook: "工作表", dashboardTitle: "Weekflow Task 看板",
+        reportFilename: "Task看板_", managed: "管理对象", reportTo: "汇报对象", notProvided: "未填写", taskStatus: "Task状态"
+      };
+    }
+    return {
+      headers: ["Group", "Flow", "Step Number", "Task Name", "Report To", "Managed Person", "Deliverable", "DDL", "DDL Week Friday", "Recurrence", "Recurrence Start", "Recurrence End", "Urgency", "Completion Status", "Completion Date", "Overdue", "Progress Note", "Related Documents"],
+      overallTitle: "Task Overall Dashboard", exportTime: "Exported At", overallStats: "Overall Statistics",
+      totals: ["Total Tasks", "Completed", "Incomplete", "Currently Overdue", "Completion Rate"],
+      groupStats: "Group Statistics", groupHeaders: ["Group Name", "Total Tasks", "Completed", "Incomplete", "Overdue", "Completion Rate"],
+      flowStats: "Flow Statistics", flowHeaders: ["Group", "Flow Name", "Steps", "Completed", "Incomplete", "Overdue", "Completion Rate"],
+      unknownGroup: "Unknown Group", yes: "Yes", no: "No", completed: "Completed", pending: "Incomplete",
+      urgency: { high: "High", medium: "Medium", low: "Low" }, recurrence: { none: "Does not repeat", weekly: "Weekly", monthly: "Monthly" },
+      sheets: ["Overall Dashboard", "Timeline Dashboard"], workbook: "Worksheets", dashboardTitle: "Weekflow Task Dashboard",
+      reportFilename: "Task_Dashboard_", managed: "Managed_Person", reportTo: "Report_To", notProvided: "Not_Provided", taskStatus: "Task_Status"
+    };
+  }
+
+  function formatMaterials(materials, options) {
     return (Array.isArray(materials) ? materials : [])
       .map(function (material) {
         return (
           "[" +
-          (materialTools.TYPE_LABELS[material.type] || material.type) +
+          (isEnglish(options)
+            ? ({ document: "Documentation", deliverable: "Deliverable", control: "Control Sheet", folder: "Folder" }[material.type] || material.type)
+            : materialTools.TYPE_LABELS[material.type] || material.type) +
           "] " +
           material.title +
-          "：" +
+          (isEnglish(options) ? ": " : "：") +
           material.url
         );
       })
@@ -84,16 +124,17 @@
   }
 
   function buildOverallRows(data, now, options) {
+    var copy = labels(options);
     var summary = stats.summarize(data.tasks, now);
     var groupRows = stats.summarizeByGroup(data.groups, data.tasks, now);
     var flowRows = stats.summarizeByFlow(data.flows || [], data.groups, data.tasks, now);
-    var title = options && options.title ? String(options.title) : "Task 整体看板";
+    var title = options && options.title ? String(options.title) : copy.overallTitle;
     var rows = [
       [title],
-      ["导出时间", new Date(now || Date.now()).toLocaleString("zh-CN")],
+      [copy.exportTime, new Date(now || Date.now()).toLocaleString(isEnglish(options) ? "en-US" : "zh-CN")],
       [],
-      ["总体统计"],
-      ["Task 总数", "已完成数量", "未完成数量", "当前逾期数量", "完成率"],
+      [copy.overallStats],
+      copy.totals,
       [
         summary.total,
         summary.completed,
@@ -102,8 +143,8 @@
         summary.completionRate + "%"
       ],
       [],
-      ["分组统计"],
-      ["分组名称", "Task 总数", "已完成", "未完成", "逾期", "完成率"]
+      [copy.groupStats],
+      copy.groupHeaders
     ];
     groupRows.forEach(function (item) {
       rows.push([
@@ -115,18 +156,10 @@
         item.completionRate + "%"
       ]);
     });
-    rows.push([], ["Flow 统计"], [
-      "所属分组",
-      "Flow 名称",
-      "步骤数",
-      "已完成",
-      "未完成",
-      "逾期",
-      "完成率"
-    ]);
+    rows.push([], [copy.flowStats], copy.flowHeaders);
     flowRows.forEach(function (item) {
       rows.push([
-        item.group ? item.group.name : "未知分组",
+        item.group ? item.group.name : copy.unknownGroup,
         item.flow.name,
         item.total,
         item.completed,
@@ -138,7 +171,8 @@
     return rows;
   }
 
-  function buildTimelineRows(data, now) {
+  function buildTimelineRows(data, now, options) {
+    var copy = labels(options);
     var today = dates.todayISO(now instanceof Date ? now : new Date());
     var weeks = timelineWeeks(data.tasks, now);
     var groupMap = new Map(
@@ -154,7 +188,7 @@
     var sortedGroups = data.groups.slice().sort(function (a, b) {
       return Number(a.order || 0) - Number(b.order || 0);
     });
-    var rows = [FIXED_HEADERS.concat(weeks)];
+    var rows = [copy.headers.concat(weeks)];
     var orderedTasks = [];
     sortedGroups.forEach(function (group) {
       var groupSourceTasks = data.tasks.filter(function (task) {
@@ -200,7 +234,7 @@
         });
         var flow = task.flowId ? flowMap.get(task.flowId) : null;
         var row = [
-          groupMap.get(task.groupId) ? group.name : "未知分组",
+          groupMap.get(task.groupId) ? group.name : copy.unknownGroup,
           flow ? flow.name : "",
           flow ? task.flowOrder || "" : "",
           task.name,
@@ -209,18 +243,19 @@
           task.deliverable,
           task.ddl,
           taskFriday,
-          recurrenceLabels[dates.recurrenceCadence(task)] || "不重复",
+          copy.recurrence[dates.recurrenceCadence(task)] || copy.recurrence.none,
           recurring ? task.recurrenceStart : "",
           recurring ? task.recurrenceEnd : "",
-          urgencyLabels[task.urgency] || task.urgency,
-          task.status === "completed" ? "已完成" : "未完成",
+          copy.urgency[task.urgency] || task.urgency,
+          task.status === "completed" ? copy.completed : copy.pending,
           task.completedAt || "",
-          dates.isOverdue(task, today) ? "是" : "否",
+          dates.isOverdue(task, today) ? copy.yes : copy.no,
           task.progressNote || "",
           formatMaterials(
             (data.materials || []).filter(function (material) {
               return material.taskIds.includes(task.id);
-            })
+            }),
+            options
           )
         ];
         weeks.forEach(function (friday) {
@@ -504,7 +539,8 @@
   }
 
   function timelineSheetXml(data, now) {
-    var timeline = buildTimelineRows(data, now);
+    var options = arguments.length > 2 ? arguments[2] : null;
+    var timeline = buildTimelineRows(data, now, options);
     var styles = groupStyleMap(data);
     var today = dates.todayISO(now instanceof Date ? now : new Date());
     var rowXml = timeline.rows
@@ -580,8 +616,9 @@
     );
   }
 
-  function workbookXml(data, now) {
-    var timeline = buildTimelineRows(data, now);
+  function workbookXml(data, now, options) {
+    var copy = labels(options);
+    var timeline = buildTimelineRows(data, now, options);
     var lastColumn = columnName(timeline.rows[0].length - 1);
     var lastRow = timeline.rows.length;
     return (
@@ -589,8 +626,10 @@
       '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
       '<workbookPr date1904="0"/>' +
       '<bookViews><workbookView visibility="visible" minimized="0" showHorizontalScroll="1" showVerticalScroll="1" showSheetTabs="1" xWindow="120" yWindow="120" windowWidth="24000" windowHeight="15000" tabRatio="600" firstSheet="0" activeTab="0" autoFilterDateGrouping="1"/></bookViews>' +
-      '<sheets><sheet name="整体看板" sheetId="1" state="visible" r:id="rId1"/><sheet name="时间表看板" sheetId="2" state="visible" r:id="rId2"/></sheets>' +
-      '<definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="1" hidden="1">&apos;时间表看板&apos;!$A$1:$' +
+      '<sheets><sheet name="' + xmlEscape(copy.sheets[0]) + '" sheetId="1" state="visible" r:id="rId1"/><sheet name="' + xmlEscape(copy.sheets[1]) + '" sheetId="2" state="visible" r:id="rId2"/></sheets>' +
+      '<definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="1" hidden="1">&apos;' +
+      xmlEscape(copy.sheets[1]) +
+      '&apos;!$A$1:$' +
       lastColumn +
       "$" +
       lastRow +
@@ -612,7 +651,7 @@
 
   function corePropertiesXml(now, options) {
     var created = (now instanceof Date ? now : new Date()).toISOString();
-    var title = options && options.title ? String(options.title) : "Weekflow Task 看板";
+    var title = options && options.title ? String(options.title) : labels(options).dashboardTitle;
     return (
       '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
       '<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" ' +
@@ -628,15 +667,16 @@
     );
   }
 
-  function appPropertiesXml() {
+  function appPropertiesXml(options) {
+    var copy = labels(options);
     return (
       '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
       '<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" ' +
       'xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes">' +
       "<Application>Weekflow</Application><DocSecurity>0</DocSecurity><ScaleCrop>false</ScaleCrop>" +
-      '<HeadingPairs><vt:vector size="2" baseType="variant"><vt:variant><vt:lpstr>工作表</vt:lpstr></vt:variant>' +
+      '<HeadingPairs><vt:vector size="2" baseType="variant"><vt:variant><vt:lpstr>' + xmlEscape(copy.workbook) + '</vt:lpstr></vt:variant>' +
       '<vt:variant><vt:i4>2</vt:i4></vt:variant></vt:vector></HeadingPairs>' +
-      '<TitlesOfParts><vt:vector size="2" baseType="lpstr"><vt:lpstr>整体看板</vt:lpstr><vt:lpstr>时间表看板</vt:lpstr></vt:vector></TitlesOfParts>' +
+      '<TitlesOfParts><vt:vector size="2" baseType="lpstr"><vt:lpstr>' + xmlEscape(copy.sheets[0]) + '</vt:lpstr><vt:lpstr>' + xmlEscape(copy.sheets[1]) + '</vt:lpstr></vt:vector></TitlesOfParts>' +
       "<Company></Company><LinksUpToDate>false</LinksUpToDate><SharedDoc>false</SharedDoc>" +
       "<HyperlinksChanged>false</HyperlinksChanged><AppVersion>16.0300</AppVersion></Properties>"
     );
@@ -651,12 +691,12 @@
     zip.file("[Content_Types].xml", contentTypesXml());
     zip.file("_rels/.rels", packageRelationshipsXml());
     zip.file("docProps/core.xml", corePropertiesXml(date, options));
-    zip.file("docProps/app.xml", appPropertiesXml());
-    zip.file("xl/workbook.xml", workbookXml(data, date));
+    zip.file("docProps/app.xml", appPropertiesXml(options));
+    zip.file("xl/workbook.xml", workbookXml(data, date, options));
     zip.file("xl/_rels/workbook.xml.rels", workbookRelationshipsXml());
     zip.file("xl/styles.xml", styleSheetXml(data));
     zip.file("xl/worksheets/sheet1.xml", overallSheetXml(data, date, options));
-    zip.file("xl/worksheets/sheet2.xml", timelineSheetXml(data, date));
+    zip.file("xl/worksheets/sheet2.xml", timelineSheetXml(data, date, options));
     return zip.generateAsync({
       type: outputType || "blob",
       mimeType: XLSX_MIME,
@@ -667,8 +707,9 @@
 
   function exportWorkbook(data, ZipConstructor, now) {
     var date = now instanceof Date ? now : new Date();
-    var filename = "Task看板_" + dates.dateTimeStamp(date) + ".xlsx";
-    return buildXlsxPackage(data, ZipConstructor, date, "blob").then(function (blob) {
+    var options = { language: i18n && i18n.getLanguage ? i18n.getLanguage() : "zh-CN" };
+    var filename = labels(options).reportFilename + dates.dateTimeStamp(date) + ".xlsx";
+    return buildXlsxPackage(data, ZipConstructor, date, "blob", options).then(function (blob) {
       return { filename: filename, blob: blob };
     });
   }
@@ -716,33 +757,39 @@
     };
   }
 
-  function safeFilenamePart(value) {
+  function safeFilenamePart(value, options) {
+    var copy = labels(options);
     return (
-      String(value || "未填写")
+      String(value || copy.notProvided)
         .trim()
         .replace(/[\\/:*?"<>|\u0000-\u001F]/g, "_")
         .replace(/\s+/g, "_")
         .replace(/_+/g, "_")
         .replace(/^[._]+|[._]+$/g, "")
-        .slice(0, 60) || "未填写"
+        .slice(0, 60) || copy.notProvided
     );
   }
 
   function taskStatusConfig(config) {
     var source = config || {};
+    if (!source.language && i18n && i18n.getLanguage) {
+      source = Object.assign({}, source, { language: i18n.getLanguage() });
+    }
     var field = source.field;
     if (!["managedObject", "reportTo"].includes(field)) {
       throw new Error("不支持的人员汇总维度。");
     }
-    var fieldLabel = field === "managedObject" ? "管理对象" : "汇报对象";
+    var copy = labels(source);
+    var fieldLabel = field === "managedObject" ? copy.managed : copy.reportTo;
     var value = String(source.value || "").trim();
-    var label = String(source.label || value || "未填写" + fieldLabel).trim();
+    var label = String(source.label || value || copy.notProvided + "_" + fieldLabel).trim();
     return {
       field: field,
       fieldLabel: fieldLabel,
       value: value,
       label: label,
-      title: fieldLabel + "：" + label + " · Task 状态"
+      title: fieldLabel + (isEnglish(source) ? ": " : "：") + label + (isEnglish(source) ? " · Task Status" : " · Task 状态"),
+      language: source.language
     };
   }
 
@@ -763,18 +810,19 @@
       ZipConstructor,
       now,
       outputType,
-      { title: scope.title }
+      { title: scope.title, language: scope.language }
     );
   }
 
   function exportTaskStatusWorkbook(data, ZipConstructor, config, now) {
     var date = now instanceof Date ? now : new Date();
     var scope = taskStatusConfig(config);
+    var copy = labels(scope);
     var filename =
       scope.fieldLabel +
       "_" +
-      safeFilenamePart(scope.label) +
-      "_Task状态_" +
+      safeFilenamePart(scope.label, scope) +
+      "_" + copy.taskStatus + "_" +
       dates.dateTimeStamp(date) +
       ".xlsx";
     return buildTaskStatusXlsxPackage(

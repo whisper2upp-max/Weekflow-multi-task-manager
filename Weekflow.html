@@ -38,6 +38,11 @@
           </button>
         </nav>
 
+        <div class="language-switch" role="group" aria-label="语言切换">
+          <button class="is-active" type="button" data-language="zh-CN" aria-pressed="true">中文</button>
+          <button type="button" data-language="en" aria-pressed="false">EN</button>
+        </div>
+
         <div id="header-summary" class="header-summary" aria-live="polite">
           <span><b id="header-pending">0</b> 未完成</span>
           <span class="summary-overdue"><b id="header-overdue">0</b> 逾期</span>
@@ -143,7 +148,11 @@
             <summary aria-label="更多数据操作">•••</summary>
             <div class="more-popover">
               <span class="menu-section-label">批量录入</span>
-              <a href="./templates/Weekflow_Task导入模板.xlsx" download>
+              <a
+                href="./templates/Weekflow_Task导入模板.xlsx"
+                data-template-kind="task"
+                download
+              >
                 下载 Excel 导入模板
               </a>
               <button type="button" data-action="export-import-data">
@@ -598,6 +607,7 @@
                 <div class="materials-download-popover">
                   <a
                     href="./templates/Weekflow_资料库导入模板.xlsx"
+                    data-template-kind="materials"
                     download
                   >
                     下载空白模板
@@ -1216,7 +1226,7 @@
       <form id="link-form" method="dialog" novalidate>
         <div class="modal-head">
           <div>
-            <p class="eyebrow">Related materials</p>
+            <p class="eyebrow">Related documents</p>
             <h2 id="link-dialog-title">管理相关资料</h2>
           </div>
           <button class="icon-button" type="button" data-action="close-link-dialog" aria-label="关闭">×</button>
@@ -1236,7 +1246,7 @@
       <form id="material-form" method="dialog" novalidate>
         <div class="modal-head">
           <div>
-            <p class="eyebrow">Material details</p>
+            <p class="eyebrow">Document details</p>
             <h2 id="material-dialog-title">添加资料</h2>
           </div>
           <button class="icon-button" type="button" data-action="close-material-dialog" aria-label="关闭">×</button>
@@ -1303,7 +1313,7 @@
     <dialog id="material-import-dialog" class="modal modal-large">
       <div class="modal-head">
         <div>
-          <p class="eyebrow">Materials import</p>
+          <p class="eyebrow">Document import</p>
           <h2>资料库 Excel 导入</h2>
         </div>
         <button class="icon-button" type="button" data-action="close-material-import" aria-label="关闭">×</button>
@@ -1428,6 +1438,7 @@
 
     <script src="./vendor/jszip.min.js"></script>
     <script src="./vendor/xlsx.full.min.js"></script>
+    <script src="./js/i18n.js"></script>
     <script src="./js/xlsx-safe.js"></script>
     <script src="./js/utils.js"></script>
     <script src="./js/date-utils.js"></script>

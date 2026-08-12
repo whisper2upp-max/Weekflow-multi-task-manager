@@ -197,6 +197,45 @@ button:disabled {
   transform: scaleX(1);
 }
 
+.language-switch {
+  display: inline-flex;
+  flex: 0 0 auto;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--fog);
+}
+
+.language-switch + .header-summary {
+  margin-left: 0;
+}
+
+.header-summary + .header-actions {
+  margin-left: auto;
+}
+
+.language-switch button {
+  min-width: 42px;
+  min-height: 32px;
+  border: 0;
+  border-right: 1px solid var(--line);
+  padding: 5px 9px;
+  background: transparent;
+  color: var(--ink-soft);
+  font-family: var(--font-data);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.language-switch button:last-child {
+  border-right: 0;
+}
+
+.language-switch button.is-active {
+  background: var(--ink);
+  color: #fff;
+}
+
 .header-summary {
   display: flex;
   margin-left: auto;
@@ -1758,6 +1797,107 @@ td {
   color: #8d96a7;
 }
 
+.localized-date-shell {
+  position: relative;
+  display: block;
+  min-width: 0;
+  min-height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: #fff;
+  isolation: isolate;
+}
+
+.localized-date-shell input[type="date"] {
+  position: relative;
+  z-index: 3;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.localized-date-shell .localized-date-placeholder {
+  position: absolute;
+  z-index: 10;
+  top: 0;
+  right: 36px;
+  bottom: 0;
+  left: 10px;
+  display: none;
+  align-items: center;
+  padding-left: 1px;
+  background: #fff;
+  color: #8d96a7;
+  font: inherit;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+.localized-date-shell:has(input:disabled) .localized-date-placeholder {
+  background: #f3f5f8;
+}
+
+.localized-date-shell:has(input:disabled) {
+  background: #f3f5f8;
+}
+
+.localized-date-shell:focus-within {
+  border-color: var(--indigo);
+  box-shadow: 0 0 0 3px rgba(83, 104, 216, 0.1);
+}
+
+.localized-date-shell:has(input.is-invalid) {
+  border-color: var(--coral);
+  box-shadow: 0 0 0 3px rgba(207, 67, 77, 0.08);
+}
+
+.localized-date-icon {
+  position: absolute;
+  z-index: 10;
+  top: 50%;
+  right: 11px;
+  display: none;
+  width: 14px;
+  height: 13px;
+  border: 1.5px solid #596579;
+  border-radius: 2px;
+  transform: translateY(-45%);
+  pointer-events: none;
+}
+
+.localized-date-icon::before {
+  position: absolute;
+  top: 3px;
+  right: 0;
+  left: 0;
+  height: 1px;
+  background: #596579;
+  content: "";
+}
+
+.localized-date-icon::after {
+  position: absolute;
+  top: -3px;
+  left: 2px;
+  width: 7px;
+  height: 3px;
+  border-right: 1.5px solid #596579;
+  border-left: 1.5px solid #596579;
+  content: "";
+}
+
+html[data-language="en"] .localized-date-shell.is-empty .localized-date-placeholder {
+  display: flex;
+}
+
+html[data-language="en"] .localized-date-shell.is-empty .localized-date-icon {
+  display: block;
+}
+
+html[data-language="en"] .localized-date-shell.is-empty input[type="date"] {
+  opacity: 0;
+}
+
 .form-field input.is-invalid,
 .form-field select.is-invalid,
 .form-field textarea.is-invalid {
@@ -2675,6 +2815,22 @@ h1 {
   font-family: var(--font-body);
   font-size: 8px;
   line-height: 1.4;
+}
+
+html[data-language="en"] .week-current-badge {
+  top: 4px;
+  right: 50%;
+  max-width: calc(100% - 12px);
+  overflow: hidden;
+  font-size: 7px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  transform: translateX(50%);
+  white-space: nowrap;
+}
+
+html[data-language="en"] .week-head.is-current .week-range {
+  padding-top: 12px;
 }
 
 .group-row {
@@ -4229,6 +4385,21 @@ h1 {
     margin-left: auto;
   }
 
+  .view-nav {
+    gap: 1px;
+  }
+
+  .nav-tab {
+    padding-right: 9px;
+    padding-left: 9px;
+  }
+
+  .language-switch button {
+    min-width: 36px;
+    padding-right: 6px;
+    padding-left: 6px;
+  }
+
   .search-field {
     width: 270px;
     min-width: 220px;
@@ -4267,6 +4438,12 @@ h1 {
 
   .app-header {
     gap: 14px;
+  }
+
+  .language-switch button {
+    min-width: 36px;
+    padding-right: 6px;
+    padding-left: 6px;
   }
 
   .filter-bar {
@@ -4763,6 +4940,40 @@ h1 {
   grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 7px 10px;
   margin-bottom: 10px;
+}
+
+/* English labels need slightly wider fixed columns than their Chinese equivalents. */
+html[data-language="en"] {
+  --left-rail: 650px;
+}
+
+html[data-language="en"] .timeline-corner,
+html[data-language="en"] .task-info {
+  grid-template-columns: minmax(235px, 1fr) 70px 82px 104px 48px;
+}
+
+html[data-language="en"] .timeline-corner {
+  font-size: 12px;
+  letter-spacing: 0.01em;
+}
+
+html[data-language="en"] .timeline-corner span {
+  padding: 0 3px;
+  text-overflow: clip;
+}
+
+html[data-language="en"] .urgency-badge {
+  width: 62px;
+  min-width: 62px;
+  padding-right: 5px;
+  padding-left: 5px;
+  white-space: nowrap;
+}
+
+@media (max-width: 1280px) {
+  html[data-language="en"] {
+    --left-rail: 640px;
+  }
 }
 
 #material-dialog {
