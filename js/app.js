@@ -3,6 +3,7 @@
   "use strict";
 
   var App = window.App;
+  var i18n = App.i18n;
   var utils = App.utils;
   var dates = App.dateUtils;
   var stats = App.stats;
@@ -13,8 +14,8 @@
   var materialExcel = App.materialExcel;
   var automation = App.automation;
 
-  var urgencyLabels = { high: "高", medium: "中", low: "低" };
-  var statusLabels = { pending: "未完成", completed: "已完成" };
+  var urgencyLabels = i18n.urgencyLabels();
+  var statusLabels = i18n.statusLabels();
   var data = storage.load();
   var ui = {
     view: "home",
@@ -71,6 +72,10 @@
 
   function queryAll(selector, root) {
     return Array.prototype.slice.call((root || document).querySelectorAll(selector));
+  }
+
+  function confirmAction(message) {
+    return window.confirm(i18n.translateMessage(message));
   }
 
   function cacheDom() {
@@ -254,6 +259,7 @@
   function initialize() {
     cacheDom();
     bindEvents();
+    syncLanguageAssets();
     var recurrenceSync = automation.syncRecurringTaskStates(data, new Date());
     if (recurrenceSync.changed) {
       try {
@@ -263,6 +269,7 @@
       }
     }
     renderAll();
+    i18n.applyDocument();
     var warning = storage.getLastWarning();
     if (warning) toast(warning, "warning", 7000);
     showDdlReminder();
@@ -273,6 +280,14 @@
     document.addEventListener("click", handleActionClick);
     document.addEventListener("click", closeOtherPopoverMenus);
     document.addEventListener("keydown", handleKeyboard);
+    queryAll("[data-language]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        var nextLanguage = i18n.normalizeLanguage(button.dataset.language);
+        if (nextLanguage === i18n.getLanguage()) return;
+        i18n.setLanguage(nextLanguage);
+        window.location.reload();
+      });
+    });
 
     dom["filter-search"].addEventListener(
       "input",
@@ -383,6 +398,54 @@
         renderMaterialLibrary();
       });
     });
+  }
+
+  function syncLanguageAssets() {
+    queryAll("[data-template-kind]").forEach(function (link) {
+      link.removeAttribute("href");
+      link.addEventListener("click", function (event) {
+        event.preventDefault();
+        downloadBlankTemplate(link.dataset.templateKind);
+      });
+    });
+    urgencyLabels = i18n.urgencyLabels();
+    statusLabels = i18n.statusLabels();
+  }
+
+  function downloadBlankTemplate(kind) {
+    if (kind === "task") {
+      excelImport
+        .exportTemplateWorkbook(
+          window.JSZip,
+          i18n.isEnglish()
+            ? "Weekflow_Task_Import_Template_EN.xlsx"
+            : "Weekflow_Task导入模板.xlsx"
+        )
+        .then(function (result) {
+          utils.downloadBlob(result.blob, result.filename);
+          toast(i18n.isEnglish() ? "Blank Task template downloaded." : "Task 空白模板已下载");
+        })
+        .catch(function (error) {
+          toast((i18n.isEnglish() ? "Template download failed: " : "模板下载失败：") + error.message, "error", 7000);
+        });
+      return;
+    }
+    if (kind === "materials") {
+      materialExcel
+        .exportTemplateWorkbook(
+          window.JSZip,
+          i18n.isEnglish()
+            ? "Weekflow_Document_Import_Template_EN.xlsx"
+            : "Weekflow_资料库导入模板.xlsx"
+        )
+        .then(function (result) {
+          utils.downloadBlob(result.blob, result.filename);
+          toast(i18n.isEnglish() ? "Blank document template downloaded." : "资料库空白模板已下载");
+        })
+        .catch(function (error) {
+          toast((i18n.isEnglish() ? "Template download failed: " : "模板下载失败：") + error.message, "error", 7000);
+        });
+    }
   }
 
   function handleKeyboard(event) {
@@ -1025,7 +1088,7 @@
     var needle = utils.normalizeText(ui.filters.search);
     data.materials.forEach(function (material) {
       var haystack = utils.normalizeText(
-        [material.title, material.url, materialTools.TYPE_LABELS[material.type], material.note].join(
+        [material.title, material.url, materialTools.typeLabel(material.type), material.note].join(
           " "
         )
       );
@@ -1066,17 +1129,31 @@
   function syncTimelineGranularityChrome(columns) {
     var dayMode = ui.timelineGranularity === "day";
     dom["timeline-heading"].textContent = dayMode ? "Task by Day" : "Task by Week";
-    dom["timeline-subtitle"].textContent = dayMode
-      ? "周一至周日 · DDL 精确到天"
-      : "周一至周日 · 表头显示周五 · 双击周表头查看每天";
-    dom["timeline-current-label"].textContent = dayMode ? "今天" : "本周";
+    dom["timeline-subtitle"].textContent = i18n.isEnglish()
+      ? dayMode
+        ? "Monday to Sunday · Deadlines shown by day"
+        : "Monday to Sunday · Headers show Friday · Double-click a week to view each day"
+      : dayMode
+        ? "周一至周日 · DDL 精确到天"
+        : "周一至周日 · 表头显示周五 · 双击周表头查看每天";
+    dom["timeline-current-label"].textContent = i18n.isEnglish()
+      ? dayMode
+        ? "Today"
+        : "This Week"
+      : dayMode
+        ? "今天"
+        : "本周";
     dom["timeline-week-range-controls"].hidden = dayMode;
     dom["timeline-week-return"].hidden = !dayMode;
     var rangeText = "";
     if (columns.length) {
-      rangeText = dayMode
-        ? columns[0] + " — " + columns[columns.length - 1] + " · 周一至周日"
-        : columns[0] + " — " + columns[columns.length - 1] + " · " + columns.length + " 周";
+      rangeText = i18n.isEnglish()
+        ? dayMode
+          ? columns[0] + " — " + columns[columns.length - 1] + " · Monday to Sunday"
+          : columns[0] + " — " + columns[columns.length - 1] + " · " + columns.length + " weeks"
+        : dayMode
+          ? columns[0] + " — " + columns[columns.length - 1] + " · 周一至周日"
+          : columns[0] + " — " + columns[columns.length - 1] + " · " + columns.length + " 周";
     }
     dom["range-label"].textContent = rangeText;
     dom["range-label"].title = rangeText;
@@ -1096,9 +1173,11 @@
     if (!data.groups.length) {
       board.appendChild(
         createEmptyState(
-          "先建立第一个分组",
-          "Task 必须归属分组。建立分组后即可开始安排周时间轴。",
-          "新建分组",
+          i18n.isEnglish() ? "Create Your First Group" : "先建立第一个分组",
+          i18n.isEnglish()
+            ? "Every Task belongs to a Group. Create one to start planning on the weekly timeline."
+            : "Task 必须归属分组。建立分组后即可开始安排周时间轴。",
+          i18n.isEnglish() ? "New Group" : "新建分组",
           openNewGroup
         )
       );
@@ -1108,11 +1187,27 @@
       board.appendChild(createTimelineHeader(columns));
       board.appendChild(
         createEmptyState(
-          hasActiveFilters() ? "该周没有符合筛选条件的 Task" : "该周没有 Task DDL",
+          i18n.isEnglish()
+            ? hasActiveFilters()
+              ? "No Tasks Match the Filters This Week"
+              : "No Task Deadlines This Week"
+            : hasActiveFilters()
+              ? "该周没有符合筛选条件的 Task"
+              : "该周没有 Task DDL",
           hasActiveFilters()
-            ? "清空筛选后可继续查看该周，或返回 Task by Week 选择其他周。"
-            : "返回 Task by Week 后，可双击其他周的日期框继续查看。",
-          hasActiveFilters() ? "清空筛选" : "返回 Task by Week",
+            ? i18n.isEnglish()
+              ? "Clear the filters to review this week, or return to Task by Week and choose another week."
+              : "清空筛选后可继续查看该周，或返回 Task by Week 选择其他周。"
+            : i18n.isEnglish()
+              ? "Return to Task by Week, then double-click another week header to continue."
+              : "返回 Task by Week 后，可双击其他周的日期框继续查看。",
+          i18n.isEnglish()
+            ? hasActiveFilters()
+              ? "Clear Filters"
+              : "Return to Task by Week"
+            : hasActiveFilters()
+              ? "清空筛选"
+              : "返回 Task by Week",
           hasActiveFilters() ? clearFilters : returnToWeekTimeline
         )
       );
@@ -1121,9 +1216,11 @@
     if (hasActiveFilters() && visibleTasks.length === 0) {
       board.appendChild(
         createEmptyState(
-          "没有符合条件的 Task",
-          "尝试减少筛选条件，或清空筛选查看全部 Task。",
-          "清空筛选",
+          i18n.isEnglish() ? "No Tasks Match the Filters" : "没有符合条件的 Task",
+          i18n.isEnglish()
+            ? "Remove one or more filters, or clear them to view every Task."
+            : "尝试减少筛选条件，或清空筛选查看全部 Task。",
+          i18n.isEnglish() ? "Clear Filters" : "清空筛选",
           clearFilters
         )
       );
@@ -1191,14 +1288,19 @@
   function weekdayLabel(value) {
     var date = dates.parseISODate(value);
     return date
-      ? ["周日", "周一", "周二", "周三", "周四", "周五", "周六"][date.getDay()]
+      ? (i18n.isEnglish()
+          ? ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+          : ["周日", "周一", "周二", "周三", "周四", "周五", "周六"])[date.getDay()]
       : "";
   }
 
   function createTimelineHeader(columns) {
     var row = utils.el("div", "timeline-header");
     var corner = utils.el("div", "timeline-corner");
-    ["Task / DDL", "紧急", "进度记录", "相关资料", "编辑"].forEach(function (label) {
+    (i18n.isEnglish()
+      ? ["Task / DDL", "Urgency", "Progress", "Documents", "Edit"]
+      : ["Task / DDL", "紧急", "进度记录", "相关资料", "编辑"]
+    ).forEach(function (label) {
       corner.appendChild(utils.el("span", "", label));
     });
     row.appendChild(corner);
@@ -1207,11 +1309,13 @@
       columns.forEach(function (day) {
         var head = utils.el("div", "week-head day-head" + (day === today ? " is-current" : ""));
         head.dataset.day = day;
-        head.appendChild(utils.el("small", "week-range", day.slice(0, 4) + " 年"));
+        head.appendChild(
+          utils.el("small", "week-range", i18n.isEnglish() ? day.slice(0, 4) : day.slice(0, 4) + " 年")
+        );
         head.appendChild(utils.el("strong", "week-date", day.slice(5).replace("-", "/")));
         head.appendChild(utils.el("span", "week-year", weekdayLabel(day)));
         if (day === today) {
-          head.appendChild(utils.el("b", "week-current-badge", "今天"));
+          head.appendChild(utils.el("b", "week-current-badge", i18n.isEnglish() ? "Today" : "今天"));
         }
         row.appendChild(head);
       });
@@ -1226,13 +1330,26 @@
       head.dataset.week = friday;
       head.tabIndex = 0;
       head.setAttribute("role", "button");
-      head.setAttribute("aria-label", "双击查看 " + dates.friendlyWeekLabel(friday) + " 的日时间轴");
-      head.title = "双击进入该周的 Task by Day";
+      head.setAttribute(
+        "aria-label",
+        i18n.isEnglish()
+          ? "Double-click to view the daily timeline for " + dates.friendlyWeekLabel(friday)
+          : "双击查看 " + dates.friendlyWeekLabel(friday) + " 的日时间轴"
+      );
+      head.title = i18n.isEnglish()
+        ? "Double-click to open Task by Day for this week"
+        : "双击进入该周的 Task by Day";
       head.appendChild(utils.el("small", "week-range", dates.friendlyWeekLabel(friday)));
       head.appendChild(utils.el("strong", "week-date", friday.slice(5).replace("-", "/")));
-      head.appendChild(utils.el("span", "week-year", friday.slice(0, 4) + " · 周五"));
+      head.appendChild(
+        utils.el(
+          "span",
+          "week-year",
+          friday.slice(0, 4) + (i18n.isEnglish() ? " · Friday" : " · 周五")
+        )
+      );
       if (friday === currentFriday) {
-        head.appendChild(utils.el("b", "week-current-badge", "本周"));
+        head.appendChild(utils.el("b", "week-current-badge", i18n.isEnglish() ? "This Week" : "本周"));
       }
       head.addEventListener("dblclick", function () {
         openDayTimeline(friday);
@@ -1466,18 +1583,32 @@
     checkbox.disabled = recurring && !periodState.checkboxEnabled;
     checkbox.setAttribute(
       "aria-label",
-      recurring
-        ? periodState.checkboxEnabled
-          ? (completed ? "取消" : "确认") +
-            "当前自然" +
-            (periodState.cadence === "weekly" ? "周" : "月") +
-            "的 DDL 完成状态"
-          : "当前不在周期 Task 的可确认范围内"
-        : completed
-          ? "恢复为未完成"
-          : "标记为已完成"
+      i18n.isEnglish()
+        ? recurring
+          ? periodState.checkboxEnabled
+            ? (completed ? "Clear" : "Confirm") +
+              " the DDL completion status for the current natural " +
+              (periodState.cadence === "weekly" ? "week" : "month")
+            : "This recurring Task cannot be completed in the current period"
+          : completed
+            ? "Restore to incomplete"
+            : "Mark as completed"
+        : recurring
+          ? periodState.checkboxEnabled
+            ? (completed ? "取消" : "确认") +
+              "当前自然" +
+              (periodState.cadence === "weekly" ? "周" : "月") +
+              "的 DDL 完成状态"
+            : "当前不在周期 Task 的可确认范围内"
+          : completed
+            ? "恢复为未完成"
+            : "标记为已完成"
     );
-    if (checkbox.disabled) checkbox.title = "进入有效自然周期后可确认本期完成状态";
+    if (checkbox.disabled) {
+      checkbox.title = i18n.isEnglish()
+        ? "The current period can be completed after the recurrence becomes active"
+        : "进入有效自然周期后可确认本期完成状态";
+    }
     checkbox.addEventListener("change", function () {
       toggleTaskCompleted(task.id, checkbox.checked);
     });
@@ -1496,23 +1627,30 @@
       );
     }
     meta.appendChild(
-      utils.el("span", "", (recurring ? "DDL 基准 " : "DDL ") + task.ddl)
+      utils.el(
+        "span",
+        "",
+        (i18n.isEnglish() ? recurring ? "DDL Anchor " : "DDL " : recurring ? "DDL 基准 " : "DDL ") +
+          task.ddl
+      )
     );
     if (recurring) {
       meta.appendChild(
         utils.el(
           "span",
           "recurrence-badge",
-          automation.CADENCE_LABELS[periodState.cadence] +
+          automation.cadenceLabel(periodState.cadence) +
             " · " +
             task.recurrenceStart +
-            " 至 " +
+            (i18n.isEnglish() ? " to " : " 至 ") +
             task.recurrenceEnd
         )
       );
     }
     if (overdue) {
-      meta.appendChild(utils.el("span", "status-label overdue", "⚠ 本期逾期"));
+      meta.appendChild(
+        utils.el("span", "status-label overdue", i18n.isEnglish() ? "⚠ Overdue" : "⚠ 本期逾期")
+      );
     } else if (completed) {
       meta.appendChild(
         utils.el("span", "status-label completed", recurring ? "✓ 本期已完成" : "✓ 已完成")
@@ -1523,14 +1661,20 @@
           "span",
           "status-label",
           today < task.recurrenceStart
-            ? "周期未开始"
+            ? i18n.isEnglish() ? "Recurrence Not Started" : "周期未开始"
             : today > task.recurrenceEnd
-              ? "周期已结束"
-              : "本期无 DDL"
+              ? i18n.isEnglish() ? "Recurrence Ended" : "周期已结束"
+              : i18n.isEnglish() ? "No DDL This Period" : "本期无 DDL"
         )
       );
     } else {
-      meta.appendChild(utils.el("span", "status-label", recurring ? "本期未完成" : "未完成"));
+      meta.appendChild(
+        utils.el(
+          "span",
+          "status-label",
+          i18n.isEnglish() ? recurring ? "Period Incomplete" : "Incomplete" : recurring ? "本期未完成" : "未完成"
+        )
+      );
     }
     titleWrap.append(title, meta);
     main.append(checkLabel, titleWrap);
@@ -1545,8 +1689,8 @@
     var materialButton = createMaterialButton(task);
     var editButton = utils.el("button", "task-icon-button", "⋯");
     editButton.type = "button";
-    editButton.title = "编辑 Task";
-    editButton.setAttribute("aria-label", "编辑 " + task.name);
+    editButton.title = i18n.isEnglish() ? "Edit Task" : "编辑 Task";
+    editButton.setAttribute("aria-label", (i18n.isEnglish() ? "Edit " : "编辑 ") + task.name);
     editButton.addEventListener("click", function () {
       openEditTask(task.id);
     });
@@ -1611,12 +1755,34 @@
 
   function buildTaskTooltip(task, group, occurrence, completed, overdue, flow) {
     var recurring = dates.isRecurringTask(task);
+    if (i18n.isEnglish()) {
+      return [
+        task.name,
+        "Group: " + group.name,
+        flow ? "Flow: " + flow.name + " · STEP " + String(task.flowOrder || 1).padStart(2, "0") : "",
+        recurring
+          ? "Recurrence: " + automation.cadenceLabel(dates.recurrenceCadence(task)) +
+            " · " + task.recurrenceStart + " to " + task.recurrenceEnd
+          : "",
+        "DDL: " + occurrence.ddl + " (" + weekdayLabel(occurrence.ddl) + ")",
+        "Urgency: " + urgencyLabels[task.urgency],
+        "Status: " + (overdue ? "Overdue" : completed ? "Completed" : "Incomplete"),
+        task.reportTo ? "Report To: " + task.reportTo : "",
+        task.managedObject ? "Managed Person: " + task.managedObject : "",
+        task.deliverable ? "Deliverable: " + task.deliverable : "",
+        task.progressNote
+          ? "Progress: " + task.progressNote.replace(/\s+/g, " ").slice(0, 120)
+          : ""
+      ]
+        .filter(Boolean)
+        .join("\n");
+    }
     return [
       task.name,
       "分组：" + group.name,
       flow ? "Flow：" + flow.name + " · STEP " + String(task.flowOrder || 1).padStart(2, "0") : "",
       recurring
-        ? "周期：" + automation.CADENCE_LABELS[dates.recurrenceCadence(task)] +
+        ? "周期：" + automation.cadenceLabel(dates.recurrenceCadence(task)) +
           " · " + task.recurrenceStart + " 至 " + task.recurrenceEnd
         : "",
       "DDL：" + occurrence.ddl + "（" + weekdayLabel(occurrence.ddl) + "）",
@@ -1638,15 +1804,23 @@
     var button = utils.el(
       "button",
       "link-button progress-button" + (hasProgress ? " has-progress" : ""),
-      "进度（" + (hasProgress ? "1" : "0") + "）"
+      i18n.isEnglish()
+        ? "Progress (" + (hasProgress ? "1" : "0") + ")"
+        : "进度（" + (hasProgress ? "1" : "0") + "）"
     );
     button.type = "button";
-    button.title = hasProgress
-      ? "双击编辑进度记录\n" + task.progressNote.replace(/\s+/g, " ").slice(0, 160)
-      : "双击添加进度记录";
+    button.title = i18n.isEnglish()
+      ? hasProgress
+        ? "Double-click to edit the progress note\n" + task.progressNote.replace(/\s+/g, " ").slice(0, 160)
+        : "Double-click to add a progress note"
+      : hasProgress
+        ? "双击编辑进度记录\n" + task.progressNote.replace(/\s+/g, " ").slice(0, 160)
+        : "双击添加进度记录";
     button.setAttribute(
       "aria-label",
-      "进度记录，" + (hasProgress ? "已有内容" : "暂无内容") + "；双击或按回车编辑"
+      i18n.isEnglish()
+        ? "Progress note " + (hasProgress ? "available" : "empty") + "; double-click or press Enter to edit"
+        : "进度记录，" + (hasProgress ? "已有内容" : "暂无内容") + "；双击或按回车编辑"
     );
     button.addEventListener("dblclick", function (event) {
       event.preventDefault();
@@ -1666,13 +1840,19 @@
     var button = utils.el(
       "button",
       "link-button material-button" + (materials.length ? " has-links" : ""),
-      "资料（" + materials.length + "）"
+      i18n.isEnglish()
+        ? "Documents (" + materials.length + ")"
+        : "资料（" + materials.length + "）"
     );
     button.type = "button";
-    button.title = "双击管理相关资料";
+    button.title = i18n.isEnglish()
+      ? "Double-click to manage related documents"
+      : "双击管理相关资料";
     button.setAttribute(
       "aria-label",
-      "相关资料，" + materials.length + " 条；双击或按回车管理"
+      i18n.isEnglish()
+        ? materials.length + " related documents; double-click or press Enter to manage"
+        : "相关资料，" + materials.length + " 条；双击或按回车管理"
     );
     button.addEventListener("dblclick", function (event) {
       event.preventDefault();
@@ -2363,7 +2543,7 @@
     materialTools.TYPES.forEach(function (type) {
       appendMaterialFilterOption(typeContainer, {
         value: type,
-        label: materialTools.TYPE_LABELS[type],
+        label: materialTools.typeLabel(type),
         checked: ui.materialFilters.types.includes(type),
         dataset: "materialFilterType",
         color: typeColors[type]
@@ -2380,7 +2560,7 @@
         return (
           Number((leftGroup && leftGroup.order) || 0) -
             Number((rightGroup && rightGroup.order) || 0) ||
-          left.name.localeCompare(right.name, "zh-CN", { numeric: true })
+          left.name.localeCompare(right.name, i18n.locale(), { numeric: true })
         );
       })
       .forEach(function (task) {
@@ -2485,6 +2665,7 @@
     } else {
       items.forEach(function (item) {
         var chip = utils.el("span", "material-chip", item.label);
+        chip.dataset.userContent = "true";
         if (item.color) {
           chip.style.setProperty("--chip-color", item.color);
           chip.classList.add("has-color");
@@ -2530,7 +2711,7 @@
       utils.el(
         "span",
         "material-type-badge type-" + material.type,
-        materialTools.TYPE_LABELS[material.type]
+        materialTools.typeLabel(material.type)
       )
     );
 
@@ -2639,9 +2820,13 @@
       var emptyCell = utils.el(
         "td",
         "materials-empty-cell",
-        data.materials.length
-          ? "没有符合当前筛选条件的资料。"
-          : "还没有资料，可手动添加或上传。"
+        i18n.isEnglish()
+          ? data.materials.length
+            ? "No documents match the current filters."
+            : "No documents yet. Add one manually or upload a file."
+          : data.materials.length
+            ? "没有符合当前筛选条件的资料。"
+            : "还没有资料，可手动添加或上传。"
       );
       emptyCell.colSpan = 8;
       emptyRow.appendChild(emptyCell);
@@ -2673,13 +2858,13 @@
     var ids = ui.selectedMaterialIds.slice();
     if (!ids.length) return;
     if (
-      !window.confirm(
+      !confirmAction(
         "确认删除选中的 " + ids.length + " 条资料？它们会从所有相关 Task 中同步移除。"
       )
     ) {
       return;
     }
-    if (!window.confirm("再次确认：批量删除资料不可恢复，是否继续？")) return;
+    if (!confirmAction("再次确认：批量删除资料不可恢复，是否继续？")) return;
     var idSet = new Set(ids);
     data.materials = data.materials.filter(function (material) {
       return !idSet.has(material.id);
@@ -2784,12 +2969,12 @@
     var field = document.getElementById(fieldId);
     var error = query('[data-error-for="' + fieldId + '"]');
     if (field) field.classList.add("is-invalid");
-    if (error) error.textContent = message;
+    if (error) error.textContent = i18n.translateMessage(message);
   }
 
   function openNewGroup() {
     clearFieldErrors(dom["group-form"]);
-    dom["group-dialog-title"].textContent = "新建分组";
+    dom["group-dialog-title"].textContent = i18n.isEnglish() ? "New Group" : "新建分组";
     dom["group-id"].value = "";
     dom["group-name"].value = "";
     var color = storage.nextGroupColor(data.groups);
@@ -2806,7 +2991,7 @@
     var group = getGroup(groupId);
     if (!group) return;
     clearFieldErrors(dom["group-form"]);
-    dom["group-dialog-title"].textContent = "编辑分组";
+    dom["group-dialog-title"].textContent = i18n.isEnglish() ? "Edit Group" : "编辑分组";
     dom["group-id"].value = group.id;
     dom["group-name"].value = group.name;
     dom["group-color"].value = group.color;
@@ -2899,7 +3084,7 @@
     ui.flowCreationForTask = Boolean(returnToTask);
     ui.flowColorCustomized = false;
     ui.draggedFlowTaskId = null;
-    dom["flow-dialog-title"].textContent = "新建 Flow";
+    dom["flow-dialog-title"].textContent = i18n.isEnglish() ? "New Flow" : "新建 Flow";
     dom["flow-id"].value = "";
     dom["flow-name"].value = "";
     var activeFlow = getFlow(ui.filters.flowId);
@@ -2926,7 +3111,7 @@
     clearFieldErrors(dom["flow-form"]);
     ui.flowCreationForTask = false;
     ui.draggedFlowTaskId = null;
-    dom["flow-dialog-title"].textContent = "编辑 Flow";
+    dom["flow-dialog-title"].textContent = i18n.isEnglish() ? "Edit Flow" : "编辑 Flow";
     dom["flow-id"].value = flow.id;
     dom["flow-name"].value = flow.name;
     populateFlowGroupSelect(flow.groupId);
@@ -2961,15 +3146,21 @@
           new Date()
         )
       : [];
-    dom["flow-task-count"].textContent = flowTasks.length + " 个步骤";
+    dom["flow-task-count"].textContent = i18n.isEnglish()
+      ? flowTasks.length + " steps"
+      : flowTasks.length + " 个步骤";
     if (!flowTasks.length) {
       container.appendChild(
         utils.el(
           "p",
           "flow-order-empty",
-          flowId
-            ? "暂无步骤。可在新建或编辑 Task 时把它加入此 Flow。"
-            : "Flow 创建后，可在 Task 中选择加入并在这里拖动排序。"
+          i18n.isEnglish()
+            ? flowId
+              ? "No steps yet. Add a Task to this Flow while creating or editing it."
+              : "After creating the Flow, add Tasks to it and reorder them here."
+            : flowId
+              ? "暂无步骤。可在新建或编辑 Task 时把它加入此 Flow。"
+              : "Flow 创建后，可在 Task 中选择加入并在这里拖动排序。"
         )
       );
       return;
@@ -2979,7 +3170,7 @@
       item.dataset.taskId = task.id;
       item.draggable = true;
       var handle = utils.el("span", "flow-drag-handle", "⠿");
-      handle.title = "拖动调整顺序";
+      handle.title = i18n.isEnglish() ? "Drag to reorder" : "拖动调整顺序";
       handle.setAttribute("aria-hidden", "true");
       var number = utils.el(
         "span",
@@ -2995,16 +3186,16 @@
       var controls = utils.el("span", "flow-order-controls");
       var up = utils.el("button", "", "↑");
       up.type = "button";
-      up.title = "上移";
-      up.setAttribute("aria-label", "上移 " + task.name);
+      up.title = i18n.isEnglish() ? "Move up" : "上移";
+      up.setAttribute("aria-label", (i18n.isEnglish() ? "Move up " : "上移 ") + task.name);
       up.disabled = index === 0;
       up.addEventListener("click", function () {
         moveFlowOrderItem(item, -1);
       });
       var down = utils.el("button", "", "↓");
       down.type = "button";
-      down.title = "下移";
-      down.setAttribute("aria-label", "下移 " + task.name);
+      down.title = i18n.isEnglish() ? "Move down" : "下移";
+      down.setAttribute("aria-label", (i18n.isEnglish() ? "Move down " : "下移 ") + task.name);
       down.disabled = index === flowTasks.length - 1;
       down.addEventListener("click", function () {
         moveFlowOrderItem(item, 1);
@@ -3058,7 +3249,9 @@
       if (buttons[0]) buttons[0].disabled = index === 0;
       if (buttons[1]) buttons[1].disabled = index === items.length - 1;
     });
-    dom["flow-task-count"].textContent = items.length + " 个步骤";
+    dom["flow-task-count"].textContent = i18n.isEnglish()
+      ? items.length + " steps"
+      : items.length + " 个步骤";
   }
 
   function saveFlowFromForm(event) {
@@ -3175,7 +3368,7 @@
         flowTasks.length +
         " 条 Task 会保留在原分组并取消 Flow 归属。"
       : "确认删除 Flow「" + flow.name + "」？";
-    if (!window.confirm(message)) return;
+    if (!confirmAction(message)) return;
     var stamp = new Date().toISOString();
     flowTasks.forEach(function (task) {
       task.flowId = null;
@@ -3212,7 +3405,7 @@
         "」" +
         (groupFlows.length ? "及其中 " + groupFlows.length + " 个空 Flow" : "") +
         "？此操作不可恢复。";
-      if (!window.confirm(emptyGroupMessage)) return;
+      if (!confirmAction(emptyGroupMessage)) return;
       data.groups = data.groups.filter(function (item) {
         return item.id !== groupId;
       });
@@ -3276,7 +3469,7 @@
       return;
     }
     if (
-      !window.confirm(
+      !confirmAction(
         "确认将「" +
           group.name +
           "」内的 Task 与 Flow 移动到「" +
@@ -3365,7 +3558,7 @@
       return flow.groupId === groupId;
     }).length;
     if (
-      !window.confirm(
+      !confirmAction(
         "最终确认：删除分组「" +
           group.name +
           "」、其中 " +
@@ -3449,7 +3642,7 @@
         return true;
       })
       .sort(function (left, right) {
-        return left.localeCompare(right, "zh-CN", { sensitivity: "base", numeric: true });
+        return left.localeCompare(right, i18n.locale(), { sensitivity: "base", numeric: true });
       });
   }
 
@@ -3480,18 +3673,22 @@
 
   function populateTaskFlowSelect(groupId, selectedFlowId) {
     var select = utils.clear(dom["task-flow"]);
-    var none = utils.el("option", "", "不加入 Flow");
+    var none = utils.el("option", "", i18n.isEnglish() ? "No Flow" : "不加入 Flow");
     none.value = "";
     select.appendChild(none);
     getSortedFlows(groupId).forEach(function (flow) {
       var taskCount = data.tasks.filter(function (task) {
         return task.flowId === flow.id;
       }).length;
-      var option = utils.el("option", "", flow.name + " · " + taskCount + " 个步骤");
+      var option = utils.el(
+        "option",
+        "",
+        flow.name + " · " + taskCount + (i18n.isEnglish() ? " steps" : " 个步骤")
+      );
       option.value = flow.id;
       select.appendChild(option);
     });
-    var create = utils.el("option", "", "＋ 创建新的 Flow…");
+    var create = utils.el("option", "", i18n.isEnglish() ? "+ Create New Flow…" : "＋ 创建新的 Flow…");
     create.value = "__new_flow__";
     select.appendChild(create);
     select.value = selectedFlowId || "";
@@ -3515,17 +3712,29 @@
       dom["task-recurrence-start"].value = dom["task-ddl"].value || dates.todayISO();
     }
     dom["task-status"].disabled = recurring;
-    dom["task-recurrence-help"].textContent = recurring
-      ? automation.CADENCE_LABELS[cadence] +
-        "显示多个 DDL，但只统计为一个 Task；完成勾选仅对应当前自然" +
-        (cadence === "weekly" ? "周" : "月") +
-        "。"
-      : "不重复的 Task 只在其 DDL 所在周显示一次。";
-    dom["task-status-help"].textContent = recurring
-      ? "周期 Task 的状态由当前自然" +
-        (cadence === "weekly" ? "周" : "月") +
-        "完成记录自动维护，请在时间轴勾选。"
-      : "非周期 Task 可在此设置整体完成状态。";
+    dom["task-recurrence-help"].textContent = i18n.isEnglish()
+      ? recurring
+        ? automation.cadenceLabel(cadence) +
+          " recurrence shows multiple DDLs but counts as one Task. Completion applies only to the current natural " +
+          (cadence === "weekly" ? "week." : "month.")
+        : "A non-recurring Task appears once in the week containing its DDL."
+      : recurring
+        ? automation.cadenceLabel(cadence) +
+          "显示多个 DDL，但只统计为一个 Task；完成勾选仅对应当前自然" +
+          (cadence === "weekly" ? "周" : "月") +
+          "。"
+        : "不重复的 Task 只在其 DDL 所在周显示一次。";
+    dom["task-status-help"].textContent = i18n.isEnglish()
+      ? recurring
+        ? "The Task status is maintained from the current natural " +
+          (cadence === "weekly" ? "week's" : "month's") +
+          " completion history. Mark it on the timeline."
+        : "Set the overall completion status here for a non-recurring Task."
+      : recurring
+        ? "周期 Task 的状态由当前自然" +
+          (cadence === "weekly" ? "周" : "月") +
+          "完成记录自动维护，请在时间轴勾选。"
+        : "非周期 Task 可在此设置整体完成状态。";
     syncCompletedDate();
   }
 
@@ -3600,6 +3809,7 @@
   function syncCompletedDate() {
     if (automation.isCadence(dom["task-recurrence"].value)) {
       dom["task-completed-at"].disabled = true;
+      i18n.refreshDateInputs();
       return;
     }
     var completed = dom["task-status"].value === "completed";
@@ -3608,6 +3818,7 @@
       dom["task-completed-at"].value = dates.todayISO();
     }
     if (!completed) dom["task-completed-at"].value = "";
+    i18n.refreshDateInputs();
   }
 
   function addDraftMaterial() {
@@ -3651,7 +3862,7 @@
       });
       if (!typeMaterials.length) return;
       var section = utils.el("section", "material-type-group type-" + type);
-      var heading = utils.el("h4", "", materialTools.TYPE_LABELS[type]);
+      var heading = utils.el("h4", "", materialTools.typeLabel(type));
       heading.appendChild(utils.el("span", "", typeMaterials.length));
       section.appendChild(heading);
       typeMaterials.forEach(function (material) {
@@ -3681,7 +3892,7 @@
         typeSelect.dataset.materialField = "type";
         typeSelect.setAttribute("aria-label", "链接类型");
         materialTools.TYPES.forEach(function (value) {
-          var option = utils.el("option", "", materialTools.TYPE_LABELS[value]);
+          var option = utils.el("option", "", materialTools.typeLabel(value));
           option.value = value;
           typeSelect.appendChild(option);
         });
@@ -3979,7 +4190,7 @@
     var id = dom["task-id"].value;
     var task = getTask(id);
     if (!task) return;
-    if (!window.confirm("确认删除 Task「" + task.name + "」？此操作不可恢复。")) return;
+    if (!confirmAction("确认删除 Task「" + task.name + "」？此操作不可恢复。")) return;
     data.tasks = data.tasks.filter(function (item) {
       return item.id !== id;
     });
@@ -3997,11 +4208,15 @@
     if (!task) return;
     ui.managedProgressTaskId = taskId;
     dom["progress-dialog-task"].textContent =
-      task.name + " · 自由记录当前进展、阻塞事项或下一步计划";
+      task.name +
+      (i18n.isEnglish()
+        ? " · Record current progress, blockers, or next steps"
+        : " · 自由记录当前进展、阻塞事项或下一步计划");
     dom["progress-note"].value = task.progressNote || "";
     dom["progress-dialog-updated"].textContent = task.progressUpdatedAt
-      ? "最后更新：" + formatProgressTimestamp(task.progressUpdatedAt)
-      : "尚未记录进度";
+      ? (i18n.isEnglish() ? "Last updated: " : "最后更新：") +
+        formatProgressTimestamp(task.progressUpdatedAt)
+      : i18n.isEnglish() ? "No progress recorded" : "尚未记录进度";
     updateProgressCharacterCount();
     dom["progress-dialog"].showModal();
     setTimeout(function () {
@@ -4015,8 +4230,8 @@
 
   function formatProgressTimestamp(value) {
     var parsed = new Date(value);
-    if (Number.isNaN(parsed.getTime())) return "未知时间";
-    return parsed.toLocaleString("zh-CN", {
+    if (Number.isNaN(parsed.getTime())) return i18n.isEnglish() ? "Unknown time" : "未知时间";
+    return parsed.toLocaleString(i18n.locale(), {
       year: "numeric",
       month: "2-digit",
       day: "2-digit",
@@ -4054,9 +4269,14 @@
     if (!task) return;
     ui.managedTaskId = taskId;
     ui.managedMaterials = utils.clone(getTaskMaterials(taskId));
-    dom["link-dialog-title"].textContent = "管理相关资料";
+    dom["link-dialog-title"].textContent = i18n.isEnglish()
+      ? "Manage Related Documents"
+      : "管理相关资料";
     dom["link-dialog-task"].textContent =
-      task.name + " · 资料按类型分组；修改后会同步到资料库";
+      task.name +
+      (i18n.isEnglish()
+        ? " · Documents are grouped by type; changes sync to the Document Library"
+        : " · 资料按类型分组；修改后会同步到资料库");
     dom["link-manager-error"].textContent = "";
     renderManagedLinks();
     dom["link-dialog"].showModal();
@@ -4223,7 +4443,9 @@
     var material = materialId ? getMaterial(materialId) : null;
     clearFieldErrors(dom["material-form"]);
     ui.editingMaterialId = material ? material.id : null;
-    dom["material-dialog-title"].textContent = material ? "编辑资料" : "添加资料";
+    dom["material-dialog-title"].textContent = i18n.isEnglish()
+      ? material ? "Edit Document" : "Add Document"
+      : material ? "编辑资料" : "添加资料";
     dom["material-id"].value = material ? material.id : "";
     dom["material-title"].value = material ? material.title : "";
     dom["material-url"].value = material ? material.url : "";
@@ -4358,7 +4580,7 @@
   function deleteCurrentMaterial() {
     var material = getMaterial(dom["material-id"].value);
     if (!material) return;
-    if (!window.confirm("确认删除资料「" + material.title + "」？所有 Task 中的关联也会移除。")) {
+    if (!confirmAction("确认删除资料「" + material.title + "」？所有 Task 中的关联也会移除。")) {
       return;
     }
     data.materials = data.materials.filter(function (item) {
@@ -4487,21 +4709,23 @@
 
   function renderMaterialImportDialog(file, result) {
     var resolved = result.rows.map(resolveMaterialImportRow);
-    var errors = result.errors.slice();
+    var errors = result.errors.map(function (message) {
+      return i18n.translateMessage(message);
+    });
     var seenUploadUrls = new Map();
     resolved.forEach(function (row) {
       row.errors.forEach(function (message) {
-        errors.push("第 " + row.sourceRow + " 行：" + message);
+        errors.push(
+          i18n.isEnglish()
+            ? "Row " + row.sourceRow + ": " + i18n.translateMessage(message)
+            : "第 " + row.sourceRow + " 行：" + message
+        );
       });
       var key = materialUrlKey(row.value.url);
       if (seenUploadUrls.has(key)) {
-        errors.push(
-          "第 " +
-            row.sourceRow +
-            " 行：链接地址与第 " +
-            seenUploadUrls.get(key) +
-            " 行重复"
-        );
+        errors.push(i18n.isEnglish()
+          ? "Row " + row.sourceRow + ": Link URL duplicates row " + seenUploadUrls.get(key)
+          : "第 " + row.sourceRow + " 行：链接地址与第 " + seenUploadUrls.get(key) + " 行重复");
       } else {
         seenUploadUrls.set(key, row.sourceRow);
       }
@@ -4566,7 +4790,7 @@
       );
       var list = utils.el("ul");
       errors.slice(0, 50).forEach(function (message) {
-        list.appendChild(utils.el("li", "", message));
+        list.appendChild(utils.el("li", "", i18n.translateMessage(message)));
       });
       errorBox.appendChild(list);
     }
@@ -4576,7 +4800,7 @@
       [
         index + 1,
         row.value.title,
-        materialTools.TYPE_LABELS[row.value.type],
+        materialTools.typeLabel(row.value.type),
         row.value.taskIds
           .map(function (id) {
             return getTask(id).name;
@@ -4648,7 +4872,7 @@
     var duplicateMode = duplicateInput ? duplicateInput.value : "replace";
     if (mode === "replace") {
       if (
-        !window.confirm(
+        !confirmAction(
           "全部覆盖会先删除资料库现有的 " +
             data.materials.length +
             " 条资料，再导入 " +
@@ -4658,7 +4882,7 @@
       ) {
         return;
       }
-      if (!window.confirm("再次确认：全部覆盖不可撤销，建议已先导出 JSON 备份。")) return;
+      if (!confirmAction("再次确认：全部覆盖不可撤销，建议已先导出 JSON 备份。")) return;
     }
     ui.isImportingMaterials = true;
     dom["material-import-confirm"].disabled = true;
@@ -4734,7 +4958,10 @@
       toast("资料库 Excel 组件未加载，请刷新页面后重试。", "error", 6500);
       return;
     }
-    var filename = "Weekflow_资料库_" + dates.dateTimeStamp(new Date()) + ".xlsx";
+    var filename =
+      (i18n.isEnglish() ? "Weekflow_Document_Library_" : "Weekflow_资料库_") +
+      dates.dateTimeStamp(new Date()) +
+      ".xlsx";
     materialExcel
       .exportWorkbook(data, window.JSZip, filename)
       .then(function (result) {
@@ -4816,7 +5043,9 @@
   }
 
   function renderExcelImportDialog(file, result) {
-    var errors = result.errors.slice();
+    var errors = result.errors.map(function (message) {
+      return i18n.translateMessage(message);
+    });
     if (!result.rows.length && !errors.length) {
       errors.push("文件中没有可导入的 Task，请在模板表头下方填写数据。");
     }
@@ -4847,7 +5076,7 @@
       );
       var list = utils.el("ul");
       errors.slice(0, 40).forEach(function (message) {
-        list.appendChild(utils.el("li", "", message));
+        list.appendChild(utils.el("li", "", i18n.translateMessage(message)));
       });
       if (errors.length > 40) {
         list.appendChild(utils.el("li", "", "其余 " + (errors.length - 40) + " 个问题未显示。"));
@@ -4864,7 +5093,7 @@
         row.flowName || "—",
         row.taskName,
         row.ddl || "—",
-        automation.CADENCE_LABELS[row.recurrenceCadence] || "不重复",
+        automation.cadenceLabel(row.recurrenceCadence) || i18n.cadenceLabels().none,
         urgencyLabels[row.urgency] || "中"
       ].forEach(function (value) {
         tableRow.appendChild(utils.el("td", "", value));
@@ -5379,7 +5608,7 @@
     var mode = modeInput ? modeInput.value : "append";
     if (mode === "replace") {
       if (
-        !window.confirm(
+        !confirmAction(
           "完整覆盖会以本文件中的 " +
             pending.summary.groupCount +
             " 个分组、" +
@@ -5394,7 +5623,7 @@
         return;
       }
       if (
-        !window.confirm(
+        !confirmAction(
           "再次确认：文件中没有的分组、Flow 和 Task 将被移除，无法匹配的资料关联也会移除。建议已先导出 JSON 备份。"
         )
       ) {
@@ -5450,7 +5679,9 @@
       return;
     }
     var filename =
-      "Weekflow_Task当前数据_" + dates.dateTimeStamp(new Date()) + ".xlsx";
+      (i18n.isEnglish() ? "Weekflow_Current_Task_Data_" : "Weekflow_Task当前数据_") +
+      dates.dateTimeStamp(new Date()) +
+      ".xlsx";
     excelImport
       .exportWorkbook(data, window.JSZip, filename)
       .then(function (result) {
@@ -5495,7 +5726,8 @@
     var config = {
       field: button.dataset.scopeField,
       value: button.dataset.scopeValue || "",
-      label: button.dataset.scopeLabel || ""
+      label: button.dataset.scopeLabel || "",
+      language: i18n.getLanguage()
     };
     ui.isExportingPersonStatus = true;
     button.disabled = true;
@@ -5525,7 +5757,10 @@
       var blob = new Blob([JSON.stringify(data, null, 2)], {
         type: "application/json;charset=utf-8"
       });
-      var filename = "Task数据备份_" + dates.dateTimeStamp(new Date()) + ".json";
+      var filename =
+        (i18n.isEnglish() ? "Weekflow_Data_Backup_" : "Task数据备份_") +
+        dates.dateTimeStamp(new Date()) +
+        ".json";
       utils.downloadBlob(blob, filename);
       toast("JSON 备份已导出");
     } catch (error) {
@@ -5547,7 +5782,7 @@
         var checked = storage.validateData(parsed);
         if (!checked.valid) throw new Error(checked.errors.slice(0, 6).join("；"));
         if (
-          !window.confirm(
+          !confirmAction(
             "确认用该备份替换当前数据？将导入 " +
               checked.data.groups.length +
               " 个分组和 " +
@@ -5659,6 +5894,7 @@
   }
 
   function toast(message, type, duration) {
+    message = i18n.translateMessage(message);
     var node = utils.el("div", "toast" + (type ? " " + type : ""), message);
     dom["toast-region"].appendChild(node);
     window.setTimeout(function () {

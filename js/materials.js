@@ -6,11 +6,17 @@
       : typeof require === "function"
         ? require("./utils.js")
         : null;
-  var api = factory(utils);
+  var i18n =
+    root.App && root.App.i18n
+      ? root.App.i18n
+      : typeof require === "function"
+        ? require("./i18n.js")
+        : null;
+  var api = factory(utils, i18n);
   if (typeof module === "object" && module.exports) module.exports = api;
   root.App = root.App || {};
   root.App.materials = api;
-})(typeof self !== "undefined" ? self : globalThis, function (utils) {
+})(typeof self !== "undefined" ? self : globalThis, function (utils, i18n) {
   "use strict";
 
   var TYPES = ["document", "deliverable", "control", "folder"];
@@ -20,15 +26,29 @@
     control: "控制表",
     folder: "文件夹"
   };
+
+  function getTypeLabels(language) {
+    if (i18n && language) i18n.setLanguage(language);
+    return i18n && typeof i18n.materialTypeLabels === "function"
+      ? i18n.materialTypeLabels()
+      : Object.assign({}, TYPE_LABELS);
+  }
+
+  function typeLabel(type, language) {
+    var labels = getTypeLabels(language);
+    return labels[type] || type;
+  }
   var TYPE_ALIASES = {
     document: "document",
     doc: "document",
+    documentation: "document",
     "说明文档": "document",
     "文档": "document",
     deliverable: "deliverable",
     delivery: "deliverable",
     "交付物": "deliverable",
     control: "control",
+    "control sheet": "control",
     "控制表": "control",
     "控制": "control",
     folder: "folder",
@@ -261,7 +281,7 @@
     var sorted = relations.groups.slice().sort(function (left, right) {
       return (
         Number(left.order || 0) - Number(right.order || 0) ||
-        left.name.localeCompare(right.name, "zh-CN", { numeric: true })
+        left.name.localeCompare(right.name, i18n ? i18n.locale() : "zh-CN", { numeric: true })
       );
     });
     return [Number(sorted[0].order || 0), sorted[0].name];
@@ -273,8 +293,8 @@
       var rightKey = firstGroupSortKey(right, data);
       return (
         leftKey[0] - rightKey[0] ||
-        leftKey[1].localeCompare(rightKey[1], "zh-CN", { numeric: true }) ||
-        left.title.localeCompare(right.title, "zh-CN", { numeric: true })
+        leftKey[1].localeCompare(rightKey[1], i18n ? i18n.locale() : "zh-CN", { numeric: true }) ||
+        left.title.localeCompare(right.title, i18n ? i18n.locale() : "zh-CN", { numeric: true })
       );
     });
   }
@@ -282,6 +302,8 @@
   return {
     TYPES: TYPES.slice(),
     TYPE_LABELS: Object.assign({}, TYPE_LABELS),
+    getTypeLabels: getTypeLabels,
+    typeLabel: typeLabel,
     cleanText: cleanText,
     normalizeType: normalizeType,
     uniqueIds: uniqueIds,
