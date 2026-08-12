@@ -1,10 +1,11 @@
-Weekflow v2.4
-Release date: 2026-08-10
+Weekflow v2.5
+Release date: 2026-08-12
 
-Bilingual interface update: 2026-08-12
+Bilingual interface release: 2026-08-12
 - English is the default; Chinese remains available from the language switch beside Document Library.
 - UI, guides, templates, re-importable data, Document Library exports, dashboard reports, and people reports follow the selected language.
-- This is a language-only update. Business data structures and functional mechanisms remain identical to the v2.4 baseline.
+- This is a language-and-documentation release. Business data structures and functional mechanisms remain identical to the v2.4 baseline.
+- Chinese and English README pages link to each other and use language-matched screenshots.
 - All seven Excel download paths use the selected language: both blank templates, re-importable current Task data, Document Library data, dashboard report, Managed Person report, and Report To report.
 - Automated regression covers Task by Week/Day completion, Group/Flow collapse, individual document selection, 1280px Windows-width alignment, and strict XLSX package reopening.
 
@@ -44,7 +45,7 @@ This is the clean release build.
 - Document search and filters live in a dedicated bar above the table; document names edit in place and URLs open directly.
 - The document editor uses a compact two-row details area so Group, Flow, and Task relations keep most of the dialog space.
 - Document table headers, type, Flow, Group, and notes use the same 12px primary size as document names; URLs and related Tasks stay compact.
-- The in-app changelog shows the full v2.4, v2.3, v2.2, v2.1, v2.0, v1.1, and v1.0 history in descending version order.
+- The in-app changelog shows the full v2.5, v2.4, v2.3, v2.2, v2.1, v2.0, v1.1, and v1.0 history in descending version order.
 - The user guide identifies Weekflow as a Multi-task management cockpit and records the Wesley Yan development attribution plus first/latest release dates.
 - Urgency, report-to, and deliverable are required for new or edited Tasks.
 - Start with: open Weekflow.html directly, or run npm run serve and visit /Weekflow.html

@@ -1,6 +1,6 @@
 <p align="right"><strong>中文</strong> · <a href="README_EN.md">English</a></p>
 
-# Weekflow v2.4 · Task management
+# Weekflow v2.5 · Task management
 
 Weekflow 是一个桌面端优先、无需后端的本地 Task 管理程序。它以自然周总览和单周日粒度下钻组织时间，通过“分组 → 可选 Flow → 有序 Task”组织工作，并提供整体看板、统一资料库、Excel 批量录入与本地备份。
 
@@ -115,6 +115,8 @@ http://localhost:8080/Weekflow.html
 ```text
 weekflow-v2.4:data:v3
 ```
+
+v2.5 为避免升级时迁移或清空既有用户数据，继续沿用 v2.4 数据命名空间；这只是兼容性存储键，不代表当前程序版本仍是 v2.4。
 
 相关迁移与安全备份键：
 
@@ -241,18 +243,18 @@ Weekflow_资料库_YYYYMMDD_HHmm.xlsx
 
 - 开发团队：Wesley Yan
 - 首个正式版本（v1.0）：2026年7月30日
-- 最新版本（v2.4）更新时间：2026年8月10日
+- 最新版本（v2.5）更新时间：2026年8月12日
 
 ## 程序文件
 
-- 本文件夹是 Weekflow v2.4 空白正式发布版。
+- 本文件夹是 Weekflow v2.5 空白正式发布版。
 - 程序需要保留整个文件夹结构，不能只移动 `Weekflow.html`；页面依赖 `css、js、templates、vendor` 子目录。
-- 如果收到 `Weekflow v2.4.zip`，请完整解压后再使用。
+- 如果收到 `Weekflow v2.5.zip`，请完整解压后再使用。
 
 ## 文件结构
 
 ```text
-Weekflow v2.4/
+Weekflow v2.5/
 ├── Weekflow.html
 ├── css/styles.css
 ├── js/

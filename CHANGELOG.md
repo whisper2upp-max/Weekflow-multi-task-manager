@@ -1,8 +1,8 @@
 # Weekflow Changelog
 
-## v2.4 Bilingual Interface Update — 2026-08-12
+## v2.5 Bilingual Release — 2026-08-12
 
-Complete bilingual language layer based on Weekflow v2.4. This update changes language only and preserves the v2.4 business data structure and mechanisms.
+Complete bilingual language layer based on Weekflow v2.4. This release changes language and documentation only, while preserving the v2.4 business data structure and mechanisms.
 
 ### Added
 
@@ -10,7 +10,8 @@ Complete bilingual language layer based on Weekflow v2.4. This update changes la
 - Translated navigation, Home, Task by Week, Task by Day, Overall Dashboard, Document Library, all forms and dialogs, filters, validation feedback, reminders, User Guide, and the full in-app Changelog.
 - Made Task and Document blank templates, re-importable current Task data, Document Library downloads, dashboard reports, and per-person Task status reports follow the selected language.
 - English workbooks use English sheet names, headers, instructions, labels, metadata, and filenames; imports continue to accept both English and Chinese headers and values.
-- Rewrote README, release notes, and automated regression documentation for the bilingual release.
+- Added separate Chinese and English README pages with mutual language links and matching screenshots for each language.
+- Rewrote release notes and automated regression documentation for the bilingual release.
 
 ### Compatibility and regression protection
 

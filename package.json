@@ -1,8 +1,8 @@
 {
   "name": "weekflow-task-manager",
-  "version": "2.4.0",
+  "version": "2.5.0",
   "private": true,
-  "description": "Weekflow v2.4 bilingual local Task management with Week/Day timelines, Workflow, dashboards, and a unified Document Library",
+  "description": "Weekflow v2.5 bilingual local Task management with Week/Day timelines, Workflow, dashboards, and a unified Document Library",
   "scripts": {
     "serve": "python3 -m http.server 8080",
     "test": "node --test tests/*.test.js"

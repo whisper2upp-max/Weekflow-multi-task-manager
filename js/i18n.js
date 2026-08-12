@@ -65,7 +65,7 @@
     "使用说明": "User Guide",
     "了解主要功能、数据保存与导出方法": "Learn the key features, data storage, and export workflows",
     "更新日志": "Changelog",
-    "查看 Weekflow v2.4 的发布内容": "Review the Weekflow v2.4 release history",
+    "查看 Weekflow v2.5 的发布内容": "Review the Weekflow v2.5 release history",
     "周一至周日 · 表头显示周五 · 双击周表头查看每天": "Monday to Sunday · Headers show Friday · Double-click a week to view each day",
     "本周": "This Week",
     "今天": "Today",
@@ -365,7 +365,7 @@
     "开发团队": "Development Team",
     "开发团队：Wesley Yan": "Development team: Wesley Yan",
     "首个正式版本（v1.0）：2026年7月30日": "First release (v1.0): July 30, 2026",
-    "最新版本（v2.4）更新时间：2026年8月10日": "Latest v2.4 update: August 10, 2026",
+    "最新版本（v2.5）更新时间：2026年8月12日": "Latest v2.5 update: August 12, 2026",
     "Weekflow 更新日志": "Weekflow Changelog",
     "新增与调整": "New and Updated",
     "新增": "New",
@@ -685,7 +685,7 @@
       "向前 4 周": "Back 4 weeks",
       "向后 4 周": "Forward 4 weeks",
       "Weekflow 首页": "Weekflow Home"
-      ,"Weekflow v2.4 本地 Task 管理工具，支持周/日双时间轴、分组、Flow、资料库、双向联动、看板、备份和 Excel 批量导入导出。": "Weekflow v2.4 local Task manager with weekly/daily timelines, Groups, Flows, Document Library, dashboards, backup, and Excel import/export."
+      ,"Weekflow v2.5 中英双语本地 Task 管理工具，支持周/日双时间轴、分组、Flow、资料库、双向联动、看板、备份和 Excel 批量导入导出。": "Weekflow v2.5 bilingual local Task manager with weekly/daily timelines, Groups, Flows, Document Library, dashboards, backup, and Excel import/export."
       ,"例如：已完成需求确认和接口联调，当前等待业务方验收。\n\n可按日期分段记录，也可以作为持续更新的项目备注。": "Example: Requirements and integration are complete; business acceptance is pending.\n\nUse dated entries or maintain this as a continuously updated project note."
     };
     return attributes[clean] || translateCompositeText(value);
@@ -812,17 +812,17 @@
       '<li><b>Excel:</b> Download a blank 20-column template or current re-importable data, validate uploads, and choose supplement import or complete replacement.</li>',
       '<li><b>Document Library:</b> Manage Documentation, Deliverables, Control Sheets, and Folders with two-way Group → Flow → Task relations.</li>',
       '</ul></section>',
-      '<section><h3>Data Storage Location</h3><p>Business data is stored in <code>localStorage</code> for the current browser and page origin under:</p><pre>weekflow-v2.4:data:v3</pre><p>Clearing site data, using a private window, changing browsers, or changing the launch origin affects which data is visible.</p></section>',
+      '<section><h3>Data Storage Location</h3><p>Business data is stored in <code>localStorage</code> for the current browser and page origin under:</p><pre>weekflow-v2.4:data:v3</pre><p>v2.5 keeps this v2.4-compatible namespace so upgrading does not migrate or clear existing data. Clearing site data, using a private window, changing browsers, or changing the launch origin affects which data is visible.</p></section>',
       '<section><h3>Data Backup and Restore</h3><ol><li>Open the <b>•••</b> data menu.</li><li>Select <b>Export JSON Backup</b> and save the file securely.</li><li>To restore, select <b>Restore from JSON</b>; Weekflow validates the data and asks for confirmation.</li></ol><p>Export a JSON backup before bulk changes, browser migration, or clearing site data.</p></section>',
       '<section><h3>Excel Bulk Import</h3><ol><li>Open <b>•••</b> and download a blank Task template or current data in import format.</li><li>Edit the <b>Task Import</b> worksheet; each row represents one Task.</li><li>Upload the workbook and review errors and preview data.</li><li>Choose <b>Supplement Import</b> or <b>Complete Replacement</b>.</li></ol><p>Group, Task Name, Deadline, Urgency, Report To, and Deliverable are required. Missing Groups and Flows are created; matching names are reused. Recurring Tasks require start and end dates.</p></section>',
       '<section><h3>Excel Export</h3><p><b>Export Dashboard Report</b> creates an Overall Dashboard and Timeline Dashboard workbook containing every Task, hierarchy summary, recurrence fields, progress notes, deadlines, and related links. It is a presentation report, not an import workbook.</p><p>For re-import, select <b>Download Current Data in Import Format</b>. The Overall Dashboard also exports one-person Task status reports. The Document Library Download menu provides its blank template and complete library.</p></section>',
-      '<section><h3>Development Team</h3><p>Developer: Wesley Yan</p><p>First release (v1.0): July 30, 2026</p><p>Latest base release (v2.4): August 10, 2026</p></section>'
+      '<section><h3>Development Team</h3><p>Developer: Wesley Yan</p><p>First release (v1.0): July 30, 2026</p><p>Latest release (v2.5): August 12, 2026</p></section>'
     ].join("");
   }
 
   function englishChangelogHtml() {
     var entries = [
-      ["English exploration", "2026-08-12", "Complete bilingual language layer", ["Added the Chinese / English switch beside Document Library and made English the branch default.", "UI, dialogs, guides, reminders, templates, re-importable data, reports, workbook metadata, and filenames follow the selected language.", "Kept the v2.4 data model and all functional mechanisms unchanged.", "Retained Windows-safe XLSX packaging and the existing timeline and Document Library scroll-position protections."]],
+      ["v2.5 Bilingual Release", "2026-08-12", "Complete bilingual language layer and language-matched repository documentation.", ["Added the Chinese / English switch beside Document Library and made English the branch default.", "UI, dialogs, guides, reminders, templates, re-importable data, reports, workbook metadata, and filenames follow the selected language.", "Added separate Chinese and English README pages with matching screenshots and mutual language links.", "Kept the v2.4 data model and storage namespace unchanged, retained Windows-safe XLSX packaging, and preserved timeline and Document Library scroll-position protections."]],
       ["v2.4 Week / Day Timeline", "2026-08-10", "Added a daily drill-down while preserving the weekly timeline and data model.", ["Renamed the main timeline Task by Week and added Task by Day by double-clicking a week header.", "Task by Day shows only deadline occurrences in the selected week, from Monday through Sunday.", "Both views preserve the operated Task row after completion and preserve Group/Flow rows after collapse or expand.", "Migrated earlier browser data into the isolated v2.4 storage namespace without changing Excel formats."]],
       ["v2.3 Recurring Tasks and Deadline Reminder", "2026-08-08", "Added weekly/monthly recurrence, continuous completion history, and a ten-second deadline reminder.", ["A recurring Task is stored once but renders every deadline between its start and end dates.", "Completing the current period also completes all earlier periods; the next period starts incomplete.", "Expanded the Task import format to 20 columns while retaining legacy 16-column compatibility.", "Prevented Task completion from jumping to the top and hardened Windows Excel workbook security metadata."]],
       ["v2.2 People Progress and Report Compatibility", "2026-08-08", "Added Managed Person and Report To summaries and person-specific Task reports.", ["The Overall Dashboard keeps five overview metrics visible and opens one detail dimension at a time.", "Person reports are sorted by Group and include deadlines, progress, Deliverables, and related documents.", "Dashboard and person workbooks open without frozen panes and retain Windows-safe workbook properties."]],

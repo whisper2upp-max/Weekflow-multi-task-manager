@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Weekflow v2.4 本地 Task 管理工具，支持周/日双时间轴、分组、Flow、资料库、双向联动、看板、备份和 Excel 批量导入导出。"
+      content="Weekflow v2.5 中英双语本地 Task 管理工具，支持周/日双时间轴、分组、Flow、资料库、双向联动、看板、备份和 Excel 批量导入导出。"
     />
-    <title>Weekflow v2.4 · Task management</title>
+    <title>Weekflow v2.5 · Task management</title>
     <link rel="stylesheet" href="./css/styles.css" />
   </head>
   <body>
@@ -251,7 +251,7 @@
         <section id="home-view" class="view-panel home-view" aria-labelledby="home-heading">
           <div class="home-hero">
             <div class="home-hero-copy">
-              <p class="eyebrow">Weekflow v2.4</p>
+              <p class="eyebrow">Weekflow v2.5</p>
               <h1 id="home-heading">把工作拆成清晰的下一步</h1>
               <p>
                 用分组建立工作版图，用 Flow 串起执行步骤，再用周时间轴看清每一个 DDL。
@@ -337,7 +337,7 @@
               <span class="home-entry-copy">
                 <small>WHAT'S NEW</small>
                 <strong>更新日志</strong>
-                <span>查看 Weekflow v2.4 的发布内容</span>
+                <span>查看 Weekflow v2.5 的发布内容</span>
               </span>
               <span class="home-entry-arrow" aria-hidden="true">↗</span>
             </button>
@@ -746,6 +746,7 @@
           <h3>数据保存位置</h3>
           <p>数据保存在当前浏览器、当前页面来源的 <code>localStorage</code> 中，主数据键为：</p>
           <pre>weekflow-v2.4:data:v3</pre>
+          <p>v2.5 为避免升级时迁移或清空既有数据，继续沿用 v2.4 兼容存储键。</p>
           <p>清除浏览器网站数据、使用无痕窗口、更换浏览器或更换启动地址，都会影响可见数据。</p>
         </section>
         <section>
@@ -782,7 +783,7 @@
           <h3>开发团队</h3>
           <p>开发团队：Wesley Yan</p>
           <p>首个正式版本（v1.0）：2026年7月30日</p>
-          <p>最新版本（v2.4）更新时间：2026年8月10日</p>
+          <p>最新版本（v2.5）更新时间：2026年8月12日</p>
         </section>
       </article>
       <div class="modal-actions">
@@ -799,6 +800,31 @@
         <button class="icon-button" type="button" data-action="close-changelog" aria-label="关闭">×</button>
       </div>
       <article class="document-content changelog-content">
+        <div class="release-entry" data-version="2.5">
+          <div class="release-heading">
+            <span>v2.5 中英双语版</span>
+            <time datetime="2026-08-12">2026-08-12</time>
+          </div>
+          <p class="release-lead">在不改变 v2.4 数据结构和业务机制的前提下，为整套程序、文档及 Excel 输入输出增加完整中英文切换。</p>
+          <section>
+            <h3>新增与调整</h3>
+            <ul>
+              <li>在资料库右侧增加 Chinese / EN 切换，整套 UI、弹窗、提示、使用说明和更新日志随语言切换。</li>
+              <li>Task 与资料库模板、可回导数据、看板报告及人员状态报告自动使用当前界面的语种。</li>
+              <li>GitHub 项目主页提供中文与英文 README，并为两种语言分别配置对应界面配图。</li>
+              <li>英文导入继续兼容中英文表头和值，不翻译或改写用户录入的业务数据。</li>
+            </ul>
+          </section>
+          <section>
+            <h3>稳定性</h3>
+            <ul>
+              <li>继续沿用 Windows-safe XLSX 打包，模板与报告不含宏、外部链接、数据连接或默认冻结窗格。</li>
+              <li>保留时间轴勾选、分组/Flow 展开折叠及资料库复选时的滚动位置保护。</li>
+              <li>继续沿用 <code>weekflow-v2.4:*</code> 数据命名空间，升级 v2.5 不迁移、不清空用户数据。</li>
+            </ul>
+          </section>
+        </div>
+
         <div class="release-entry" data-version="2.4">
           <div class="release-heading">
             <span>v2.4 Week / Day 双时间轴版</span>

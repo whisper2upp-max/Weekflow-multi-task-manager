@@ -1,10 +1,10 @@
 <p align="right"><a href="README.md">中文</a> · <strong>English</strong></p>
 
-# Weekflow v2.4 · Bilingual Task Management
+# Weekflow v2.5 · Bilingual Task Management
 
 Weekflow is a desktop-first, backend-free Multi-task management cockpit for tracking several workstreams and organizing all Task-related documents in one place. It combines weekly and daily deadline timelines, `Group → optional Flow → ordered Task` workflows, an Overall Dashboard, a unified Document Library, Excel bulk import/export, and local JSON backup.
 
-The bilingual interface changes language only. It does not change the v2.4 data model, business rules, recurrence logic, storage behavior, filtering, linking, or scrolling mechanisms.
+The bilingual interface changes language only. It does not change the v2.4-compatible data model, business rules, recurrence logic, storage behavior, filtering, linking, or scrolling mechanisms.
 
 ## Quick Start
 
@@ -94,6 +94,8 @@ Business data is stored in `localStorage` for the current browser and page origi
 ```text
 weekflow-v2.4:data:v3
 ```
+
+To avoid migrating or clearing existing user data during the v2.5 upgrade, Weekflow keeps the v2.4 storage namespace. This is a compatibility key and does not indicate that the application is still v2.4.
 
 The top-level data structure is `version: 3` with `groups`, `flows`, `tasks`, and `materials`. Recurrence settings and occurrence completion history live on each Task, so recurring deadlines do not create duplicate Tasks. Weekflow can migrate same-origin v2.3, v2.2, v2.1, v2.0, v1.1, and v1.0 data while leaving older keys available for rollback.
 
@@ -210,8 +212,8 @@ Weekflow/
 
 - Developer: Wesley Yan
 - First release (v1.0): July 30, 2026
-- Latest base release (v2.4): August 10, 2026
-- Bilingual interface update: August 12, 2026
+- Latest release (v2.5): August 12, 2026
+- Bilingual interface release: August 12, 2026
 
 ## Security and Limits
 
