@@ -1,0 +1,78 @@
+name: Build Windows installers
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - codex/tauri-v3-windows
+    paths-ignore:
+      - "**/*.md"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: weekflow-tauri-windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-windows-x64:
+    name: Windows x64 · MSI and NSIS
+    runs-on: windows-latest
+    timeout-minutes: 60
+
+    steps:
+      - name: Check out Tauri branch
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Cache Rust build
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "./src-tauri -> target"
+
+      - name: Install locked frontend dependencies
+        run: npm ci
+
+      - name: Type-check
+        run: npm run typecheck
+
+      - name: Run unit tests
+        run: npm run test
+
+      - name: Build Windows installers
+        run: npm run tauri build -- --target x86_64-pc-windows-msvc --bundles msi,nsis
+
+      - name: Collect installers and checksums
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path artifacts | Out-Null
+          Get-ChildItem -Path src-tauri/target/x86_64-pc-windows-msvc/release/bundle -Recurse -File |
+            Where-Object { $_.Extension -eq '.msi' -or $_.Name -like '*-setup.exe' } |
+            Copy-Item -Destination artifacts
+          $installers = Get-ChildItem -Path artifacts -File
+          if ($installers.Count -lt 2) {
+            throw "Expected both MSI and NSIS installers, but found $($installers.Count)."
+          }
+          $installers | Get-FileHash -Algorithm SHA256 |
+            ForEach-Object { "$($_.Hash.ToLower())  $([System.IO.Path]::GetFileName($_.Path))" } |
+            Set-Content -Encoding utf8 artifacts/SHA256SUMS.txt
+          Get-ChildItem artifacts | Format-Table Name, Length
+
+      - name: Upload Windows installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: Weekflow-v3.0.0-windows-x64
+          path: artifacts/*
+          if-no-files-found: error
+          retention-days: 30
