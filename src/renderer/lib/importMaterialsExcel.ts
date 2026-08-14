@@ -5,6 +5,7 @@ import * as materialExcel from "../../shared/material-excel";
 import type { MaterialImportParseResult } from "../../shared/material-excel";
 import { useUiStore } from "../store/uiStore";
 import { pickFile } from "./files";
+import { translateText } from "./i18n";
 
 const MAX_FILE_SIZE = 15 * 1024 * 1024;
 
@@ -13,7 +14,7 @@ function errorMessage(error: unknown): string {
 }
 
 export async function pickAndImportMaterialsExcel(): Promise<void> {
-  const file = await pickFile([{ name: "Excel 工作簿", extensions: ["xlsx"] }]);
+  const file = await pickFile([{ name: translateText("Excel 工作簿"), extensions: ["xlsx"] }]);
   if (!file) return;
   if (file.data.byteLength > MAX_FILE_SIZE) {
     useUiStore.getState().pushToast("Excel 文件不能超过 15 MB。", "error");

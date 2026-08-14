@@ -33,6 +33,26 @@ const COLUMN_DEFS: ReadonlyArray<readonly [MaterialColumnKey, string, boolean]> 
   ["note", "备注", false]
 ];
 
+/* 英文表头（逐字沿用原 material-excel.js EN_COLUMNS）。
+   语言通过 BuildWorkbookOptions.english 显式传入，shared 不读全局语言。 */
+const EN_COLUMN_DEFS: ReadonlyArray<readonly [MaterialColumnKey, string, boolean]> = [
+  ["title", "Link Name*", true],
+  ["url", "Link URL*", true],
+  ["type", "Type", false],
+  ["taskNames", "Related Tasks", false],
+  ["flowNames", "Related Flows", false],
+  ["groupNames", "Groups", false],
+  ["note", "Notes", false]
+];
+
+/* 英文类型文案（等价原版 buildWorkbook 英文分支的内联映射） */
+const EN_TYPE_LABELS: Record<MaterialType, string> = {
+  document: "Documentation",
+  deliverable: "Deliverable",
+  control: "Control Sheet",
+  folder: "Folder"
+};
+
 /** 与原版导出一致：{ key, header, required } 列表。 */
 export const COLUMNS = COLUMN_DEFS.map((column) => ({
   key: column[0],
@@ -67,6 +87,8 @@ export interface MaterialExcelDataInput {
 
 export interface BuildWorkbookOptions {
   template?: boolean;
+  /** true 时使用英文表头/sheet 名/文件名（等价原版 options.language 为 en 的分支） */
+  english?: boolean;
 }
 
 export interface ExcelFileResult {
@@ -286,7 +308,8 @@ export function buildWorkbook(
   options?: BuildWorkbookOptions
 ): XLSX.WorkBook {
   const isTemplate = Boolean(options && options.template);
-  const header = COLUMN_DEFS.map((column) => {
+  const english = Boolean(options && options.english);
+  const header = (english ? EN_COLUMN_DEFS : COLUMN_DEFS).map((column) => {
     return column[1];
   });
   const rows = sortByGroup(data.materials || [], data).map((material) => {
@@ -294,7 +317,7 @@ export function buildWorkbook(
     return [
       material.title,
       material.url,
-      TYPE_LABELS[material.type],
+      english ? EN_TYPE_LABELS[material.type] || material.type : TYPE_LABELS[material.type],
       relations.tasks
         .map((task) => {
           return taskPath(task, data);
@@ -333,11 +356,17 @@ export function buildWorkbook(
   XLSX.utils.book_append_sheet(
     workbook,
     sheet,
-    isTemplate ? SHEET_NAME : "资料库"
+    english ? (isTemplate ? "Document Import" : "Document Library") : isTemplate ? SHEET_NAME : "资料库"
   );
   workbook.Props = {
-    Title: isTemplate ? "Weekflow 资料库导入模板" : "Weekflow v2.5 资料库",
-    Subject: "Weekflow 资料库",
+    Title: english
+      ? isTemplate
+        ? "Weekflow Document Import Template"
+        : "Weekflow Desktop Document Library"
+      : isTemplate
+        ? "Weekflow 资料库导入模板"
+        : "Weekflow Desktop 资料库",
+    Subject: english ? "Weekflow document library" : "Weekflow 资料库",
     Author: "Wesley Yan"
   };
   return workbook;
@@ -363,24 +392,33 @@ export function buildXlsxPackage(
 
 export function exportWorkbook(
   data: MaterialExcelDataInput,
-  filename?: string
+  filename?: string,
+  english?: boolean
 ): Promise<ExcelFileResult> {
   const outputName =
-    filename || "Weekflow_资料库_" + dateTimeStamp(new Date()) + ".xlsx";
-  return buildXlsxPackage(data, "uint8array", {}).then((bytes) => {
+    filename ||
+    (english ? "Weekflow_Document_Library_" : "Weekflow_资料库_") +
+      dateTimeStamp(new Date()) +
+      ".xlsx";
+  return buildXlsxPackage(data, "uint8array", { english: Boolean(english) }).then((bytes) => {
     return { filename: outputName, data: bytes };
   });
 }
 
-export function exportTemplateWorkbook(filename?: string): Promise<ExcelFileResult> {
-  const options: BuildWorkbookOptions = { template: true };
+export function exportTemplateWorkbook(
+  filename?: string,
+  english?: boolean
+): Promise<ExcelFileResult> {
+  const options: BuildWorkbookOptions = { template: true, english: Boolean(english) };
   const emptyData: MaterialExcelDataInput = {
     groups: [],
     flows: [],
     tasks: [],
     materials: []
   };
-  const outputName = filename || "Weekflow_资料库导入模板.xlsx";
+  const outputName =
+    filename ||
+    (english ? "Weekflow_Document_Import_Template_EN.xlsx" : "Weekflow_资料库导入模板.xlsx");
   return buildXlsxPackage(emptyData, "uint8array", options).then((bytes) => {
     return { filename: outputName, data: bytes };
   });

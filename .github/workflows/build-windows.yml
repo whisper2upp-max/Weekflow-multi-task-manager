@@ -25,6 +25,13 @@ jobs:
       - name: Check out Tauri branch
         uses: actions/checkout@v4
 
+      - name: Read app version
+        id: app-meta
+        shell: pwsh
+        run: |
+          $package = Get-Content package.json -Raw | ConvertFrom-Json
+          "version=$($package.version)" >> $env:GITHUB_OUTPUT
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -64,15 +71,19 @@ jobs:
           if ($installers.Count -lt 2) {
             throw "Expected both MSI and NSIS installers, but found $($installers.Count)."
           }
-          $installers | Get-FileHash -Algorithm SHA256 |
-            ForEach-Object { "$($_.Hash.ToLower())  $([System.IO.Path]::GetFileName($_.Path))" } |
-            Set-Content -Encoding utf8 artifacts/SHA256SUMS.txt
+          $checksumLines = $installers | Get-FileHash -Algorithm SHA256 |
+            ForEach-Object { "$($_.Hash.ToLower())  $([System.IO.Path]::GetFileName($_.Path))" }
+          [System.IO.File]::WriteAllText(
+            (Join-Path $PWD 'artifacts/SHA256SUMS.txt'),
+            (($checksumLines -join "`n") + "`n"),
+            [System.Text.UTF8Encoding]::new($false)
+          )
           Get-ChildItem artifacts | Format-Table Name, Length
 
       - name: Upload Windows installers
         uses: actions/upload-artifact@v4
         with:
-          name: Weekflow-v3.0.0-windows-x64
+          name: Weekflow-Desktop-v${{ steps.app-meta.outputs.version }}-windows-x64
           path: artifacts/*
           if-no-files-found: error
           retention-days: 30

@@ -212,9 +212,10 @@ function PersonCard(props: {
         total={item.total}
       />
       <div className="group-card-stats">
-        <span className="completed">✓ 完成 {item.completed}</span>
-        <span className="active">○ 进行 {active}</span>
-        <span className="overdue">逾期 {item.overdue}</span>
+        {/* 单一表达式字符串（等价原版 textContent 拼接）：observer 数字句式需要完整文本节点 */}
+        <span className="completed">{"✓ 完成 " + item.completed}</span>
+        <span className="active">{"○ 进行 " + active}</span>
+        <span className="overdue">{"逾期 " + item.overdue}</span>
       </div>
       <div className="person-card-actions">
         <PersonExportButton

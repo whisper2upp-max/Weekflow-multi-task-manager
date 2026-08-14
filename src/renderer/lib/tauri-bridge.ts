@@ -13,7 +13,7 @@
  * - 二进制内容（xlsx 等）跨桥一律 base64 字符串传递。
  */
 import { invoke } from "@tauri-apps/api/core";
-import { openUrl } from "@tauri-apps/plugin-opener";
+import { openPath, openUrl, revealItemInDir } from "@tauri-apps/plugin-opener";
 import { makeEmptyData, validateData } from "../../shared/schema";
 import type { WeekflowData } from "../../shared/types";
 import type {
@@ -178,9 +178,110 @@ const api: WeekflowApi = {
       backupCount: info.backup_count,
     };
   },
+
+  async revealPath(path: string): Promise<{ ok: boolean; error?: string }> {
+    try {
+      // 防滥用：只允许展示数据文件自身或备份目录（路径以后端返回值为准）
+      const info = await invoke<RustDataInfo>("get_data_info");
+      if (path === info.data_file) {
+        await revealItemInDir(path); // 系统文件管理器中定位并选中数据文件
+      } else if (path === info.backups_dir) {
+        await openPath(path); // 打开备份目录
+      } else {
+        return { ok: false, error: "仅支持打开数据文件或备份目录" };
+      }
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, error: `打开目录失败：${errorMessage(error)}` };
+    }
+  },
 };
 
 /** 渲染前调用：把 Tauri 实现挂到 window.weekflow */
 export function installTauriBridge(): void {
-  window.weekflow = api;
+  if (isTauriEnvironment()) {
+    window.weekflow = api;
+    return;
+  }
+  /* dev 兜底：纯浏览器预览（npm run dev:vite / playwright 截图）时没有 Tauri IPC，
+     挂一个 localStorage 内存 stub，仅用于开发预览，不影响打包后的真实行为。 */
+  window.weekflow = createDevStub();
+}
+
+function isTauriEnvironment(): boolean {
+  return Boolean(
+    (window as unknown as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__
+  );
+}
+
+/* ---------- 纯浏览器 dev 预览 stub（不进入任何 Tauri 代码路径） ---------- */
+
+const DEV_STUB_STORAGE_KEY = "weekflow-desktop:dev-preview-data";
+
+function createDevStub(): WeekflowApi {
+  const readStored = (): LoadDataResult => {
+    try {
+      const json = window.localStorage.getItem(DEV_STUB_STORAGE_KEY);
+      if (!json) {
+        const data = makeEmptyData();
+        window.localStorage.setItem(DEV_STUB_STORAGE_KEY, JSON.stringify(data, null, 2));
+        return { ok: true, data, warning: null };
+      }
+      const checked = validateData(JSON.parse(json));
+      return checked.ok
+        ? { ok: true, data: checked.data, warning: null }
+        : { ok: true, data: makeEmptyData(), warning: "数据校验失败，已重置为空数据" };
+    } catch {
+      return { ok: true, data: makeEmptyData(), warning: "数据解析失败，已重置为空数据" };
+    }
+  };
+  return {
+    async loadData(): Promise<LoadDataResult> {
+      return readStored();
+    },
+    async saveData(data: WeekflowData): Promise<SaveDataResult> {
+      const checked = validateData(data);
+      if (!checked.ok) {
+        return { ok: false, error: `数据校验失败：${checked.errors.join("；")}` };
+      }
+      try {
+        window.localStorage.setItem(DEV_STUB_STORAGE_KEY, JSON.stringify(checked.data, null, 2));
+        return { ok: true };
+      } catch (error) {
+        return { ok: false, error: errorMessage(error) };
+      }
+    },
+    async saveFileWithDialog(options): Promise<SaveFileResult> {
+      /* 浏览器下载兜底 */
+      const bytes =
+        typeof options.data === "string"
+          ? new TextEncoder().encode(options.data)
+          : new Uint8Array(options.data);
+      const blob = new Blob([bytes.buffer as ArrayBuffer]);
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = options.defaultPath;
+      anchor.click();
+      URL.revokeObjectURL(url);
+      return { ok: true, filePath: options.defaultPath };
+    },
+    async openFileWithDialog(): Promise<OpenFileResult> {
+      return { ok: true, canceled: true };
+    },
+    async openExternal(url: string): Promise<{ ok: boolean; error?: string }> {
+      window.open(url, "_blank", "noopener");
+      return { ok: true };
+    },
+    async getDataInfo() {
+      return {
+        dataFile: "(dev preview) localStorage:" + DEV_STUB_STORAGE_KEY,
+        backupsDir: "(dev preview) none",
+        backupCount: 0
+      };
+    },
+    async revealPath(): Promise<{ ok: boolean; error?: string }> {
+      return { ok: false, error: "浏览器预览模式不支持打开目录" };
+    }
+  };
 }

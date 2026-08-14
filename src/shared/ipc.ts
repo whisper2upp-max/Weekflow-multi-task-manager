@@ -55,6 +55,8 @@ export interface WeekflowApi {
   openExternal(url: string): Promise<{ ok: boolean; error?: string }>;
   /** 数据目录路径（用于使用说明展示） */
   getDataInfo(): Promise<{ dataFile: string; backupsDir: string; backupCount: number }>;
+  /** 在系统文件管理器中显示指定路径（仅允许数据文件与备份目录） */
+  revealPath(path: string): Promise<{ ok: boolean; error?: string }>;
 }
 
 export const IPC = {

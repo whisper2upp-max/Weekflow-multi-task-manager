@@ -1,10 +1,14 @@
 /* 时间轴表头行：左侧固定五列 + 周表头（双击/Enter/空格进日视图）或日表头 7 天。
-   等价 app.js:1297 createTimelineHeader。 */
+   等价 app.js:1297 createTimelineHeader（含原版的 isEnglish 三元文案分支）。 */
 import type { TimelineGranularity } from "../../../shared/types";
 import * as dates from "../../../shared/date-utils";
+import { isEnglish } from "../../lib/i18n";
 import { weekdayLabel } from "./utils";
 
-const CORNER_LABELS = ["Task / DDL", "紧急", "进度记录", "相关资料", "编辑"];
+/* 原版英文分支逐字：["Task / DDL", "Urgency", "Progress", "Documents", "Edit"] */
+const CORNER_LABELS = isEnglish()
+  ? ["Task / DDL", "Urgency", "Progress", "Documents", "Edit"]
+  : ["Task / DDL", "紧急", "进度记录", "相关资料", "编辑"];
 
 interface TimelineHeaderProps {
   columns: string[];
@@ -35,7 +39,9 @@ export default function TimelineHeader({
               className={"week-head day-head" + (day === currentColumn ? " is-current" : "")}
               data-day={day}
             >
-              <small className="week-range">{day.slice(0, 4) + " 年"}</small>
+              <small className="week-range">
+                {isEnglish() ? day.slice(0, 4) : day.slice(0, 4) + " 年"}
+              </small>
               <strong className="week-date">{day.slice(5).replace("-", "/")}</strong>
               <span className="week-year">{weekdayLabel(day)}</span>
               {day === currentColumn && <b className="week-current-badge">今天</b>}

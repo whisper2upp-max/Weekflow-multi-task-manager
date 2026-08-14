@@ -18,6 +18,7 @@ import {
 } from "../lib/exporters";
 import { pickFile } from "../lib/files";
 import { pickAndImportTaskExcel } from "../lib/importTaskExcel";
+import { tConfirm, translateText } from "../lib/i18n";
 
 /** 等价 app.js:5817 closeDetailsMenus：收起所有打开的 <details> 弹层。 */
 export function closeDetailsMenus(): void {
@@ -153,7 +154,7 @@ export default function FilterBar() {
      恢复前自动备份由主进程轮换备份覆盖，无需单独处理。 */
   const handleImportJson = async (): Promise<void> => {
     closeDetailsMenus();
-    const file = await pickFile([{ name: "JSON 备份", extensions: ["json"] }]);
+    const file = await pickFile([{ name: translateText("JSON 备份"), extensions: ["json"] }]);
     if (!file) return;
     const text = new TextDecoder("utf-8").decode(file.data);
     let parsed: unknown;
@@ -172,7 +173,7 @@ export default function FilterBar() {
         .pushToast("导入失败：" + checked.errors.slice(0, 6).join("；"), "error");
       return;
     }
-    const confirmed = window.confirm(
+    const confirmed = tConfirm(
       "确认用该备份替换当前数据？将导入 " +
         checked.data.groups.length +
         " 个分组和 " +

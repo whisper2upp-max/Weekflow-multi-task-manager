@@ -127,6 +127,54 @@ const GUIDE_ROWS: string[][] = [
   ]
 ];
 
+/* 英文表头/说明（逐字沿用原 excel-import.js EN_COLUMNS / EN_GUIDE_ROWS）。
+   语言通过 BuildWorkbookOptions.english 显式传入，shared 不读全局语言。 */
+const EN_COLUMN_DEFS: ReadonlyArray<readonly [TaskColumnKey, string, boolean]> = [
+  ["groupName", "Group*", true],
+  ["groupColor", "Group Color", false],
+  ["flowName", "Flow", false],
+  ["flowColor", "Flow Color", false],
+  ["flowOrder", "Flow Step", false],
+  ["taskName", "Task Name*", true],
+  ["ddl", "DDL*", true],
+  ["recurrenceCadence", "Recurrence", false],
+  ["recurrenceStart", "Recurrence Start", false],
+  ["recurrenceEnd", "Recurrence End", false],
+  ["recurrenceCompletions", "Recurrence Completion History", false],
+  ["urgency", "Urgency*", true],
+  ["status", "Completion Status", false],
+  ["completedAt", "Completion Date", false],
+  ["reportTo", "Report To*", true],
+  ["managedObject", "Managed Person", false],
+  ["deliverable", "Deliverable*", true],
+  ["progressNote", "Progress Note", false],
+  ["documentLinks", "Documentation Links", false],
+  ["deliverableLinks", "Deliverable Links", false]
+];
+
+const EN_GUIDE_ROWS: string[][] = [
+  ["Group*", "Yes", "Supplement import reuses a Group with the same name; complete replacement rebuilds Groups from the file", "Products and Projects"],
+  ["Group Color", "No", "Use #RRGGBB; blank reuses a matched Group color or assigns one automatically", "#665CFF"],
+  ["Flow", "No", "Matched by name within the Group; leave blank for a standalone Task", "Release Workflow"],
+  ["Flow Color", "No", "Use #RRGGBB; a new Flow inherits its Group color when blank", "#665CFF"],
+  ["Flow Step", "No", "Task step number within the Flow; enter an integer greater than 0", "1"],
+  ["Task Name*", "Yes", "Task name, up to 160 characters", "Complete pre-release checks"],
+  ["DDL*", "Yes", "Deadline; yyyy-mm-dd is recommended", "2026-08-07"],
+  ["Recurrence", "No", "Does not repeat, Weekly, or Monthly; blank means Does not repeat", "Weekly"],
+  ["Recurrence Start", "For recurring Tasks", "Start date; must be entered with Recurrence End", "2026-08-01"],
+  ["Recurrence End", "For recurring Tasks", "End date; DDL must be inside the date range", "2026-09-30"],
+  ["Recurrence Completion History", "No", "Format: occurrence DDL|completion date. Separate periods with new lines or semicolons", "2026-08-07|2026-08-08"],
+  ["Urgency*", "Yes", "High, Medium, or Low", "High"],
+  ["Completion Status", "No", "Incomplete or Completed; blank defaults to Incomplete", "Incomplete"],
+  ["Completion Date", "No", "For completed Tasks only; yyyy-mm-dd is recommended", "2026-08-06"],
+  ["Report To*", "Yes", "Enter a person's name; matching names are standardized for filtering", "Wesley Yan"],
+  ["Managed Person", "No", "Enter a person's name; matching names are standardized for filtering", "Amy Chen"],
+  ["Deliverable*", "Yes", "Describe the expected output, up to 500 characters", "Release approval record"],
+  ["Progress Note", "No", "Current progress or notes, up to 4,000 characters", "Integration testing completed"],
+  ["Documentation Links", "No", "Format: title|https://...; separate links with new lines or semicolons", "User Guide|https://example.com/guide"],
+  ["Deliverable Links", "No", "Format: title|https://...; separate links with new lines or semicolons", "Delivery File|https://example.com/delivery"]
+];
+
 export interface ParsedLink {
   title: string;
   url: string;
@@ -187,6 +235,8 @@ export interface TaskExcelDataInput {
 
 export interface BuildWorkbookOptions {
   template?: boolean;
+  /** true 时使用英文表头/说明/sheet 名（等价原版 options.language 为 en 的分支） */
+  english?: boolean;
 }
 
 export interface ExcelFileResult {
@@ -833,18 +883,50 @@ export function buildWorkbook(
   options?: BuildWorkbookOptions
 ): XLSX.WorkBook {
   const isTemplate = Boolean(options && options.template);
-  const headers = COLUMN_DEFS.map((column) => {
+  const english = Boolean(options && options.english);
+  const activeColumns = english ? EN_COLUMN_DEFS : COLUMN_DEFS;
+  const headers = activeColumns.map((column) => {
     return column[1];
   });
-  const rows = buildExportRows(data);
+  let rows = buildExportRows(data);
+  if (english) {
+    rows = rows.map((row) => {
+      const copy = row.slice();
+      copy[7] =
+        ({ 不重复: "Does not repeat", 每周: "Weekly", 每月: "Monthly" } as Record<string, string>)[
+          String(copy[7])
+        ] || copy[7];
+      copy[11] =
+        ({ 高: "High", 中: "Medium", 低: "Low" } as Record<string, string>)[String(copy[11])] ||
+        copy[11];
+      copy[12] = copy[12] === "已完成" ? "Completed" : "Incomplete";
+      return copy;
+    });
+  }
   const headerRows: Array<Array<string | number | null>> = [
-    [isTemplate ? "Weekflow Task 导入模板" : "Weekflow Task 当前数据（可再次导入）"],
     [
-      isTemplate
-        ? "每行填写 1 条 Task，完成后可通过“上传 Excel 批量导入”上传。"
-        : "每行代表 1 条 Task；文件结构与空白导入模板一致，可在“上传 Excel 批量导入”中直接使用。"
+      english
+        ? isTemplate
+          ? "Weekflow Task Import Template"
+          : "Weekflow Current Task Data (Re-importable)"
+        : isTemplate
+          ? "Weekflow Task 导入模板"
+          : "Weekflow Task 当前数据（可再次导入）"
     ],
-    ["带 * 为必填列｜请勿修改表头｜日期建议使用 yyyy-mm-dd｜单次最多导入 1000 条 Task"],
+    [
+      english
+        ? isTemplate
+          ? "Enter one Task per row, then upload this workbook through Excel Bulk Import."
+          : "Each row is one Task. This file matches the blank import template and can be uploaded through Excel Bulk Import."
+        : isTemplate
+          ? "每行填写 1 条 Task，完成后可通过“上传 Excel 批量导入”上传。"
+          : "每行代表 1 条 Task；文件结构与空白导入模板一致，可在“上传 Excel 批量导入”中直接使用。"
+    ],
+    [
+      english
+        ? "* Required | Do not change headers | Use yyyy-mm-dd dates | Maximum 1,000 Tasks per import"
+        : "带 * 为必填列｜请勿修改表头｜日期建议使用 yyyy-mm-dd｜单次最多导入 1000 条 Task"
+    ],
     headers
   ];
   const taskSheet = XLSX.utils.aoa_to_sheet(headerRows.concat(rows));
@@ -864,14 +946,23 @@ export function buildWorkbook(
   };
   taskSheet["!freeze"] = { xSplit: 0, ySplit: 4 };
 
-  const guideRows: string[][] = [
-    ["Weekflow Excel 导入使用说明"],
-    ["1. 回到“Task导入”工作表，每行填写或调整 1 条 Task。"],
-    ["2. 分组、Task name、DDL、紧急程度、汇报对象和交付物为必填。"],
-    ["3. 在 Weekflow 中选择“••• → 上传 Excel 批量导入”，先查看校验预览。"],
-    ["4. 选择补充导入或完整覆盖；完整覆盖会连续确认两次。"],
-    ["字段", "必填", "填写规则", "格式示例（仅供参考）"]
-  ].concat(GUIDE_ROWS);
+  const guideRows: string[][] = english
+    ? [
+        ["Weekflow Excel Import Guide"],
+        ["1. Open the Task Import sheet and enter or update one Task per row."],
+        ["2. Group, Task Name, DDL, Urgency, Report To, and Deliverable are required."],
+        ["3. In Weekflow, choose ••• → Upload Excel for Bulk Import and review validation results."],
+        ["4. Choose Supplement Import or Complete Replacement; replacement requires two confirmations."],
+        ["Field", "Required", "Instructions", "Example (reference only)"]
+      ].concat(EN_GUIDE_ROWS)
+    : [
+        ["Weekflow Excel 导入使用说明"],
+        ["1. 回到“Task导入”工作表，每行填写或调整 1 条 Task。"],
+        ["2. 分组、Task name、DDL、紧急程度、汇报对象和交付物为必填。"],
+        ["3. 在 Weekflow 中选择“••• → 上传 Excel 批量导入”，先查看校验预览。"],
+        ["4. 选择补充导入或完整覆盖；完整覆盖会连续确认两次。"],
+        ["字段", "必填", "填写规则", "格式示例（仅供参考）"]
+      ].concat(GUIDE_ROWS);
   const guideSheet = XLSX.utils.aoa_to_sheet(guideRows);
   guideSheet["!merges"] = [
     { s: { r: 0, c: 0 }, e: { r: 0, c: 3 } },
@@ -885,15 +976,25 @@ export function buildWorkbook(
   guideSheet["!freeze"] = { xSplit: 0, ySplit: 6 };
 
   const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, taskSheet, SHEET_NAME);
-  XLSX.utils.book_append_sheet(workbook, guideSheet, "填写说明");
+  XLSX.utils.book_append_sheet(workbook, taskSheet, english ? "Task Import" : SHEET_NAME);
+  XLSX.utils.book_append_sheet(workbook, guideSheet, english ? "Instructions" : "填写说明");
   workbook.Props = {
-    Title: isTemplate ? "Weekflow Task 导入模板" : "Weekflow Task 当前数据",
-    Subject: "Weekflow v2.5 re-importable Task data",
+    Title: english
+      ? isTemplate
+        ? "Weekflow Task Import Template"
+        : "Weekflow Current Task Data"
+      : isTemplate
+        ? "Weekflow Task 导入模板"
+        : "Weekflow Task 当前数据",
+    Subject: "Weekflow Desktop re-importable Task data",
     Author: "Wesley Yan",
-    Comments: isTemplate
-      ? "空白 Task 导入模板。"
-      : "与 Weekflow Task 导入模板结构一致，可再次批量导入。"
+    Comments: english
+      ? isTemplate
+        ? "Blank Task import template."
+        : "Matches the Weekflow Task import template and can be imported again."
+      : isTemplate
+        ? "空白 Task 导入模板。"
+        : "与 Weekflow Task 导入模板结构一致，可再次批量导入。"
   };
   return workbook;
 }
@@ -918,19 +1019,28 @@ export function buildXlsxPackage(
 
 export function exportWorkbook(
   data: TaskExcelDataInput,
-  filename?: string
+  filename?: string,
+  english?: boolean
 ): Promise<ExcelFileResult> {
   const outputName =
-    filename || "Weekflow_Task当前数据_" + dateTimeStamp(new Date()) + ".xlsx";
-  return buildXlsxPackage(data, "uint8array", {}).then((bytes) => {
+    filename ||
+    (english ? "Weekflow_Current_Task_Data_" : "Weekflow_Task当前数据_") +
+      dateTimeStamp(new Date()) +
+      ".xlsx";
+  return buildXlsxPackage(data, "uint8array", { english: Boolean(english) }).then((bytes) => {
     return { filename: outputName, data: bytes };
   });
 }
 
-export function exportTemplateWorkbook(filename?: string): Promise<ExcelFileResult> {
-  const options: BuildWorkbookOptions = { template: true };
+export function exportTemplateWorkbook(
+  filename?: string,
+  english?: boolean
+): Promise<ExcelFileResult> {
+  const options: BuildWorkbookOptions = { template: true, english: Boolean(english) };
   const emptyData: TaskExcelDataInput = { groups: [], flows: [], tasks: [], materials: [] };
-  const outputName = filename || "Weekflow_Task导入模板.xlsx";
+  const outputName =
+    filename ||
+    (english ? "Weekflow_Task_Import_Template_EN.xlsx" : "Weekflow_Task导入模板.xlsx");
   return buildXlsxPackage(emptyData, "uint8array", options).then((bytes) => {
     return { filename: outputName, data: bytes };
   });

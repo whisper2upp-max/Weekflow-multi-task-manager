@@ -8,6 +8,7 @@ import { useDataStore } from "../../store/dataStore";
 import type { MaterialDraft } from "../../store/dataStore";
 import { useUiStore } from "../../store/uiStore";
 import { useModalDialog } from "../../lib/useModalDialog";
+import { isEnglish } from "../../lib/i18n";
 import MaterialRowsEditor, {
   makeEmptyMaterialDraft,
   validateMaterialRows
@@ -125,7 +126,10 @@ export default function LinkDialog() {
           </button>
         </div>
         <p id="link-dialog-task" className="modal-context">
-          {task.name + " · 资料按类型分组；修改后会同步到资料库"}
+          {task.name +
+            (isEnglish()
+              ? " · Documents are grouped by type; changes sync to the Document Library"
+              : " · 资料按类型分组；修改后会同步到资料库")}
         </p>
         <MaterialRowsEditor
           id="link-manager-rows"

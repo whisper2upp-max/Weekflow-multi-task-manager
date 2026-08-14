@@ -11,6 +11,7 @@ import { useUiStore } from "../../store/uiStore";
 import { useModalDialog } from "../../lib/useModalDialog";
 import { useFormErrors } from "./dialogForm";
 import { taskDraftStore } from "./taskDraftStore";
+import { tConfirm } from "../../lib/i18n";
 
 const STATUS_LABELS: Record<string, string> = { pending: "未完成", completed: "已完成" };
 
@@ -224,7 +225,7 @@ export default function FlowDialog() {
         flowTaskCount +
         " 条 Task 会保留在原分组并取消 Flow 归属。"
       : "确认删除 Flow「" + flow.name + "」？";
-    if (!window.confirm(message)) return;
+    if (!tConfirm(message)) return;
     void useDataStore
       .getState()
       .deleteFlow(flow.id)

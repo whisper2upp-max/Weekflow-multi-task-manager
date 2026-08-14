@@ -13,6 +13,7 @@ import {
 } from "../../src/shared/excel-export";
 import {
   exportTemplateWorkbook as exportMaterialTemplate,
+  exportWorkbook as exportMaterialWorkbook,
   parseWorkbook as parseMaterialWorkbook
 } from "../../src/shared/material-excel";
 
@@ -284,5 +285,91 @@ describe("excel-export 看板报告（手写 OOXML + JSZip）", () => {
         now
       )
     ).rejects.toThrow("管理对象“不存在的人”没有 Task。");
+  });
+});
+
+/* ---------- 英文模式（english=true 显式参数） ---------- */
+
+describe("excel-import 英文导出分支", () => {
+  it("英文空白模板：文件名/sheet 名/表头为英文，解析端吃回无错误", async () => {
+    const result = await exportTaskTemplate(undefined, true);
+    expect(result.filename).toBe("Weekflow_Task_Import_Template_EN.xlsx");
+    const workbook = XLSX.read(result.data, { type: "array" });
+    expect(workbook.SheetNames).toEqual(["Task Import", "Instructions"]);
+    const parsed = parseTaskWorkbook(result.data);
+    expect(parsed.errors).toEqual([]);
+    expect(parsed.rows).toEqual([]);
+    expect(parsed.sheetName).toBe("Task Import");
+  });
+
+  it("英文当前数据：文件名带时间戳，英文表头+英文值可回导", async () => {
+    const result = await exportTaskWorkbook(sampleData(), undefined, true);
+    expect(result.filename).toMatch(/^Weekflow_Current_Task_Data_\d{8}_\d{4}\.xlsx$/);
+    const workbook = XLSX.read(result.data, { type: "array" });
+    expect(workbook.SheetNames[0]).toBe("Task Import");
+    const parsed = parseTaskWorkbook(result.data);
+    expect(parsed.errors).toEqual([]);
+    expect(parsed.rows).toHaveLength(1);
+    /* 英文值回导后归一到内部枚举 */
+    expect(parsed.rows[0].taskName).toBe("完成发布前检查");
+    expect(parsed.rows[0].urgency).toBe("high");
+    expect(parsed.rows[0].status).toBe("pending");
+    expect(parsed.rows[0].recurrenceCadence).toBe("none");
+    expect(parsed.rows[0].documentLinks[0].url).toBe("https://example.com/guide");
+  });
+});
+
+describe("excel-export 英文分支", () => {
+  const now = new Date(2026, 7, 12, 10, 30);
+
+  it("英文看板报告：文件名与 sheet 名为英文", async () => {
+    const result = await exportDashboardWorkbook(sampleData(), now, true);
+    expect(result.filename).toBe("Task_Dashboard_20260812_1030.xlsx");
+    const zip = await JSZip.loadAsync(result.data);
+    const workbookXml = await zip.file("xl/workbook.xml")!.async("string");
+    expect(workbookXml).toContain("Overall Dashboard");
+    expect(workbookXml).toContain("Timeline Dashboard");
+    const sheet1 = await zip.file("xl/worksheets/sheet1.xml")!.async("string");
+    expect(sheet1).toContain("Overall Statistics");
+    expect(sheet1).toContain("Group Statistics");
+    const sheet2 = await zip.file("xl/worksheets/sheet2.xml")!.async("string");
+    expect(sheet2).toContain("Task Name");
+    expect(sheet2).toContain("完成发布前检查");
+    const core = await zip.file("docProps/core.xml")!.async("string");
+    expect(core).toContain("Weekflow Task Dashboard");
+  });
+
+  it("英文人员 Task 状态：文件名与标题为英文", async () => {
+    const result = await exportTaskStatusWorkbook(
+      sampleData(),
+      { field: "reportTo", value: "Wesley Yan", label: "Wesley Yan" },
+      now,
+      true
+    );
+    expect(result.filename).toBe("Report_To_Wesley_Yan_Task_Status_20260812_1030.xlsx");
+    expect(result.title).toBe("Report_To: Wesley Yan · Task Status");
+  });
+});
+
+describe("material-excel 英文分支", () => {
+  it("英文资料库模板：文件名/sheet 名/表头为英文，可解析", async () => {
+    const result = await exportMaterialTemplate(undefined, true);
+    expect(result.filename).toBe("Weekflow_Document_Import_Template_EN.xlsx");
+    const parsed = parseMaterialWorkbook(result.data);
+    expect(parsed.errors).toEqual([]);
+    expect(parsed.rows).toEqual([]);
+    expect(parsed.sheetName).toBe("Document Import");
+  });
+
+  it("英文资料库导出：文件名/sheet 名/类型值为英文，可解析", async () => {
+    const result = await exportMaterialWorkbook(sampleData(), undefined, true);
+    expect(result.filename).toMatch(/^Weekflow_Document_Library_\d{8}_\d{4}\.xlsx$/);
+    const workbook = XLSX.read(result.data, { type: "array" });
+    expect(workbook.SheetNames).toEqual(["Document Library"]);
+    const parsed = parseMaterialWorkbook(result.data);
+    expect(parsed.errors).toEqual([]);
+    expect(parsed.rows).toHaveLength(1);
+    /* 英文类型值回导归一到内部枚举 */
+    expect(parsed.rows[0].type).toBe("document");
   });
 });

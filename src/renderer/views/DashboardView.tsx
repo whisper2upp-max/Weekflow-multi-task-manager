@@ -57,7 +57,8 @@ export default function DashboardView() {
             <h2 id="dashboard-module-title">进度汇总维度</h2>
           </div>
           <span id="dashboard-scope">
-            统计全部 {summary.total} 条 Task（不受时间轴筛选影响）
+            {/* 单一表达式（等价原版 textContent 拼接）：observer 的复合替换需要完整字符串 */}
+            {"统计全部 " + summary.total + " 条 Task（不受时间轴筛选影响）"}
           </span>
         </div>
         <div

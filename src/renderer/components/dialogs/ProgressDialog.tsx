@@ -1,15 +1,17 @@
 /* 进度记录弹窗：等价原 app.js openProgressManager(4206) /
-   formatProgressTimestamp(4231) / updateProgressCharacterCount(4243) / saveProgressNote(4248)。 */
+   formatProgressTimestamp(4231) / updateProgressCharacterCount(4243) / saveProgressNote(4248)。
+   文案含原版 isEnglish 英文分支。 */
 import { useEffect, useRef, useState } from "react";
 import { useDataStore } from "../../store/dataStore";
 import { useUiStore } from "../../store/uiStore";
 import { useModalDialog } from "../../lib/useModalDialog";
+import { isEnglish } from "../../lib/i18n";
 
-/** 等价原 formatProgressTimestamp：非法时间显示「未知时间」 */
+/** 等价原 formatProgressTimestamp：非法时间显示「未知时间」（英文 Unknown time） */
 function formatProgressTimestamp(value: string): string {
   const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return "未知时间";
-  return parsed.toLocaleString("zh-CN", {
+  if (Number.isNaN(parsed.getTime())) return isEnglish() ? "Unknown time" : "未知时间";
+  return parsed.toLocaleString(isEnglish() ? "en-US" : "zh-CN", {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -56,8 +58,11 @@ export default function ProgressDialog() {
   if (!dialog || !task) return null;
 
   const updatedText = task.progressUpdatedAt
-    ? "最后更新：" + formatProgressTimestamp(task.progressUpdatedAt)
-    : "尚未记录进度";
+    ? (isEnglish() ? "Last updated: " : "最后更新：") +
+      formatProgressTimestamp(task.progressUpdatedAt)
+    : isEnglish()
+      ? "No progress recorded"
+      : "尚未记录进度";
 
   const onSubmit = (event: React.FormEvent): void => {
     event.preventDefault();
@@ -91,7 +96,10 @@ export default function ProgressDialog() {
           </button>
         </div>
         <p id="progress-dialog-task" className="modal-context">
-          {task.name + " · 自由记录当前进展、阻塞事项或下一步计划"}
+          {task.name +
+            (isEnglish()
+              ? " · Record current progress, blockers, or next steps"
+              : " · 自由记录当前进展、阻塞事项或下一步计划")}
         </p>
         <label className="form-field progress-note-field">
           <span>进度内容</span>

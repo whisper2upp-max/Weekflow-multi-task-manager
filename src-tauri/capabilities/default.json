@@ -1,13 +1,24 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "默认窗口能力：核心 + 打开外部链接（仅 http/https，最小授权）。文件保存/打开对话框由自有 Rust command 触发，不走 JS 插件通道。",
-  "windows": ["main"],
+  "description": "默认窗口能力：核心 + 打开外部链接（仅 http/https）+ 在文件管理器中显示路径（桥接层限定仅数据文件/备份目录）。文件保存/打开对话框由自有 Rust command 触发，不走 JS 插件通道。",
+  "windows": [
+    "main"
+  ],
   "permissions": [
     "core:default",
     {
       "identifier": "opener:allow-open-url",
-      "allow": [{ "url": "http://*" }, { "url": "https://*" }]
-    }
+      "allow": [
+        {
+          "url": "http://*"
+        },
+        {
+          "url": "https://*"
+        }
+      ]
+    },
+    "opener:allow-open-path",
+    "opener:allow-reveal-item-in-dir"
   ]
 }

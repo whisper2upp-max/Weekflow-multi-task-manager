@@ -13,6 +13,7 @@ import { prepareMaterialImport, useDataStore } from "../../store/dataStore";
 import { useUiStore } from "../../store/uiStore";
 import { useModalDialog } from "../../lib/useModalDialog";
 import { pickAndImportMaterialsExcel } from "../../lib/importMaterialsExcel";
+import { tConfirm, translateMessage } from "../../lib/i18n";
 
 export default function MaterialImportDialog() {
   const dialog = useUiStore((s) =>
@@ -103,7 +104,7 @@ function MaterialImportDialogInner({
     if (isImporting || !rows.length || errors.length) return;
     if (mode === "replace") {
       if (
-        !window.confirm(
+        !tConfirm(
           "全部覆盖会先删除资料库现有的 " +
             data.materials.length +
             " 条资料，再导入 " +
@@ -113,7 +114,7 @@ function MaterialImportDialogInner({
       ) {
         return;
       }
-      if (!window.confirm("再次确认：全部覆盖不可撤销，建议已先导出 JSON 备份。")) return;
+      if (!tConfirm("再次确认：全部覆盖不可撤销，建议已先导出 JSON 备份。")) return;
     }
     const counts = await useDataStore
       .getState()
@@ -221,8 +222,9 @@ function MaterialImportDialogInner({
           <>
             <strong>{"发现 " + errors.length + " 个问题，修正后请重新选择文件："}</strong>
             <ul>
+              {/* 等价原版 app.js:5079：错误条目过 translateMessage（含“第 N 行：”递归） */}
               {errors.slice(0, 50).map((message, index) => (
-                <li key={index}>{message}</li>
+                <li key={index}>{translateMessage(message)}</li>
               ))}
               {errors.length > 50 && (
                 <li>{"其余 " + (errors.length - 50) + " 个问题未显示。"}</li>

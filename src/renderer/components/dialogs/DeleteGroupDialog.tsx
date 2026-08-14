@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useDataStore } from "../../store/dataStore";
 import { useUiStore } from "../../store/uiStore";
 import { useModalDialog } from "../../lib/useModalDialog";
+import { tConfirm } from "../../lib/i18n";
 
 export default function DeleteGroupDialog() {
   const dialog = useUiStore((s) => (s.dialog?.type === "deleteGroup" ? s.dialog : null));
@@ -48,7 +49,7 @@ export default function DeleteGroupDialog() {
       return;
     }
     if (
-      !window.confirm(
+      !tConfirm(
         "确认将「" +
           group.name +
           "」内的 Task 与 Flow 移动到「" +
@@ -68,7 +69,7 @@ export default function DeleteGroupDialog() {
 
   const onDeleteWithTasks = (): void => {
     if (
-      !window.confirm(
+      !tConfirm(
         "最终确认：删除分组「" +
           group.name +
           "」、其中 " +

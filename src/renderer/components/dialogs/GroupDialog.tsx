@@ -7,6 +7,7 @@ import { useDataStore } from "../../store/dataStore";
 import { useUiStore } from "../../store/uiStore";
 import { useModalDialog } from "../../lib/useModalDialog";
 import { useFormErrors } from "./dialogForm";
+import { tConfirm } from "../../lib/i18n";
 
 export default function GroupDialog() {
   const dialog = useUiStore((s) => (s.dialog?.type === "group" ? s.dialog : null));
@@ -90,7 +91,7 @@ export default function GroupDialog() {
         "」" +
         (flowCount ? "及其中 " + flowCount + " 个空 Flow" : "") +
         "？此操作不可恢复。";
-      if (!window.confirm(message)) return;
+      if (!tConfirm(message)) return;
       void useDataStore
         .getState()
         .deleteGroup(dialog.groupId)

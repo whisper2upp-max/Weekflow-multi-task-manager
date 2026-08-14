@@ -1,8 +1,17 @@
-# Weekflow v3.0 · Tauri Desktop
+# Weekflow Desktop v1.0
 
-Weekflow v3.0 is the Tauri v2 desktop edition maintained separately from the Web edition on `main`. It uses React, TypeScript, Rust, and the operating system WebView while preserving the Weekflow workflow and data contract.
+Weekflow Desktop is the Tauri v2 desktop edition of Weekflow. It uses React, TypeScript, Rust, and the operating system WebView while preserving the Weekflow workflow and v3 data contract.
 
 Developer: Wesley Yan
+
+## Highlights
+
+- Native macOS and Windows desktop application
+- Chinese and English interface
+- Task by Week and Task by Day timelines
+- Dashboard and document library
+- Local JSON persistence with rotating backups
+- Excel/JSON import and export compatible with the Weekflow data contract
 
 ## Local development
 
@@ -26,8 +35,8 @@ The `Build Windows installers` workflow runs on a real `windows-latest` GitHub r
 - WiX Microsoft Installer: `.msi`
 - NSIS setup executable: `-setup.exe`
 
-It runs automatically when application files are pushed to `codex/tauri-v3-windows`, and it can also be started manually from **Actions → Build Windows installers → Run workflow**. Download the resulting `Weekflow-v3.0.0-windows-x64` artifact after the workflow succeeds.
+It runs automatically when application files are pushed to `codex/tauri-v3-windows`, and it can also be started manually from **Actions → Build Windows installers → Run workflow**. Download the resulting `Weekflow-Desktop-v1.0.0-windows-x64` artifact after the workflow succeeds.
 
-The installer uses Tauri's default WebView2 download bootstrapper. Windows 10 and Windows 11 normally already provide WebView2. These first builds are unsigned, so Windows SmartScreen may show an unknown-publisher warning during testing.
+The installer uses Tauri's WebView2 download bootstrapper. Windows 10 and Windows 11 normally already provide WebView2. These builds are unsigned, so Windows SmartScreen may show an unknown-publisher warning.
 
-This branch is intentionally not merged into the Web edition's `main` branch.
+This branch is maintained independently from the Web edition on `main`.

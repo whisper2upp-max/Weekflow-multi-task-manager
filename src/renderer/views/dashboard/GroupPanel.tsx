@@ -110,8 +110,9 @@ function GroupCard({ item }: { item: GroupSummary }) {
         total={item.total}
       />
       <div className="group-card-stats">
-        <span className="completed">✓ 完成 {item.completed}</span>
-        <span className="active">○ 进行 {active}</span>
+        {/* 单一表达式字符串（等价原版 textContent 拼接）：observer 数字句式需要完整文本节点 */}
+        <span className="completed">{"✓ 完成 " + item.completed}</span>
+        <span className="active">{"○ 进行 " + active}</span>
         <button
           type="button"
           className="table-overdue-button overdue"
@@ -120,7 +121,7 @@ function GroupCard({ item }: { item: GroupSummary }) {
             applyDashboardFilter(item.group.id, true);
           }}
         >
-          逾期 {item.overdue}
+          {"逾期 " + item.overdue}
         </button>
       </div>
     </article>

@@ -13,6 +13,8 @@ import type { MaterialDraft } from "../../store/dataStore";
 import { useUiStore } from "../../store/uiStore";
 import { useModalDialog } from "../../lib/useModalDialog";
 import { useFormErrors } from "./dialogForm";
+import { isEnglish, tConfirm } from "../../lib/i18n";
+import DateInput from "../DateInput";
 import MaterialRowsEditor, {
   makeEmptyMaterialDraft,
   validateMaterialRows
@@ -198,17 +200,32 @@ export default function TaskDialog() {
       ? values.flowId
       : "";
 
-  /* 等价 syncTaskRecurrenceFields 的文案部分 */
+  /* 等价 syncTaskRecurrenceFields 的文案部分（含原版 isEnglish 英文分支） */
+  const english = isEnglish();
   const cadenceUnit = values.recurrenceCadence === "weekly" ? "周" : "月";
-  const recurrenceHelp = recurring
-    ? automation.cadenceLabel(values.recurrenceCadence) +
-      "显示多个 DDL，但只统计为一个 Task；完成勾选仅对应当前自然" +
-      cadenceUnit +
-      "。"
-    : "不重复的 Task 只在其 DDL 所在周显示一次。";
-  const statusHelp = recurring
-    ? "周期 Task 的状态由当前自然" + cadenceUnit + "完成记录自动维护，请在时间轴勾选。"
-    : "非周期 Task 可在此设置整体完成状态。";
+  const recurrenceHelp = english
+    ? recurring
+      ? ({ none: "Does not repeat", weekly: "Weekly", monthly: "Monthly" } as const)[
+          values.recurrenceCadence
+        ] +
+        " recurrence shows multiple DDLs but counts as one Task. Completion applies only to the current natural " +
+        (values.recurrenceCadence === "weekly" ? "week." : "month.")
+      : "A non-recurring Task appears once in the week containing its DDL."
+    : recurring
+      ? automation.cadenceLabel(values.recurrenceCadence) +
+        "显示多个 DDL，但只统计为一个 Task；完成勾选仅对应当前自然" +
+        cadenceUnit +
+        "。"
+      : "不重复的 Task 只在其 DDL 所在周显示一次。";
+  const statusHelp = english
+    ? recurring
+      ? "The Task status is maintained from the current natural " +
+        (values.recurrenceCadence === "weekly" ? "week's" : "month's") +
+        " completion history. Mark it on the timeline."
+      : "Set the overall completion status here for a non-recurring Task."
+    : recurring
+      ? "周期 Task 的状态由当前自然" + cadenceUnit + "完成记录自动维护，请在时间轴勾选。"
+      : "非周期 Task 可在此设置整体完成状态。";
 
   const onGroupChange = (nextGroupId: string): void => {
     patchValues({ groupId: nextGroupId, flowGroupId: nextGroupId, flowId: "" });
@@ -381,7 +398,7 @@ export default function TaskDialog() {
 
   const onDelete = (): void => {
     if (!task) return;
-    if (!window.confirm("确认删除 Task「" + task.name + "」？此操作不可恢复。")) return;
+    if (!tConfirm("确认删除 Task「" + task.name + "」？此操作不可恢复。")) return;
     void useDataStore
       .getState()
       .deleteTask(task.id)
@@ -472,7 +489,7 @@ export default function TaskDialog() {
                   {item.name +
                     " · " +
                     tasks.filter((taskItem) => taskItem.flowId === item.id).length +
-                    " 个步骤"}
+                    (english ? " steps" : " 个步骤")}
                 </option>
               ))}
               <option value="__new_flow__">＋ 创建新的 Flow…</option>
@@ -486,9 +503,8 @@ export default function TaskDialog() {
             <span>
               DDL <em>*</em>
             </span>
-            <input
+            <DateInput
               id="task-ddl"
-              type="date"
               required
               value={values.ddl}
               className={invalidClass("task-ddl")}
@@ -521,9 +537,8 @@ export default function TaskDialog() {
             <span>
               周期开始日期 <em>*</em>
             </span>
-            <input
+            <DateInput
               id="task-recurrence-start"
-              type="date"
               required={recurring}
               value={values.recurrenceStart}
               className={invalidClass("task-recurrence-start")}
@@ -537,9 +552,8 @@ export default function TaskDialog() {
             <span>
               周期结束日期 <em>*</em>
             </span>
-            <input
+            <DateInput
               id="task-recurrence-end"
-              type="date"
               required={recurring}
               value={values.recurrenceEnd}
               className={invalidClass("task-recurrence-end")}
@@ -586,9 +600,8 @@ export default function TaskDialog() {
           </label>
           <label className="form-field">
             <span>完成日期</span>
-            <input
+            <DateInput
               id="task-completed-at"
-              type="date"
               disabled={recurring || values.status !== "completed"}
               value={!recurring && values.status !== "completed" ? "" : values.completedAt}
               onChange={(event) => patchValues({ completedAt: event.target.value })}

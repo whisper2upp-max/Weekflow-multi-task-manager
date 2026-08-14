@@ -1,11 +1,12 @@
 /* Task 行：完成勾选框、标题钮、STEP 编号、DDL 基准/文案、周期徽标、周期状态机状态标、
    紧急徽标、进度钮（双击/Enter/空格）、资料钮（双击/Enter/空格）、⋯ 编辑钮，
    右侧每列 DDL 节点钮。等价 app.js:1561 createTaskRow、1802 createProgressButton、
-   1838 createMaterialButton。 */
+   1838 createMaterialButton。英文文案沿用原版 isEnglish 三元分支（i18n.urgencyLabels 等）。 */
 import type { CSSProperties } from "react";
 import type { Flow, Group, RecurringOccurrence, Task, Urgency } from "../../../shared/types";
 import * as dates from "../../../shared/date-utils";
 import * as automation from "../../../shared/automation";
+import { isEnglish } from "../../lib/i18n";
 import {
   URGENCY_ICONS,
   URGENCY_LABELS,
@@ -14,6 +15,10 @@ import {
   getTaskTimelineOccurrences,
   groupStyleVars
 } from "./utils";
+
+/* 等价原版 i18n.urgencyLabels()/cadenceLabels() 的英文映射 */
+const EN_URGENCY_LABELS: Record<Urgency, string> = { high: "High", medium: "Medium", low: "Low" };
+const EN_CADENCE_LABELS = { none: "Does not repeat", weekly: "Weekly", monthly: "Monthly" } as const;
 
 type NodeState = "overdue" | "completed" | Urgency;
 
@@ -70,16 +75,28 @@ export default function TaskRow({
   const style: CSSProperties = { ...groupStyleVars(group), ...(flow ? flowStyleVars(flow) : {}) };
 
   const checkboxDisabled = recurring && !periodState.checkboxEnabled;
-  const checkboxAriaLabel = recurring
-    ? periodState.checkboxEnabled
-      ? (completed ? "取消" : "确认") +
-        "当前自然" +
-        (periodState.cadence === "weekly" ? "周" : "月") +
-        "的 DDL 完成状态"
-      : "当前不在周期 Task 的可确认范围内"
-    : completed
-      ? "恢复为未完成"
-      : "标记为已完成";
+  /* 等价 app.js:1584-1611：勾选框 aria-label/title 的英文分支逐字沿用原版 */
+  const english = isEnglish();
+  const checkboxAriaLabel = english
+    ? recurring
+      ? periodState.checkboxEnabled
+        ? (completed ? "Clear" : "Confirm") +
+          " the DDL completion status for the current natural " +
+          (periodState.cadence === "weekly" ? "week" : "month")
+        : "This recurring Task cannot be completed in the current period"
+      : completed
+        ? "Restore to incomplete"
+        : "Mark as completed"
+    : recurring
+      ? periodState.checkboxEnabled
+        ? (completed ? "取消" : "确认") +
+          "当前自然" +
+          (periodState.cadence === "weekly" ? "周" : "月") +
+          "的 DDL 完成状态"
+        : "当前不在周期 Task 的可确认范围内"
+      : completed
+        ? "恢复为未完成"
+        : "标记为已完成";
 
   /* 周期状态机状态标（等价 app.js:1650-1678） */
   let statusLabel;
@@ -122,7 +139,13 @@ export default function TaskRow({
               checked={completed}
               disabled={checkboxDisabled}
               aria-label={checkboxAriaLabel}
-              title={checkboxDisabled ? "进入有效自然周期后可确认本期完成状态" : undefined}
+              title={
+                checkboxDisabled
+                  ? english
+                    ? "The current period can be completed after the recurrence becomes active"
+                    : "进入有效自然周期后可确认本期完成状态"
+                  : undefined
+              }
               onChange={() => onToggleCompleted(task.id)}
             />
           </label>
@@ -141,13 +164,18 @@ export default function TaskRow({
                   {"STEP " + String(stepNumber || 1).padStart(2, "0")}
                 </span>
               )}
-              <span>{(recurring ? "DDL 基准 " : "DDL ") + task.ddl}</span>
+              <span>
+                {(english ? (recurring ? "DDL Anchor " : "DDL ") : recurring ? "DDL 基准 " : "DDL ") +
+                  task.ddl}
+              </span>
               {recurring && (
                 <span className="recurrence-badge">
-                  {automation.cadenceLabel(periodState.cadence) +
+                  {(english
+                    ? EN_CADENCE_LABELS[periodState.cadence]
+                    : automation.cadenceLabel(periodState.cadence)) +
                     " · " +
                     task.recurrenceStart +
-                    " 至 " +
+                    (english ? " to " : " 至 ") +
                     task.recurrenceEnd}
                 </span>
               )}
@@ -156,15 +184,22 @@ export default function TaskRow({
           </div>
         </div>
         <span className={"urgency-badge " + task.urgency}>
-          {URGENCY_ICONS[task.urgency] + " " + URGENCY_LABELS[task.urgency]}
+          {URGENCY_ICONS[task.urgency] +
+            " " +
+            (english ? EN_URGENCY_LABELS[task.urgency] : URGENCY_LABELS[task.urgency])}
         </span>
         <button
           className={"link-button progress-button" + (hasProgress ? " has-progress" : "")}
           type="button"
           title={
-            hasProgress
-              ? "双击编辑进度记录\n" + task.progressNote.replace(/\s+/g, " ").slice(0, 160)
-              : "双击添加进度记录"
+            english
+              ? hasProgress
+                ? "Double-click to edit the progress note\n" +
+                  task.progressNote.replace(/\s+/g, " ").slice(0, 160)
+                : "Double-click to add a progress note"
+              : hasProgress
+                ? "双击编辑进度记录\n" + task.progressNote.replace(/\s+/g, " ").slice(0, 160)
+                : "双击添加进度记录"
           }
           aria-label={"进度记录，" + (hasProgress ? "已有内容" : "暂无内容") + "；双击或按回车编辑"}
           onDoubleClick={(event) => {
@@ -199,8 +234,8 @@ export default function TaskRow({
         <button
           className="task-icon-button"
           type="button"
-          title="编辑 Task"
-          aria-label={"编辑 " + task.name}
+          title={english ? "Edit Task" : "编辑 Task"}
+          aria-label={(english ? "Edit " : "编辑 ") + task.name}
           onClick={() => onOpenTask(task.id)}
         >
           ⋯

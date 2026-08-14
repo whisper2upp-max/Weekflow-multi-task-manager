@@ -1,13 +1,13 @@
 [package]
-name = "weekflow-tauri"
-version = "3.0.0"
-description = "Weekflow - Tauri v2 任务管理应用"
+name = "weekflow-desktop"
+version = "1.0.0"
+description = "Weekflow Desktop - Tauri v2 桌面任务管理应用"
 authors = ["Wesley Yan"]
 license = "UNLICENSED"
 edition = "2021"
 
 [lib]
-name = "weekflow_tauri_lib"
+name = "weekflow_desktop_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

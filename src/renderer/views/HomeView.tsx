@@ -1,5 +1,6 @@
 /* 主页：hero + 动态统计胶囊 + 5 张入口卡。等价原 Weekflow.html:251-345
-   与 app.js renderHomeSummary（802-809）。唯一文案改动：eyebrow 由「Weekflow v2.5」改为「Weekflow」。 */
+   与 app.js renderHomeSummary（802-809）。文案差异：eyebrow 为「Weekflow Desktop v1.0」，
+   更新日志入口卡描述指向 Weekflow Desktop 发布内容。 */
 import * as stats from "../../shared/stats";
 import { useDataStore } from "../store/dataStore";
 import { useUiStore } from "../store/uiStore";
@@ -21,7 +22,7 @@ export default function HomeView() {
     >
       <div className="home-hero">
         <div className="home-hero-copy">
-          <p className="eyebrow">Weekflow</p>
+          <p className="eyebrow">Weekflow Desktop v1.0</p>
           <h1 id="home-heading">把工作拆成清晰的下一步</h1>
           <p>用分组建立工作版图，用 Flow 串起执行步骤，再用周时间轴看清每一个 DDL。</p>
           <div className="home-stats" aria-label="当前数据概览">
@@ -148,7 +149,7 @@ export default function HomeView() {
           <span className="home-entry-copy">
             <small>WHAT&apos;S NEW</small>
             <strong>更新日志</strong>
-            <span>查看 Weekflow v2.5 的发布内容</span>
+            <span>查看 Weekflow Desktop 的发布内容</span>
           </span>
           <span className="home-entry-arrow" aria-hidden="true">↗</span>
         </button>

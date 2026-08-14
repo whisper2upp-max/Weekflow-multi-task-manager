@@ -12,6 +12,7 @@ import { useDataStore } from "../store/dataStore";
 import { useUiStore } from "../store/uiStore";
 import * as exporters from "../lib/exporters";
 import { pickAndImportMaterialsExcel } from "../lib/importMaterialsExcel";
+import { tConfirm } from "../lib/i18n";
 import MaterialTableRow from "./materials/MaterialTableRow";
 
 /* 等价 app.js:2618 materialMatchesFilters */
@@ -116,13 +117,13 @@ export default function MaterialsView() {
     const ids = useUiStore.getState().selectedMaterialIds.slice();
     if (!ids.length) return;
     if (
-      !window.confirm(
+      !tConfirm(
         "确认删除选中的 " + ids.length + " 条资料？它们会从所有相关 Task 中同步移除。"
       )
     ) {
       return;
     }
-    if (!window.confirm("再次确认：批量删除资料不可恢复，是否继续？")) return;
+    if (!tConfirm("再次确认：批量删除资料不可恢复，是否继续？")) return;
     await useDataStore.getState().deleteMaterials(ids);
   };
 

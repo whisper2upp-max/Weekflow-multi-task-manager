@@ -1,6 +1,7 @@
 /* Excel 导出 action：看板报告 / 人员 Task 状态 / 可回导数据 / 空白模板 / 资料库。
    全部走 shared 的 excel-export / excel-import / material-excel 生成，再经 files.ts 保存。
-   toast 文案与原 js/app.js 一致；导出期间用 dataStore 的锁防重入。 */
+   toast 文案与原 js/app.js 一致；导出期间用 dataStore 的锁防重入。
+   英文模式按 isEnglish() 给 shared 传 english=true（shared 不读全局语言）。 */
 import * as excelExport from "../../shared/excel-export";
 import * as excelImport from "../../shared/excel-import";
 import * as materialExcel from "../../shared/material-excel";
@@ -8,8 +9,11 @@ import type { FileFilter } from "../../shared/ipc";
 import { useDataStore } from "../store/dataStore";
 import { useUiStore } from "../store/uiStore";
 import { saveBinaryToDisk } from "./files";
+import { isEnglish, translateText } from "./i18n";
 
-const XLSX_FILTERS: FileFilter[] = [{ name: "Excel 工作簿", extensions: ["xlsx"] }];
+const XLSX_FILTERS: FileFilter[] = [
+  { name: translateText("Excel 工作簿"), extensions: ["xlsx"] }
+];
 
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -27,7 +31,7 @@ export async function exportDashboardReport(): Promise<boolean> {
   if (!data) return false;
   useDataStore.setState({ isExporting: true });
   try {
-    const result = await excelExport.exportWorkbook(data, new Date());
+    const result = await excelExport.exportWorkbook(data, new Date(), isEnglish());
     const saved = await saveBinaryToDisk(result.filename, result.data, XLSX_FILTERS);
     if (saved) toast("看板报告已导出：" + result.filename);
     return saved;
@@ -54,7 +58,8 @@ export async function exportPersonTaskStatus(
     const result = await excelExport.exportTaskStatusWorkbook(
       data,
       { field: scopeField, value: scopeValue, label: scopeLabel },
-      new Date()
+      new Date(),
+      isEnglish()
     );
     const saved = await saveBinaryToDisk(result.filename, result.data, XLSX_FILTERS);
     if (saved) toast("Task 状态已导出：" + result.filename);
@@ -72,7 +77,7 @@ export async function exportTaskImportData(): Promise<boolean> {
   const data = useDataStore.getState().data;
   if (!data) return false;
   try {
-    const result = await excelImport.exportWorkbook(data);
+    const result = await excelImport.exportWorkbook(data, undefined, isEnglish());
     const saved = await saveBinaryToDisk(result.filename, result.data, XLSX_FILTERS);
     if (saved) toast("已按导入模板下载当前数据：" + result.filename);
     return saved;
@@ -85,7 +90,7 @@ export async function exportTaskImportData(): Promise<boolean> {
 /* 等价 app.js:415 downloadBlankTemplate("task") */
 export async function downloadTaskTemplate(): Promise<boolean> {
   try {
-    const result = await excelImport.exportTemplateWorkbook();
+    const result = await excelImport.exportTemplateWorkbook(undefined, isEnglish());
     const saved = await saveBinaryToDisk(result.filename, result.data, XLSX_FILTERS);
     if (saved) toast("Task 空白模板已下载");
     return saved;
@@ -98,7 +103,7 @@ export async function downloadTaskTemplate(): Promise<boolean> {
 /* 等价 app.js:415 downloadBlankTemplate("materials") */
 export async function downloadMaterialTemplate(): Promise<boolean> {
   try {
-    const result = await materialExcel.exportTemplateWorkbook();
+    const result = await materialExcel.exportTemplateWorkbook(undefined, isEnglish());
     const saved = await saveBinaryToDisk(result.filename, result.data, XLSX_FILTERS);
     if (saved) toast("资料库空白模板已下载");
     return saved;
@@ -113,7 +118,7 @@ export async function exportMaterialLibrary(): Promise<boolean> {
   const data = useDataStore.getState().data;
   if (!data) return false;
   try {
-    const result = await materialExcel.exportWorkbook(data);
+    const result = await materialExcel.exportWorkbook(data, undefined, isEnglish());
     const saved = await saveBinaryToDisk(result.filename, result.data, XLSX_FILTERS);
     if (saved) toast("资料库已下载：" + result.filename);
     return saved;

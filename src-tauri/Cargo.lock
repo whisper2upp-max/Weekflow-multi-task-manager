@@ -4420,8 +4420,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "weekflow-tauri"
-version = "3.0.0"
+name = "weekflow-desktop"
+version = "1.0.0"
 dependencies = [
  "base64 0.22.1",
  "chrono",

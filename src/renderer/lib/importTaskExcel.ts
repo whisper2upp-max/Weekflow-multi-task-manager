@@ -3,11 +3,12 @@
 import * as excelImport from "../../shared/excel-import";
 import { useUiStore } from "../store/uiStore";
 import { pickFile } from "./files";
+import { translateText } from "./i18n";
 
 const MAX_SIZE = 15 * 1024 * 1024;
 
 export async function pickAndImportTaskExcel(): Promise<void> {
-  const file = await pickFile([{ name: "Excel 工作簿", extensions: ["xlsx"] }]);
+  const file = await pickFile([{ name: translateText("Excel 工作簿"), extensions: ["xlsx"] }]);
   if (!file) return;
   if (file.data.byteLength > MAX_SIZE) {
     useUiStore.getState().pushToast("Excel 文件不能超过 15 MB。", "error", 6500);

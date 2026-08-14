@@ -18,6 +18,7 @@ import * as automation from "../../shared/automation";
 import * as dates from "../../shared/date-utils";
 import * as materialTools from "../../shared/materials";
 import * as utils from "../../shared/utils";
+import { translateMessage } from "../lib/i18n";
 import { useDataStore } from "./dataStore";
 
 export type ToastType = "success" | "error" | "warning";
@@ -349,8 +350,10 @@ export const useUiStore = create<UiStoreState>()((set, get) => ({
     set({ dialog: null });
   },
 
+  /* 等价 app.js:5896 toast()：消息入列前过 translateMessage（英文模式翻译成英文展示） */
   pushToast(message, type, duration) {
     const id = utils.uid("toast");
+    const translated = translateMessage(message);
     const finalDuration =
       Number.isFinite(Number(duration)) && duration !== undefined
         ? duration
@@ -365,7 +368,7 @@ export const useUiStore = create<UiStoreState>()((set, get) => ({
         const oldest = next.shift();
         if (oldest) clearToastTimer(oldest.id);
       }
-      next.push({ id, message, type, duration: finalDuration });
+      next.push({ id, message: translated, type, duration: finalDuration });
       return { toasts: next };
     });
     const timer = setTimeout(() => {

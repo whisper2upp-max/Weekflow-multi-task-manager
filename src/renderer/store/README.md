@@ -5,8 +5,8 @@
 - 两个 store 都是 Zustand：`import { useDataStore } from "./store/dataStore"` / `import { useUiStore } from "./store/uiStore"`。
 - 组件内读取：`const data = useDataStore((s) => s.data);`；组件外（事件、定时器）：`useDataStore.getState()` / `useUiStore.getState()`。
 - 选择器返回数组/对象字面量时注意引用稳定性，必要时用 `zustand/react/shallow` 的 `useShallow`。
-- **所有 action 内部已完成 toast**（文案与原版一致）。返回 `false` / `null` / `{ok:false}` 即失败，组件只需据此决定是否关闭弹窗，**不要再重复 toast**。
-- 所有 `window.confirm` 二次确认都在**组件层**做（原版四处两次 confirm：批量删资料、资料全部覆盖、Excel 完整覆盖、删组连带删 Task），store 不弹确认。
+- **所有 action 内部已完成 toast**（文案与原版一致；pushToast 入列前过 `lib/i18n.ts` 的 `translateMessage`，英文模式自动转英文）。返回 `false` / `null` / `{ok:false}` 即失败，组件只需据此决定是否关闭弹窗，**不要再重复 toast**。
+- 所有二次确认都在**组件层**做，用 `lib/i18n.ts` 的 `tConfirm()`（内部 translateMessage 后 window.confirm；原版四处两次 confirm：批量删资料、资料全部覆盖、Excel 完整覆盖、删组连带删 Task），store 不弹确认。
 - 表单字段级校验（必填、日期合法等）在弹窗组件做；store 接收合法 payload。但 `saveGroup` / `saveFlow` 的**重名拦截在 store 层**，返回 `{ ok: false, error }` 且**不 toast**，组件把 error 显示为字段错误。
 - 每次成功变更后 `data` 会被替换为校验归一化后的新副本，组件按新引用重新派生即可。
 - 打开资料链接：`await useDataStore.getState().recordMaterialOpen(id)`（记录打开次数并静默保存），然后 `window.weekflow.openExternal(url)`。
@@ -335,7 +335,9 @@ pickFile(filters: FileFilter[]): Promise<{ name: string; data: ArrayBuffer } | n
 
 ## 4. `src/renderer/lib/exporters.ts`
 
-全部 `Promise<boolean>`（true=已保存并 toast 成功文案；取消静默 false；失败 toast 后 false）：
+全部 `Promise<boolean>`（true=已保存并 toast 成功文案；取消静默 false；失败 toast 后 false）。
+英文模式：调用 shared 时按 `isEnglish()` 传 `english=true`（文件名/sheet 名/表头/labels 变英文；
+shared 模块不读全局语言，导入解析端始终兼容中英文表头与值）：
 
 ```ts
 exportDashboardReport(): Promise<boolean>;        // isExporting 锁；toast "看板报告已导出：<文件名>"

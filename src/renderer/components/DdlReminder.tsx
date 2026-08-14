@@ -44,7 +44,8 @@ export default function DdlReminder() {
           <>
             {items.slice(0, 5).map((entry) => (
               <div className="ddl-reminder-item" key={entry.task.id + ":" + entry.ddl}>
-                <span>{entry.task.name}</span>
+                {/* data-user-content：observer 跳过用户任务名（比原版多一层保护，中文模式无影响） */}
+                <span data-user-content="true">{entry.task.name}</span>
                 <time>{entry.ddl + " · " + dueReminderLabel(entry.ddl, today)}</time>
               </div>
             ))}

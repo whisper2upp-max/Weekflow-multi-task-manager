@@ -71,7 +71,34 @@ const recurrenceLabels: Record<RecurrenceCadence, string> = {
   monthly: "每月"
 };
 
-const LABELS = {
+interface ExcelLabels {
+  headers: string[];
+  overallTitle: string;
+  exportTime: string;
+  overallStats: string;
+  totals: string[];
+  groupStats: string;
+  groupHeaders: string[];
+  flowStats: string;
+  flowHeaders: string[];
+  unknownGroup: string;
+  yes: string;
+  no: string;
+  completed: string;
+  pending: string;
+  urgency: Record<Urgency, string>;
+  recurrence: Record<RecurrenceCadence, string>;
+  sheets: string[];
+  workbook: string;
+  dashboardTitle: string;
+  reportFilename: string;
+  managed: string;
+  reportTo: string;
+  notProvided: string;
+  taskStatus: string;
+}
+
+const LABELS: ExcelLabels = {
   headers: FIXED_HEADERS_LIST.slice(),
   overallTitle: "Task 整体看板",
   exportTime: "导出时间",
@@ -98,8 +125,69 @@ const LABELS = {
   taskStatus: "Task状态"
 };
 
+/* 英文 labels（逐字沿用原 excel-export.js labels() 的英文分支）。
+   语言通过 english 参数显式传入，shared 不读全局语言。 */
+const EN_LABELS: ExcelLabels = {
+  headers: [
+    "Group",
+    "Flow",
+    "Step Number",
+    "Task Name",
+    "Report To",
+    "Managed Person",
+    "Deliverable",
+    "DDL",
+    "DDL Week Friday",
+    "Recurrence",
+    "Recurrence Start",
+    "Recurrence End",
+    "Urgency",
+    "Completion Status",
+    "Completion Date",
+    "Overdue",
+    "Progress Note",
+    "Related Documents"
+  ],
+  overallTitle: "Task Overall Dashboard",
+  exportTime: "Exported At",
+  overallStats: "Overall Statistics",
+  totals: ["Total Tasks", "Completed", "Incomplete", "Currently Overdue", "Completion Rate"],
+  groupStats: "Group Statistics",
+  groupHeaders: ["Group Name", "Total Tasks", "Completed", "Incomplete", "Overdue", "Completion Rate"],
+  flowStats: "Flow Statistics",
+  flowHeaders: ["Group", "Flow Name", "Steps", "Completed", "Incomplete", "Overdue", "Completion Rate"],
+  unknownGroup: "Unknown Group",
+  yes: "Yes",
+  no: "No",
+  completed: "Completed",
+  pending: "Incomplete",
+  urgency: { high: "High", medium: "Medium", low: "Low" },
+  recurrence: { none: "Does not repeat", weekly: "Weekly", monthly: "Monthly" },
+  sheets: ["Overall Dashboard", "Timeline Dashboard"],
+  workbook: "Worksheets",
+  dashboardTitle: "Weekflow Task Dashboard",
+  reportFilename: "Task_Dashboard_",
+  managed: "Managed_Person",
+  reportTo: "Report_To",
+  notProvided: "Not_Provided",
+  taskStatus: "Task_Status"
+};
+
+function labelsFor(english?: boolean): ExcelLabels {
+  return english ? EN_LABELS : LABELS;
+}
+
+const EN_MATERIAL_TYPE_LABELS: Record<string, string> = {
+  document: "Documentation",
+  deliverable: "Deliverable",
+  control: "Control Sheet",
+  folder: "Folder"
+};
+
 export interface ExcelExportOptions {
   title?: string;
+  /** true 时使用英文 labels/sheet 名/文件名（等价原版 options.language 为 en 的分支） */
+  english?: boolean;
 }
 
 export interface ExcelFileResult {
@@ -127,15 +215,17 @@ interface ResolvedTaskStatusScope {
 
 type CellValue = string | number | null | undefined;
 
-export function formatMaterials(materials: Material[]): string {
+export function formatMaterials(materials: Material[], english?: boolean): string {
   return (Array.isArray(materials) ? materials : [])
     .map((material) => {
       return (
         "[" +
-        (TYPE_LABELS[material.type] || material.type) +
+        (english
+          ? EN_MATERIAL_TYPE_LABELS[material.type] || material.type
+          : TYPE_LABELS[material.type] || material.type) +
         "] " +
         material.title +
-        "：" +
+        (english ? ": " : "：") +
         material.url
       );
     })
@@ -163,14 +253,19 @@ export function buildOverallRows(
   now?: Date,
   options?: ExcelExportOptions
 ): CellValue[][] {
-  const copy = LABELS;
+  const copy = labelsFor(options && options.english);
   const summary = summarize(data.tasks, now);
   const groupRows = summarizeByGroup(data.groups, data.tasks, now);
   const flowRows = summarizeByFlow(data.flows || [], data.groups, data.tasks, now);
   const title = options && options.title ? String(options.title) : copy.overallTitle;
   const rows: CellValue[][] = [
     [title],
-    [copy.exportTime, new Date(now || Date.now()).toLocaleString("zh-CN")],
+    [
+      copy.exportTime,
+      new Date(now || Date.now()).toLocaleString(
+        options && options.english ? "en-US" : "zh-CN"
+      )
+    ],
     [],
     [copy.overallStats],
     copy.totals,
@@ -219,9 +314,9 @@ export interface TimelineRows {
 export function buildTimelineRows(
   data: WeekflowData,
   now?: Date,
-  _options?: ExcelExportOptions
+  options?: ExcelExportOptions
 ): TimelineRows {
-  const copy = LABELS;
+  const copy = labelsFor(options && options.english);
   const today = todayISO(now instanceof Date ? now : new Date());
   const weeks = timelineWeeks(data.tasks, now);
   const groupMap = new Map<string, Group>(
@@ -303,7 +398,8 @@ export function buildTimelineRows(
         formatMaterials(
           (data.materials || []).filter((material) => {
             return material.taskIds.includes(task.id);
-          })
+          }),
+          options && options.english
         )
       ];
       weeks.forEach((friday) => {
@@ -681,7 +777,7 @@ function workbookXml(
   now?: Date,
   options?: ExcelExportOptions
 ): string {
-  const copy = LABELS;
+  const copy = labelsFor(options && options.english);
   const timeline = buildTimelineRows(data, now, options);
   const lastColumn = columnName(timeline.rows[0].length - 1);
   const lastRow = timeline.rows.length;
@@ -719,7 +815,10 @@ function workbookRelationshipsXml(): string {
 
 function corePropertiesXml(now?: Date, options?: ExcelExportOptions): string {
   const created = (now instanceof Date ? now : new Date()).toISOString();
-  const title = options && options.title ? String(options.title) : LABELS.dashboardTitle;
+  const title =
+    options && options.title
+      ? String(options.title)
+      : labelsFor(options && options.english).dashboardTitle;
   return (
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
     '<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" ' +
@@ -737,8 +836,8 @@ function corePropertiesXml(now?: Date, options?: ExcelExportOptions): string {
   );
 }
 
-function appPropertiesXml(): string {
-  const copy = LABELS;
+function appPropertiesXml(options?: ExcelExportOptions): string {
+  const copy = labelsFor(options && options.english);
   return (
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
     '<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties" ' +
@@ -787,7 +886,7 @@ export function buildXlsxPackage(
   zip.file("[Content_Types].xml", contentTypesXml());
   zip.file("_rels/.rels", packageRelationshipsXml());
   zip.file("docProps/core.xml", corePropertiesXml(date, options));
-  zip.file("docProps/app.xml", appPropertiesXml());
+  zip.file("docProps/app.xml", appPropertiesXml(options));
   zip.file("xl/workbook.xml", workbookXml(data, date, options));
   zip.file("xl/_rels/workbook.xml.rels", workbookRelationshipsXml());
   zip.file("xl/styles.xml", styleSheetXml(data));
@@ -803,13 +902,16 @@ export function buildXlsxPackage(
 
 export function exportWorkbook(
   data: WeekflowData,
-  now?: Date
+  now?: Date,
+  english?: boolean
 ): Promise<ExcelFileResult> {
   const date = now instanceof Date ? now : new Date();
-  const filename = LABELS.reportFilename + dateTimeStamp(date) + ".xlsx";
-  return buildXlsxPackage(data, date, "uint8array", {}).then((bytes) => {
-    return { filename: filename, data: bytes };
-  });
+  const filename = labelsFor(english).reportFilename + dateTimeStamp(date) + ".xlsx";
+  return buildXlsxPackage(data, date, "uint8array", { english: Boolean(english) }).then(
+    (bytes) => {
+      return { filename: filename, data: bytes };
+    }
+  );
 }
 
 export function buildScopedTaskData(
@@ -859,8 +961,8 @@ export function buildScopedTaskData(
   };
 }
 
-function safeFilenamePart(value: unknown): string {
-  const copy = LABELS;
+function safeFilenamePart(value: unknown, english?: boolean): string {
+  const copy = labelsFor(english);
   return (
     String(value || copy.notProvided)
       .trim()
@@ -872,13 +974,16 @@ function safeFilenamePart(value: unknown): string {
   );
 }
 
-function taskStatusConfig(config: TaskStatusScopeConfig): ResolvedTaskStatusScope {
+function taskStatusConfig(
+  config: TaskStatusScopeConfig,
+  english?: boolean
+): ResolvedTaskStatusScope {
   const source = config || ({} as TaskStatusScopeConfig);
   const field = source.field;
   if (!["managedObject", "reportTo"].includes(field)) {
     throw new Error("不支持的人员汇总维度。");
   }
-  const copy = LABELS;
+  const copy = labelsFor(english);
   const fieldLabel = field === "managedObject" ? copy.managed : copy.reportTo;
   const value = String(source.value || "").trim();
   const label = String(
@@ -889,7 +994,11 @@ function taskStatusConfig(config: TaskStatusScopeConfig): ResolvedTaskStatusScop
     fieldLabel: fieldLabel,
     value: value,
     label: label,
-    title: fieldLabel + "：" + label + " · Task 状态"
+    title:
+      fieldLabel +
+      (english ? ": " : "：") +
+      label +
+      (english ? " · Task Status" : " · Task 状态")
   };
 }
 
@@ -897,48 +1006,55 @@ export function buildTaskStatusXlsxPackage(
   data: WeekflowData,
   config: TaskStatusScopeConfig,
   now: Date | undefined,
-  outputType: "arraybuffer"
+  outputType: "arraybuffer",
+  english?: boolean
 ): Promise<ArrayBuffer>;
 export function buildTaskStatusXlsxPackage(
   data: WeekflowData,
   config: TaskStatusScopeConfig,
   now?: Date,
-  outputType?: "uint8array"
+  outputType?: "uint8array",
+  english?: boolean
 ): Promise<Uint8Array>;
 export function buildTaskStatusXlsxPackage(
   data: WeekflowData,
   config: TaskStatusScopeConfig,
   now?: Date,
-  outputType: "uint8array" | "arraybuffer" = "uint8array"
+  outputType: "uint8array" | "arraybuffer" = "uint8array",
+  english?: boolean
 ): Promise<Uint8Array | ArrayBuffer> {
-  const scope = taskStatusConfig(config);
+  const scope = taskStatusConfig(config, english);
   const scopedData = buildScopedTaskData(data, scope.field, scope.value);
   if (!scopedData.tasks.length) {
     return Promise.reject(
       new Error(scope.fieldLabel + "“" + scope.label + "”没有 Task。")
     );
   }
-  return buildXlsxPackage(scopedData, now, outputType, { title: scope.title });
+  return buildXlsxPackage(scopedData, now, outputType, {
+    title: scope.title,
+    english: Boolean(english)
+  });
 }
 
 export function exportTaskStatusWorkbook(
   data: WeekflowData,
   config: TaskStatusScopeConfig,
-  now?: Date
+  now?: Date,
+  english?: boolean
 ): Promise<TaskStatusFileResult> {
   const date = now instanceof Date ? now : new Date();
-  const scope = taskStatusConfig(config);
-  const copy = LABELS;
+  const scope = taskStatusConfig(config, english);
+  const copy = labelsFor(english);
   const filename =
     scope.fieldLabel +
     "_" +
-    safeFilenamePart(scope.label) +
+    safeFilenamePart(scope.label, english) +
     "_" +
     copy.taskStatus +
     "_" +
     dateTimeStamp(date) +
     ".xlsx";
-  return buildTaskStatusXlsxPackage(data, scope, date, "uint8array").then((bytes) => {
+  return buildTaskStatusXlsxPackage(data, scope, date, "uint8array", english).then((bytes) => {
     return { filename: filename, data: bytes, title: scope.title };
   });
 }

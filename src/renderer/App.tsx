@@ -1,9 +1,11 @@
 /* App 外壳：按原 Weekflow.html 骨架组织 .app-shell（Header + 两条筛选栏 + main 四视图），
    body 级挂载全部弹窗与 toast/提醒区域。
    副作用复刻原 js/app.js：启动 load()+showDdlReminder（app.js:259-277）、
+   首帧后 i18n.applyDocument()（app.js:272，英文模式整树翻译 + MutationObserver）、
    跨午夜定时器（app.js:5831-5857）、Cmd/Ctrl+K 聚焦搜索（app.js:451-462）、
    弹层互斥收起（app.js:487-496）。 */
 import { useEffect } from "react";
+import { applyDocument } from "./lib/i18n";
 import { useDataStore } from "./store/dataStore";
 import { useUiStore } from "./store/uiStore";
 import Header from "./components/Header";
@@ -27,6 +29,12 @@ import UserGuideDialog from "./components/dialogs/UserGuideDialog";
 import ChangelogDialog from "./components/dialogs/ChangelogDialog";
 
 export default function App() {
+  /* 等价 app.js:272 i18n.applyDocument()：首帧提交后整树翻译一次并启动 observer，
+     之后所有增量渲染（含 load() 完成后的数据驱动内容与 DDL 提醒）由 observer 接管 */
+  useEffect(() => {
+    applyDocument();
+  }, []);
+
   /* 启动加载（warning toast 由 dataStore.load 内部展示），完成后播报临期提醒 */
   useEffect(() => {
     let cancelled = false;

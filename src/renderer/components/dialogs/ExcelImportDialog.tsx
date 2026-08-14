@@ -8,6 +8,7 @@ import { analyzeTaskExcelImport, useDataStore } from "../../store/dataStore";
 import { useUiStore } from "../../store/uiStore";
 import { useModalDialog } from "../../lib/useModalDialog";
 import { pickAndImportTaskExcel } from "../../lib/importTaskExcel";
+import { tConfirm, translateMessage } from "../../lib/i18n";
 
 const URGENCY_LABELS: Record<string, string> = { high: "高", medium: "中", low: "低" };
 const PREVIEW_LIMIT = 20;
@@ -76,7 +77,7 @@ export default function ExcelImportDialog() {
     if (isImportingExcel || !rows.length || errors.length) return;
     if (mode === "replace") {
       if (
-        !window.confirm(
+        !tConfirm(
           "完整覆盖会以本文件中的 " +
             summary.groupCount +
             " 个分组、" +
@@ -91,7 +92,7 @@ export default function ExcelImportDialog() {
         return;
       }
       if (
-        !window.confirm(
+        !tConfirm(
           "再次确认：文件中没有的分组、Flow 和 Task 将被移除，无法匹配的资料关联也会移除。建议已先导出 JSON 备份。"
         )
       ) {
@@ -179,8 +180,9 @@ export default function ExcelImportDialog() {
           <>
             <strong>{"发现 " + errors.length + " 个问题，修正后请重新选择文件："}</strong>
             <ul>
+              {/* 等价原版 app.js:4793：错误条目过 translateMessage（含“第 N 行：”递归） */}
               {errors.slice(0, ERROR_LIMIT).map((message, index) => (
-                <li key={index}>{message}</li>
+                <li key={index}>{translateMessage(message)}</li>
               ))}
               {errors.length > ERROR_LIMIT && (
                 <li>{"其余 " + (errors.length - ERROR_LIMIT) + " 个问题未显示。"}</li>

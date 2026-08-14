@@ -1,9 +1,10 @@
-/* 顶栏：brand、主导航、未完成/逾期汇总、新建操作。等价原 Weekflow.html:15-62
+/* 顶栏：brand、主导航、语言切换、未完成/逾期汇总、新建操作。等价原 Weekflow.html:15-62
    与 app.js 的 renderHeaderSummary（796-800）、syncView 顶栏部分（2950-2956）、
-   openNewTask/openNewFlow 的空分组守卫（app.js:3741-3746 / 3077-3082）。
-   去掉原语言切换（仅中文版）。 */
+   openNewTask/openNewFlow 的空分组守卫（app.js:3741-3746 / 3077-3082）、
+   语言切换点击处理（app.js:284-290：点当前语言忽略，否则 setLanguage 后整页 reload）。 */
 import * as stats from "../../shared/stats";
 import type { ViewName } from "../../shared/types";
+import { getLanguage, setLanguage } from "../lib/i18n";
 import { useDataStore } from "../store/dataStore";
 import { useUiStore } from "../store/uiStore";
 
@@ -19,6 +20,8 @@ export default function Header() {
   const switchView = useUiStore((state) => state.switchView);
   const openDialog = useUiStore((state) => state.openDialog);
   const data = useDataStore((state) => state.data);
+  /* 语言在会话内恒定（切换即整页 reload），非响应式读取即可 */
+  const language = getLanguage();
 
   const summary = stats.summarize(data ? data.tasks : null, new Date());
   /* 等价 app.js:2950：dashboard / materials 视图隐藏汇总与新建操作 */
@@ -103,6 +106,32 @@ export default function Header() {
           );
         })}
       </nav>
+
+      {/* 等价原 Weekflow.html:41-44 的 .language-switch；点击当前语言忽略，否则整页 reload */}
+      <div className="language-switch" role="group" aria-label="语言切换">
+        <button
+          className={language === "zh-CN" ? "is-active" : undefined}
+          type="button"
+          data-language="zh-CN"
+          aria-pressed={language === "zh-CN"}
+          onClick={() => {
+            if (language !== "zh-CN") setLanguage("zh-CN");
+          }}
+        >
+          中文
+        </button>
+        <button
+          className={language === "en" ? "is-active" : undefined}
+          type="button"
+          data-language="en"
+          aria-pressed={language === "en"}
+          onClick={() => {
+            if (language !== "en") setLanguage("en");
+          }}
+        >
+          EN
+        </button>
+      </div>
 
       <div id="header-summary" className="header-summary" aria-live="polite" hidden={simplifiedHeader}>
         <span>

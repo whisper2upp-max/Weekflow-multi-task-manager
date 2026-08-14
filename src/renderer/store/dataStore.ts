@@ -26,6 +26,7 @@ import type {
   ParsedTaskRow
 } from "../../shared/excel-import";
 import type { ParsedMaterialRow } from "../../shared/material-excel";
+import { isEnglish, translateText } from "../lib/i18n";
 import { useUiStore } from "./uiStore";
 
 /* ------------------------------------------------------------------ */
@@ -1668,15 +1669,19 @@ export const useDataStore = create<DataStoreState>()((set, get) => {
       }
     },
 
-    /* JSON 备份导出（原 app.js:5754；toast 按新契约带文件名） */
+    /* JSON 备份导出（原 app.js:5754；toast 按新契约带文件名；
+       英文文件名等价原 app.js:5761 的 Weekflow_Data_Backup_ 分支） */
     async exportJsonBackup() {
       const data = get().data;
       if (!data) return false;
-      const filename = "Task数据备份_" + dates.dateTimeStamp(new Date()) + ".json";
+      const filename =
+        (isEnglish() ? "Weekflow_Data_Backup_" : "Task数据备份_") +
+        dates.dateTimeStamp(new Date()) +
+        ".json";
       try {
         const result = await window.weekflow.saveFileWithDialog({
           defaultPath: filename,
-          filters: [{ name: "JSON 备份", extensions: ["json"] }],
+          filters: [{ name: translateText("JSON 备份"), extensions: ["json"] }],
           data: JSON.stringify(data, null, 2)
         });
         if (result.ok) {

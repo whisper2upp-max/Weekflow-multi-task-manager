@@ -1,7 +1,7 @@
 {
-  "name": "weekflow-tauri",
-  "version": "3.0.0",
-  "description": "Weekflow - Tauri v2 + React + TypeScript 任务管理应用",
+  "name": "weekflow-desktop",
+  "version": "1.0.0",
+  "description": "Weekflow Desktop - Tauri v2 + React + TypeScript 桌面任务管理应用",
   "author": "Wesley Yan",
   "license": "UNLICENSED",
   "private": true,

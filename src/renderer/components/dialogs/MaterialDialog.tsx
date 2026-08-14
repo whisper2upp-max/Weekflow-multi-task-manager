@@ -12,6 +12,7 @@ import type { Flow, Group, MaterialType, Task, WeekflowData } from "../../../sha
 import { useDataStore } from "../../store/dataStore";
 import { useUiStore } from "../../store/uiStore";
 import { useModalDialog } from "../../lib/useModalDialog";
+import { tConfirm } from "../../lib/i18n";
 
 type RelationKind = "group" | "flow" | "task";
 
@@ -279,7 +280,7 @@ function MaterialDialogInner({ data, materialId, dialogRef }: MaterialDialogInne
   const handleDelete = async (): Promise<void> => {
     if (!material) return;
     if (
-      !window.confirm("确认删除资料「" + material.title + "」？所有 Task 中的关联也会移除。")
+      !tConfirm("确认删除资料「" + material.title + "」？所有 Task 中的关联也会移除。")
     ) {
       return;
     }
