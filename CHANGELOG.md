@@ -1,5 +1,25 @@
 # Weekflow Changelog
 
+## v2.6 Document Library Dual Layout — 2026-08-14
+
+Added a Group layout for browsing documents by Task Group while preserving the existing List layout, data relations, imports, exports, and visual language.
+
+### Added and changed
+
+- Added List / Group layout switching in the Document Library. List retains the existing table and full filter behavior without functional changes.
+- Added Group cards in a four-column default grid. Additional Groups wrap to later rows; every card has a fixed height and independent vertical scrolling.
+- Group cards show document selection, document name, and a compact **Go to** link action. Clicking the name opens the existing edit dialog.
+- Sorted each Group by open count across the current and previous natural week, descending, with document name as the tie-breaker.
+- Added **Arrange Layout** to choose one to four Group columns per row and reorder Groups by drag-and-drop or move buttons. The button sits immediately to the left of the List / Group switch.
+- Group mode keeps document-name search and Type filtering, while Group, Flow, Task, and Recently Used filters remain List-only.
+- Stored layout mode, column count, and Group order inside the main JSON data preferences so export and restore preserve the user's layout.
+
+### Compatibility and regression protection
+
+- Kept the language switch immediately after Document Library on every main page; the library layout controls occupy a separate right-aligned area.
+- Kept checkbox selection updates in place so selecting documents in long List or Group views does not reset the page or card scroll position.
+- Did not change Task or Document Excel templates, upload schemas, dashboard reports, or person reports. All workbook paths continue to use the Windows-safe OOXML packaging and validation introduced earlier.
+
 ## v2.5 Bilingual Release — 2026-08-12
 
 Complete bilingual language layer based on Weekflow v2.4. This release changes language and documentation only, while preserving the v2.4 business data structure and mechanisms.

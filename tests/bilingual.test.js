@@ -54,10 +54,41 @@ test("page contains the isolated language switch beside Document Library", () =>
   assert.match(html, /js\/i18n\.js/);
 });
 
+test("Document Library exposes bilingual List and Group layout controls", () => {
+  const html = fs.readFileSync(path.join(__dirname, "..", "Weekflow.html"), "utf8");
+  assert.match(html, /id="materials-layout-controls"/);
+  assert.match(html, /data-action="materials-layout-list"/);
+  assert.match(html, /data-action="materials-layout-group"/);
+  assert.ok(
+    html.indexOf('id="material-layout-settings-button"') <
+      html.indexOf('class="segmented materials-layout-switch"'),
+    "Arrange Layout must appear to the left of the List / Group switch"
+  );
+  assert.equal(i18n.translateText("调整布局"), "Arrange Layout");
+  assert.equal(i18n.translateText("前往"), "Go to");
+});
+
+test("v2.6 version and release documentation stay aligned", () => {
+  const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
+  const html = fs.readFileSync(path.join(root, "Weekflow.html"), "utf8");
+  const readme = fs.readFileSync(path.join(root, "README.md"), "utf8");
+  const readmeEn = fs.readFileSync(path.join(root, "README_EN.md"), "utf8");
+  const changelog = fs.readFileSync(path.join(root, "CHANGELOG.md"), "utf8");
+  const release = fs.readFileSync(path.join(root, "RELEASE.txt"), "utf8");
+
+  assert.equal(pkg.version, "2.6.0");
+  assert.match(html, /<title>Weekflow v2\.6/);
+  assert.match(readme, /^# Weekflow v2\.6/m);
+  assert.match(readmeEn, /^# Weekflow v2\.6/m);
+  assert.match(changelog, /^## v2\.6 Document Library Dual Layout — 2026-08-14/m);
+  assert.match(release, /^Weekflow v2\.6\nRelease date: 2026-08-14/);
+});
+
 test("English current-Task workbook has English sheets and can be imported", async () => {
   i18n.setLanguage("en");
   const workbook = excelImport.buildWorkbook(sampleData(), { language: "en" });
   assert.deepEqual(workbook.SheetNames, ["Task Import", "Instructions"]);
+  assert.equal(workbook.Props.Subject, "Weekflow v2.6 re-importable Task data");
   assert.equal(workbook.Sheets["Task Import"].A4.v, "Group*");
   assert.equal(workbook.Sheets["Task Import"].L5.v, "High");
   const buffer = await excelImport.buildXlsxPackage(sampleData(), JSZip, "nodebuffer", { language: "en" });
@@ -94,6 +125,7 @@ test("English Document Library workbook has English headers and can be imported"
   i18n.setLanguage("en");
   const workbook = materialExcel.buildWorkbook(sampleData(), { language: "en" });
   assert.deepEqual(workbook.SheetNames, ["Document Library"]);
+  assert.equal(workbook.Props.Title, "Weekflow v2.6 Document Library");
   assert.equal(workbook.Sheets["Document Library"].A1.v, "Link Name*");
   assert.equal(workbook.Sheets["Document Library"].C2.v, "Documentation");
   const buffer = await materialExcel.buildXlsxPackage(sampleData(), JSZip, "nodebuffer", { language: "en" });

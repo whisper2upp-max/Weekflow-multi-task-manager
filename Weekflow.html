@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Weekflow v2.5 中英双语本地 Task 管理工具，支持周/日双时间轴、分组、Flow、资料库、双向联动、看板、备份和 Excel 批量导入导出。"
+      content="Weekflow v2.6 中英双语本地 Task 管理工具，支持周/日双时间轴、分组、Flow、资料库双布局、双向联动、看板、备份和 Excel 批量导入导出。"
     />
-    <title>Weekflow v2.5 · Task management</title>
+    <title>Weekflow v2.6 · Task management</title>
     <link rel="stylesheet" href="./css/styles.css" />
   </head>
   <body>
@@ -41,6 +41,23 @@
         <div class="language-switch" role="group" aria-label="语言切换">
           <button class="is-active" type="button" data-language="zh-CN" aria-pressed="true">中文</button>
           <button type="button" data-language="en" aria-pressed="false">EN</button>
+        </div>
+
+        <div id="materials-layout-controls" class="materials-layout-controls" aria-label="资料库布局" hidden>
+          <span>布局</span>
+          <button
+            id="material-layout-settings-button"
+            class="material-layout-settings-button"
+            type="button"
+            data-action="open-material-layout-settings"
+            hidden
+          >
+            <span aria-hidden="true">⌘</span><span class="material-layout-settings-label">调整布局</span>
+          </button>
+          <div class="segmented materials-layout-switch" role="group" aria-label="资料库布局切换">
+            <button class="is-active" type="button" data-action="materials-layout-list">列表</button>
+            <button type="button" data-action="materials-layout-group">分组</button>
+          </div>
         </div>
 
         <div id="header-summary" class="header-summary" aria-live="polite">
@@ -251,7 +268,7 @@
         <section id="home-view" class="view-panel home-view" aria-labelledby="home-heading">
           <div class="home-hero">
             <div class="home-hero-copy">
-              <p class="eyebrow">Weekflow v2.5</p>
+              <p class="eyebrow">Weekflow v2.6</p>
               <h1 id="home-heading">把工作拆成清晰的下一步</h1>
               <p>
                 用分组建立工作版图，用 Flow 串起执行步骤，再用周时间轴看清每一个 DDL。
@@ -337,7 +354,7 @@
               <span class="home-entry-copy">
                 <small>WHAT'S NEW</small>
                 <strong>更新日志</strong>
-                <span>查看 Weekflow v2.5 的发布内容</span>
+                <span>查看 Weekflow v2.6 的发布内容</span>
               </span>
               <span class="home-entry-arrow" aria-hidden="true">↗</span>
             </button>
@@ -624,7 +641,7 @@
             </div>
           </div>
 
-          <section class="dashboard-section materials-table-section" aria-label="资料清单">
+          <section id="materials-table-section" class="dashboard-section materials-table-section" aria-label="资料清单">
             <div class="table-wrap materials-table-wrap">
               <table class="materials-table">
                 <thead>
@@ -644,6 +661,14 @@
                 <tbody id="materials-table-body"></tbody>
               </table>
             </div>
+          </section>
+          <section
+            id="materials-group-section"
+            class="dashboard-section materials-group-section"
+            aria-label="按分组显示资料"
+            hidden
+          >
+            <div id="materials-group-board" class="materials-group-board"></div>
           </section>
           <input
             id="material-file-input"
@@ -737,8 +762,9 @@
             <li><b>筛选与看板：</b>时间轴可按分组、Flow、状态、紧急程度、逾期或关键词组合筛选；筛选弹层会在切换菜单或点击空白处时关闭。整体看板常驻显示 Task 总数、已完成、未完成、当前逾期和完成率，并可按分组、Flow、管理对象或汇报对象切换查看详细进度。</li>
             <li><b>对象汇总与导出：</b>整体看板按人员姓名分别汇总每个管理对象和汇报对象的完成率、已完成、未完成及逾期数量，并一键导出该人员的 Task 状态。</li>
             <li><b>Excel 批量录入：</b>20 列 Task 模板包含周期、周期起止和完成历史，可下载空白模板或按模板下载当前数据，上传后先校验预览，再选择补充导入或完整覆盖。</li>
-            <li><b>资料库：</b>统一管理说明文档、交付物、控制表和文件夹；搜索及类型、分组、Flow、Task 筛选集中在表格上方，并按“分组 → Flow → Task”选择关联、与时间轴双向同步。</li>
-            <li><b>最近常用：</b>本自然周或上个自然周至少打开过一次的资料可一键筛出。</li>
+            <li><b>资料库：</b>统一管理说明文档、交付物、控制表和文件夹，并提供 List 与 Group 两种布局。List 保留完整大列表和类型、分组、Flow、Task 筛选；Group 按 Task 分组显示固定高度资料栏，仅保留名称搜索和类型筛选。</li>
+            <li><b>Group 布局：</b>默认每行显示四个分组，资料按本自然周与上个自然周的打开次数降序排列，同次数按名称排序；点击资料名称编辑，点击“前往”打开链接。可在“调整布局”中选择每行 1–4 个分组并拖动排列顺序。</li>
+            <li><b>最近常用：</b>List 可筛出本自然周或上个自然周至少打开过一次的资料；Group 会自动把近期打开次数更多的资料排在前面。</li>
             <li><b>资料导入与清理：</b>资料 Excel 可选择补充导入或全部覆盖；重复地址可替换或跳过，批量删除需连续确认两次。</li>
           </ul>
         </section>
@@ -746,7 +772,7 @@
           <h3>数据保存位置</h3>
           <p>数据保存在当前浏览器、当前页面来源的 <code>localStorage</code> 中，主数据键为：</p>
           <pre>weekflow-v2.4:data:v3</pre>
-          <p>v2.5 为避免升级时迁移或清空既有数据，继续沿用 v2.4 兼容存储键。</p>
+          <p>v2.6 为避免升级时迁移或清空既有数据，继续沿用 v2.4 兼容存储键。</p>
           <p>清除浏览器网站数据、使用无痕窗口、更换浏览器或更换启动地址，都会影响可见数据。</p>
         </section>
         <section>
@@ -757,6 +783,7 @@
             <li>需要恢复时选择“从 JSON 恢复”，程序会先校验数据并请求确认。</li>
           </ol>
           <p>建议在批量修改、迁移浏览器或清理网站数据前先导出 JSON 备份。</p>
+          <p>JSON 备份同时保存资料库的 List / Group 模式、每行分组数和分组排列顺序，恢复后会继续沿用原布局偏好。</p>
         </section>
         <section>
           <h3>Excel 批量导入</h3>
@@ -783,7 +810,7 @@
           <h3>开发团队</h3>
           <p>开发团队：Wesley Yan</p>
           <p>首个正式版本（v1.0）：2026年7月30日</p>
-          <p>最新版本（v2.5）更新时间：2026年8月12日</p>
+          <p>最新版本（v2.6）更新时间：2026年8月14日</p>
         </section>
       </article>
       <div class="modal-actions">
@@ -800,6 +827,33 @@
         <button class="icon-button" type="button" data-action="close-changelog" aria-label="关闭">×</button>
       </div>
       <article class="document-content changelog-content">
+        <div class="release-entry" data-version="2.6">
+          <div class="release-heading">
+            <span>v2.6 资料库双布局版</span>
+            <time datetime="2026-08-14">2026-08-14</time>
+          </div>
+          <p class="release-lead">在保留原 List 资料清单的基础上，增加按 Task 分组组织资料的 Group 布局及可持久化布局偏好。</p>
+          <section>
+            <h3>新增与调整</h3>
+            <ul>
+              <li>资料库新增 List / Group 双布局切换；List 的表格、筛选、上传下载和编辑逻辑保持不变。</li>
+              <li>Group 默认每行四栏，每栏对应一个 Task 分组并采用固定高度、组内独立滚动；资料仅展示名称、复选框和“前往”链接按钮。</li>
+              <li>Group 内资料按本自然周与上个自然周打开次数降序排列，同次数按名称排序；未分组资料使用独立栏。</li>
+              <li>新增“调整布局”，支持每行 1–4 个分组、拖动或上下按钮调整分组顺序；按钮位于 List / Group 切换左侧。</li>
+              <li>Group 模式保留名称搜索与类型筛选，隐藏分组、Flow、Task 和最近常用筛选；复选删除、资料编辑、上传和下载继续适用。</li>
+              <li>布局模式、每行分组数和分组顺序写入 JSON 数据偏好，导出备份并恢复后继续沿用。</li>
+            </ul>
+          </section>
+          <section>
+            <h3>稳定性</h3>
+            <ul>
+              <li>资料勾选采用原位状态更新，连续选择或取消不会把页面或组内滚动位置带回顶部。</li>
+              <li>语言切换继续固定在主导航后的统一位置，资料库布局控件独立靠右，不改变其他主页面页头。</li>
+              <li>Task 与资料库 Excel 模板、上传结构及全部报告格式均未改变，并继续通过 Windows-safe OOXML 校验。</li>
+            </ul>
+          </section>
+        </div>
+
         <div class="release-entry" data-version="2.5">
           <div class="release-heading">
             <span>v2.5 中英双语版</span>
@@ -1393,6 +1447,43 @@
           确认导入
         </button>
       </div>
+    </dialog>
+
+    <dialog id="material-layout-dialog" class="modal material-layout-dialog">
+      <form id="material-layout-form" method="dialog" novalidate>
+        <div class="modal-head">
+          <div>
+            <p class="eyebrow">Group layout</p>
+            <h2>调整分组布局</h2>
+          </div>
+          <button class="icon-button" type="button" data-action="close-material-layout-settings" aria-label="关闭">×</button>
+        </div>
+        <p class="modal-context">设置每行显示的分组数，并拖动分组调整排列顺序。</p>
+        <label class="form-field material-layout-columns-field" for="material-layout-columns">
+          <span>每行分组数</span>
+          <select id="material-layout-columns">
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+          </select>
+        </label>
+        <section class="material-layout-order-section" aria-labelledby="material-layout-order-title">
+          <div class="material-layout-order-head">
+            <div>
+              <h3 id="material-layout-order-title">分组排列顺序</h3>
+              <p>拖动左侧把手调整顺序，也可使用上下移动按钮。</p>
+            </div>
+          </div>
+          <div id="material-layout-order-list" class="material-layout-order-list"></div>
+        </section>
+        <div class="modal-actions split-actions">
+          <button class="button button-quiet" type="button" data-action="reset-material-layout">恢复默认</button>
+          <span></span>
+          <button class="button button-quiet" type="button" data-action="close-material-layout-settings">取消</button>
+          <button class="button button-primary" type="submit">应用布局</button>
+        </div>
+      </form>
     </dialog>
 
     <dialog id="progress-dialog" class="modal">

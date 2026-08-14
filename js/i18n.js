@@ -20,6 +20,11 @@
     "时间轴看板": "Timeline",
     "整体看板": "Overall Dashboard",
     "资料库": "Document Library",
+    "布局": "Layout",
+    "列表": "List",
+    "资料库布局": "Document Library Layout",
+    "资料库布局切换": "Document Library Layout Switch",
+    "调整布局": "Arrange Layout",
     "未完成": "Incomplete",
     "已完成": "Completed",
     "逾期": "Overdue",
@@ -65,7 +70,7 @@
     "使用说明": "User Guide",
     "了解主要功能、数据保存与导出方法": "Learn the key features, data storage, and export workflows",
     "更新日志": "Changelog",
-    "查看 Weekflow v2.5 的发布内容": "Review the Weekflow v2.5 release history",
+    "查看 Weekflow v2.6 的发布内容": "Review the Weekflow v2.6 release history",
     "周一至周日 · 表头显示周五 · 双击周表头查看每天": "Monday to Sunday · Headers show Friday · Double-click a week to view each day",
     "本周": "This Week",
     "今天": "Today",
@@ -106,6 +111,16 @@
     "下载资料库": "Download Document Library",
     "上传": "Upload",
     "＋ 添加资料": "+ Add Document",
+    "资料清单": "Document List",
+    "按分组显示资料": "Documents by Group",
+    "调整分组布局": "Arrange Group Layout",
+    "设置每行显示的分组数，并拖动分组调整排列顺序。": "Set the number of Groups per row, then drag Groups to arrange their order.",
+    "每行分组数": "Groups per Row",
+    "分组排列顺序": "Group Order",
+    "恢复默认": "Restore Defaults",
+    "应用布局": "Apply Layout",
+    "前往": "Go to",
+    "暂无符合条件的资料": "No matching documents",
     "链接名称": "Link Name",
     "链接地址": "Link URL",
     "相关 Task": "Related Tasks",
@@ -347,9 +362,11 @@
     "Excel 批量录入：": "Excel Bulk Import:",
     "20 列 Task 模板包含周期、周期起止和完成历史，可下载空白模板或按模板下载当前数据，上传后先校验预览，再选择补充导入或完整覆盖。": "The 20-column Task template includes recurrence, date range, and completion history. Download a blank template or current data in the same format, validate the upload preview, then choose supplement import or complete replacement.",
     "资料库：": "Document Library:",
-    "统一管理说明文档、交付物、控制表和文件夹；搜索及类型、分组、Flow、Task 筛选集中在表格上方，并按“分组 → Flow → Task”选择关联、与时间轴双向同步。": "Manage Documentation, Deliverables, Control Sheets, and Folders in one place. Search and Type, Group, Flow, and Task filters sit above the table. Relations follow Group → Flow → Task and sync both ways with the timeline.",
+    "统一管理说明文档、交付物、控制表和文件夹，并提供 List 与 Group 两种布局。List 保留完整大列表和类型、分组、Flow、Task 筛选；Group 按 Task 分组显示固定高度资料栏，仅保留名称搜索和类型筛选。": "Manage Documentation, Deliverables, Control Sheets, and Folders in List or Group layout. List keeps the full table and Type, Group, Flow, and Task filters; Group shows fixed-height cards by Task Group with name search and Type filtering only.",
+    "Group 布局：": "Group Layout:",
+    "默认每行显示四个分组，资料按本自然周与上个自然周的打开次数降序排列，同次数按名称排序；点击资料名称编辑，点击“前往”打开链接。可在“调整布局”中选择每行 1–4 个分组并拖动排列顺序。": "Show four Groups per row by default. Documents sort by open count in the current and previous natural week, then by name. Select a document name to edit or Go to to open its link. Arrange Layout supports one to four Groups per row and drag reordering.",
     "最近常用：": "Recently Used:",
-    "本自然周或上个自然周至少打开过一次的资料可一键筛出。": "Filter documents opened at least once during the current or previous natural week.",
+    "List 可筛出本自然周或上个自然周至少打开过一次的资料；Group 会自动把近期打开次数更多的资料排在前面。": "List filters documents opened in the current or previous natural week; Group automatically ranks documents with more recent opens first.",
     "资料导入与清理：": "Document Import and Cleanup:",
     "资料 Excel 可选择补充导入或全部覆盖；重复地址可替换或跳过，批量删除需连续确认两次。": "Document Excel import supports supplement import or overwrite all. Duplicate URLs can be replaced or skipped, and bulk deletion requires two confirmations.",
     "数据保存位置": "Data Storage Location",
@@ -361,11 +378,12 @@
     "选择“导出 JSON 备份”，将文件保存到安全位置。": "Choose Export JSON Backup and save the file in a safe location.",
     "需要恢复时选择“从 JSON 恢复”，程序会先校验数据并请求确认。": "To restore, choose Restore from JSON. Weekflow validates the data and asks for confirmation first.",
     "建议在批量修改、迁移浏览器或清理网站数据前先导出 JSON 备份。": "Export a JSON backup before bulk changes, browser migration, or clearing site data.",
+    "JSON 备份同时保存资料库的 List / Group 模式、每行分组数和分组排列顺序，恢复后会继续沿用原布局偏好。": "JSON backup also stores the Document Library List / Group mode, Groups per row, and Group order. Restoring the backup restores the same layout preference.",
     "Excel 导出": "Excel Export",
     "开发团队": "Development Team",
     "开发团队：Wesley Yan": "Development team: Wesley Yan",
     "首个正式版本（v1.0）：2026年7月30日": "First release (v1.0): July 30, 2026",
-    "最新版本（v2.5）更新时间：2026年8月12日": "Latest v2.5 update: August 12, 2026",
+    "最新版本（v2.6）更新时间：2026年8月14日": "Latest v2.6 update: August 14, 2026",
     "Weekflow 更新日志": "Weekflow Changelog",
     "新增与调整": "New and Updated",
     "新增": "New",
@@ -685,7 +703,7 @@
       "向前 4 周": "Back 4 weeks",
       "向后 4 周": "Forward 4 weeks",
       "Weekflow 首页": "Weekflow Home"
-      ,"Weekflow v2.5 中英双语本地 Task 管理工具，支持周/日双时间轴、分组、Flow、资料库、双向联动、看板、备份和 Excel 批量导入导出。": "Weekflow v2.5 bilingual local Task manager with weekly/daily timelines, Groups, Flows, Document Library, dashboards, backup, and Excel import/export."
+      ,"Weekflow v2.6 中英双语本地 Task 管理工具，支持周/日双时间轴、分组、Flow、资料库双布局、双向联动、看板、备份和 Excel 批量导入导出。": "Weekflow v2.6 bilingual local Task manager with weekly/daily timelines, Groups, Flows, a dual-layout Document Library, dashboards, backup, and Excel import/export."
       ,"例如：已完成需求确认和接口联调，当前等待业务方验收。\n\n可按日期分段记录，也可以作为持续更新的项目备注。": "Example: Requirements and integration are complete; business acceptance is pending.\n\nUse dated entries or maintain this as a continuously updated project note."
     };
     return attributes[clean] || translateCompositeText(value);
@@ -810,18 +828,21 @@
       '<li><b>Reminder:</b> A non-blocking bottom-right reminder lists incomplete Tasks due within seven days and closes after ten seconds.</li>',
       '<li><b>Filters and Dashboard:</b> Combine Group, Flow, status, urgency, overdue, and keyword filters. View summaries by Group, Flow, Managed Person, or Report To.</li>',
       '<li><b>Excel:</b> Download a blank 20-column template or current re-importable data, validate uploads, and choose supplement import or complete replacement.</li>',
-      '<li><b>Document Library:</b> Manage Documentation, Deliverables, Control Sheets, and Folders with two-way Group → Flow → Task relations.</li>',
+      '<li><b>Document Library:</b> Manage Documentation, Deliverables, Control Sheets, and Folders in List or Group layout. List keeps the full table and filters; Group shows fixed-height cards by Task Group with name search and Type filtering.</li>',
+      '<li><b>Group Layout:</b> Show four Groups per row by default. Documents sort by open count in the current and previous natural week, then by name. Select a document name to edit or <b>Go to</b> to open its link. <b>Arrange Layout</b> supports one to four Groups per row and drag reordering.</li>',
+      '<li><b>Recently Used:</b> List filters documents opened in the current or previous natural week; Group automatically ranks documents with more recent opens first.</li>',
       '</ul></section>',
-      '<section><h3>Data Storage Location</h3><p>Business data is stored in <code>localStorage</code> for the current browser and page origin under:</p><pre>weekflow-v2.4:data:v3</pre><p>v2.5 keeps this v2.4-compatible namespace so upgrading does not migrate or clear existing data. Clearing site data, using a private window, changing browsers, or changing the launch origin affects which data is visible.</p></section>',
-      '<section><h3>Data Backup and Restore</h3><ol><li>Open the <b>•••</b> data menu.</li><li>Select <b>Export JSON Backup</b> and save the file securely.</li><li>To restore, select <b>Restore from JSON</b>; Weekflow validates the data and asks for confirmation.</li></ol><p>Export a JSON backup before bulk changes, browser migration, or clearing site data.</p></section>',
+      '<section><h3>Data Storage Location</h3><p>Business data is stored in <code>localStorage</code> for the current browser and page origin under:</p><pre>weekflow-v2.4:data:v3</pre><p>v2.6 keeps this v2.4-compatible namespace so upgrading does not migrate or clear existing data. Clearing site data, using a private window, changing browsers, or changing the launch origin affects which data is visible.</p></section>',
+      '<section><h3>Data Backup and Restore</h3><ol><li>Open the <b>•••</b> data menu.</li><li>Select <b>Export JSON Backup</b> and save the file securely.</li><li>To restore, select <b>Restore from JSON</b>; Weekflow validates the data and asks for confirmation.</li></ol><p>Export a JSON backup before bulk changes, browser migration, or clearing site data.</p><p>JSON backup also stores the Document Library List / Group mode, Groups per row, and Group order, so restore retains the layout preference.</p></section>',
       '<section><h3>Excel Bulk Import</h3><ol><li>Open <b>•••</b> and download a blank Task template or current data in import format.</li><li>Edit the <b>Task Import</b> worksheet; each row represents one Task.</li><li>Upload the workbook and review errors and preview data.</li><li>Choose <b>Supplement Import</b> or <b>Complete Replacement</b>.</li></ol><p>Group, Task Name, Deadline, Urgency, Report To, and Deliverable are required. Missing Groups and Flows are created; matching names are reused. Recurring Tasks require start and end dates.</p></section>',
       '<section><h3>Excel Export</h3><p><b>Export Dashboard Report</b> creates an Overall Dashboard and Timeline Dashboard workbook containing every Task, hierarchy summary, recurrence fields, progress notes, deadlines, and related links. It is a presentation report, not an import workbook.</p><p>For re-import, select <b>Download Current Data in Import Format</b>. The Overall Dashboard also exports one-person Task status reports. The Document Library Download menu provides its blank template and complete library.</p></section>',
-      '<section><h3>Development Team</h3><p>Developer: Wesley Yan</p><p>First release (v1.0): July 30, 2026</p><p>Latest release (v2.5): August 12, 2026</p></section>'
+      '<section><h3>Development Team</h3><p>Developer: Wesley Yan</p><p>First release (v1.0): July 30, 2026</p><p>Latest release (v2.6): August 14, 2026</p></section>'
     ].join("");
   }
 
   function englishChangelogHtml() {
     var entries = [
+      ["v2.6 Document Library Dual Layout", "2026-08-14", "Added a Group layout for browsing documents by Task Group while preserving the existing List layout and data workflows.", ["Added List / Group switching and fixed-height Group cards in a four-column default grid with independent scrolling.", "Sorted documents by current/previous natural-week open count and then by name; document names edit and Go to opens links.", "Added Arrange Layout to the left of the layout switch, with one-to-four columns and drag or button reordering.", "Stored layout mode, column count, and Group order in JSON preferences, retained the unified language-switch position, stable checkbox scrolling, unchanged Excel schemas, and Windows-safe OOXML packaging."]],
       ["v2.5 Bilingual Release", "2026-08-12", "Complete bilingual language layer and language-matched repository documentation.", ["Added the Chinese / English switch beside Document Library and made English the branch default.", "UI, dialogs, guides, reminders, templates, re-importable data, reports, workbook metadata, and filenames follow the selected language.", "Added separate Chinese and English README pages with matching screenshots and mutual language links.", "Kept the v2.4 data model and storage namespace unchanged, retained Windows-safe XLSX packaging, and preserved timeline and Document Library scroll-position protections."]],
       ["v2.4 Week / Day Timeline", "2026-08-10", "Added a daily drill-down while preserving the weekly timeline and data model.", ["Renamed the main timeline Task by Week and added Task by Day by double-clicking a week header.", "Task by Day shows only deadline occurrences in the selected week, from Monday through Sunday.", "Both views preserve the operated Task row after completion and preserve Group/Flow rows after collapse or expand.", "Migrated earlier browser data into the isolated v2.4 storage namespace without changing Excel formats."]],
       ["v2.3 Recurring Tasks and Deadline Reminder", "2026-08-08", "Added weekly/monthly recurrence, continuous completion history, and a ten-second deadline reminder.", ["A recurring Task is stored once but renders every deadline between its start and end dates.", "Completing the current period also completes all earlier periods; the next period starts incomplete.", "Expanded the Task import format to 20 columns while retaining legacy 16-column compatibility.", "Prevented Task completion from jumping to the top and hardened Windows Excel workbook security metadata."]],

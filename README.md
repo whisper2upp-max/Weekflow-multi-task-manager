@@ -1,8 +1,8 @@
 <p align="right"><strong>中文</strong> · <a href="README_EN.md">English</a></p>
 
-# Weekflow v2.5 · Task management
+# Weekflow v2.6 · Task management
 
-Weekflow 是一个桌面端优先、无需后端的本地 Task 管理程序。它以自然周总览和单周日粒度下钻组织时间，通过“分组 → 可选 Flow → 有序 Task”组织工作，并提供整体看板、统一资料库、Excel 批量录入与本地备份。
+Weekflow 是一个桌面端优先、无需后端的本地 Task 管理程序。它以自然周总览和单周日粒度下钻组织时间，通过“分组 → 可选 Flow → 有序 Task”组织工作，并提供整体看板、List / Group 双布局资料库、Excel 批量录入与本地备份。
 
 程序由原生 HTML、CSS 和 JavaScript 构建，不需要安装前端依赖。本正式版从空白数据启动，不包含示例分组、Flow、Task、资料或恢复示例数据入口。
 
@@ -82,9 +82,13 @@ http://localhost:8080/Weekflow.html
 
 ![资料库](readme配图/资料库.png)
 
-- 大列表字段包括链接名称、地址、类型、相关 Task、相关 Flow、分组和备注；点击名称编辑，点击地址打开。
+- 右上角可在 `List` 与 `Group` 两种布局间切换；“调整布局”位于布局切换按钮左侧，并只在 Group 模式显示。
+- `List` 保持原有大列表，字段包括链接名称、地址、类型、相关 Task、相关 Flow、分组和备注；点击名称编辑，点击地址打开。
 - 表头、类型、相关 Flow、分组和备注使用与资料名称一致的主字号；较长的链接地址和可能包含多项的相关 Task 保持紧凑字号。
-- 资料库标题上方提供独立的搜索与筛选栏；链接名称支持搜索，类型、Task、Flow、分组支持多选筛选，表格表头仅保留字段名称。
+- `List` 的搜索与筛选栏支持资料名称搜索以及类型、Task、Flow、分组多选筛选，表格表头仅保留字段名称。
+- `Group` 默认每行显示四个分组栏，超出后自动换行；每栏高度固定并可独立上下滚动，只显示资料名称、复选框和“前往”按钮。资料名称打开编辑界面，“前往”打开链接。
+- `Group` 仅保留资料名称搜索和类型筛选，不显示分组、Flow、Task 与最近常用筛选。栏内资料按本自然周和上个自然周的打开次数降序排列，次数相同按名称排序。
+- “调整布局”支持每行 1–4 个分组，并可拖动或使用上下按钮修改分组排列顺序；确认后立即应用并保存。
 - 资料筛选沿用时间轴“筛选分组”的高对比弹层；点击其他筛选或页面空白处会自动收起，备注仅展示、不参与搜索。
 - 一条资料可关联多个 Task、Flow 和分组，选项只来自时间轴中已经存在的内容。
 - 新建或编辑资料时按“分组 → Flow → Task”选择关联；先选分组，才会显示所选分组内的 Flow 和 Task。
@@ -116,7 +120,7 @@ http://localhost:8080/Weekflow.html
 weekflow-v2.4:data:v3
 ```
 
-v2.5 为避免升级时迁移或清空既有用户数据，继续沿用 v2.4 数据命名空间；这只是兼容性存储键，不代表当前程序版本仍是 v2.4。
+v2.6 为避免升级时迁移或清空既有用户数据，继续沿用 v2.4 数据命名空间；这只是兼容性存储键，不代表当前程序版本仍是 v2.4。
 
 相关迁移与安全备份键：
 
@@ -143,7 +147,7 @@ weekflow-v2.4:pre-import-backup
 weekflow-v2.4:corrupt-backup
 ```
 
-- 当前数据结构版本为 `version: 3`，顶层包含 `groups、flows、tasks、materials`。周期配置与按期完成记录直接保存在对应 Task 的 `recurrenceCadence、recurrenceStart、recurrenceEnd、recurrenceCompletions` 字段中，因此多个周期 DDL 不会增加 Task 数量。
+- 当前数据结构版本为 `version: 3`，顶层包含 `groups、flows、tasks、materials、preferences`。`preferences.documentLibrary` 保存 List / Group 模式、每行分组数和分组顺序；周期配置与按期完成记录直接保存在对应 Task 的 `recurrenceCadence、recurrenceStart、recurrenceEnd、recurrenceCompletions` 字段中，因此多个周期 DDL 不会增加 Task 数量。
 - 旧 v3 数据仍可读取；旧式顶层周期规则和 Flow 模板字段会被安全忽略，既有 Task 不会被删除。
 - v1/v2 数据会自动迁移；旧 Task 内的说明文档与交付物链接会转成统一资料并保留 Task 关联。
 - 每次业务修改都会立即保存。若主数据损坏，原始内容会尝试写入 `corrupt-backup`。
@@ -159,6 +163,8 @@ weekflow-v2.4:corrupt-backup
 3. 将 `.json` 文件保存到受控位置。
 
 恢复时选择“从 JSON 恢复”。程序会校验数据版本、唯一 ID、日期、分组/Flow/Task 关系、Task 周期起止日期与完成记录、资料类型、URL、关联对象和打开时间，再请求确认。确认恢复前会尝试保存当前数据到 `pre-import-backup`。
+
+JSON 备份也包含资料库布局偏好：当前使用的 List / Group 模式、每行分组数量和分组排列顺序。恢复备份后会继续沿用原来的资料库布局。
 
 ## Excel 批量导入
 
@@ -243,18 +249,18 @@ Weekflow_资料库_YYYYMMDD_HHmm.xlsx
 
 - 开发团队：Wesley Yan
 - 首个正式版本（v1.0）：2026年7月30日
-- 最新版本（v2.5）更新时间：2026年8月12日
+- 最新版本（v2.6）更新时间：2026年8月14日
 
 ## 程序文件
 
-- 本文件夹是 Weekflow v2.5 空白正式发布版。
+- 本文件夹是 Weekflow v2.6 空白正式发布版。
 - 程序需要保留整个文件夹结构，不能只移动 `Weekflow.html`；页面依赖 `css、js、templates、vendor` 子目录。
-- 如果收到 `Weekflow v2.5.zip`，请完整解压后再使用。
+- 如果收到 `Weekflow v2.6.zip`，请完整解压后再使用。
 
 ## 文件结构
 
 ```text
-Weekflow v2.5/
+Weekflow v2.6/
 ├── Weekflow.html
 ├── css/styles.css
 ├── js/

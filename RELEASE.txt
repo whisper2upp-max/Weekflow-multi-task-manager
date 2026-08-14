@@ -1,5 +1,16 @@
-Weekflow v2.5
-Release date: 2026-08-12
+Weekflow v2.6
+Release date: 2026-08-14
+
+Document Library dual-layout release: 2026-08-14
+- List preserves the existing full document table, filters, editing, selection, upload, and download behavior.
+- Group displays fixed-height Task Group cards in a four-column default grid; extra Groups wrap to later rows and each card scrolls independently.
+- Group documents show selection, document name, and a Go to action, sorted by current/previous natural-week open count and then by name.
+- Arrange Layout sits to the left of the List / Group switch, supports one to four columns, and reorders Groups by dragging or move buttons.
+- Group mode keeps document-name search and Type filtering while Group, Flow, Task, Recently Used filters remain List-only.
+- JSON export and restore preserve the layout mode, columns per row, and custom Group order.
+- The language switch remains immediately after Document Library on every page, independent of the right-aligned layout controls.
+- Document selection remains an in-place update so long List and Group views do not jump to the top.
+- Excel templates, upload schemas, and report structures are unchanged and retain Windows-safe OOXML packaging.
 
 Bilingual interface release: 2026-08-12
 - English is the default; Chinese remains available from the language switch beside Document Library.
@@ -45,7 +56,7 @@ This is the clean release build.
 - Document search and filters live in a dedicated bar above the table; document names edit in place and URLs open directly.
 - The document editor uses a compact two-row details area so Group, Flow, and Task relations keep most of the dialog space.
 - Document table headers, type, Flow, Group, and notes use the same 12px primary size as document names; URLs and related Tasks stay compact.
-- The in-app changelog shows the full v2.5, v2.4, v2.3, v2.2, v2.1, v2.0, v1.1, and v1.0 history in descending version order.
+- The in-app changelog shows the full v2.6, v2.5, v2.4, v2.3, v2.2, v2.1, v2.0, v1.1, and v1.0 history in descending version order.
 - The user guide identifies Weekflow as a Multi-task management cockpit and records the Wesley Yan development attribution plus first/latest release dates.
 - Urgency, report-to, and deliverable are required for new or edited Tasks.
 - Start with: open Weekflow.html directly, or run npm run serve and visit /Weekflow.html
