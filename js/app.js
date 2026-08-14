@@ -16,6 +16,7 @@
 
   var urgencyLabels = i18n.urgencyLabels();
   var statusLabels = i18n.statusLabels();
+  var MATERIAL_UNGROUPED_KEY = "__ungrouped__";
   var data = storage.load();
   var ui = {
     view: "home",
@@ -52,6 +53,7 @@
     flowCreationForTask: false,
     flowColorCustomized: false,
     draggedFlowTaskId: null,
+    draggedMaterialGroupKey: null,
     deletingGroupId: null,
     isSavingTask: false,
     isExporting: false,
@@ -84,6 +86,8 @@
       "timeline-view",
       "dashboard-view",
       "materials-view",
+      "materials-layout-controls",
+      "material-layout-settings-button",
       "filter-bar",
       "materials-filter-bar",
       "home-task-total",
@@ -138,7 +142,10 @@
       "materials-total",
       "materials-frequent-total",
       "materials-ungrouped-total",
+      "materials-table-section",
       "materials-table-body",
+      "materials-group-section",
+      "materials-group-board",
       "material-selection-count",
       "material-select-visible",
       "material-filter-name",
@@ -150,6 +157,10 @@
       "material-filter-task-label",
       "material-filter-flow-label",
       "material-filter-group-label",
+      "material-type-filter",
+      "material-group-filter",
+      "material-flow-filter",
+      "material-task-filter",
       "material-file-input",
       "group-dialog",
       "group-form",
@@ -227,6 +238,10 @@
       "material-import-preview",
       "material-import-confirm",
       "material-duplicate-choice",
+      "material-layout-dialog",
+      "material-layout-form",
+      "material-layout-columns",
+      "material-layout-order-list",
       "progress-dialog",
       "progress-form",
       "progress-dialog-task",
@@ -356,18 +371,9 @@
     dom["material-select-visible"].addEventListener("change", function (event) {
       setVisibleMaterialsSelected(event.target.checked);
     });
-    dom["materials-table-body"].addEventListener("change", function (event) {
-      if (!event.target.matches("[data-material-select]")) return;
-      var id = event.target.value;
-      if (event.target.checked && !ui.selectedMaterialIds.includes(id)) {
-        ui.selectedMaterialIds.push(id);
-      } else if (!event.target.checked) {
-        ui.selectedMaterialIds = ui.selectedMaterialIds.filter(function (selectedId) {
-          return selectedId !== id;
-        });
-      }
-      syncMaterialSelectionState();
-    });
+    dom["materials-table-body"].addEventListener("change", handleMaterialSelectionChange);
+    dom["materials-group-board"].addEventListener("change", handleMaterialSelectionChange);
+    dom["material-layout-form"].addEventListener("submit", saveMaterialLayoutPreferences);
     queryAll('input[name="material-import-mode"]').forEach(function (input) {
       input.addEventListener("change", renderMaterialImportMode);
     });
@@ -643,6 +649,15 @@
         ui.materialFilters.recentOnly = true;
         renderMaterialLibrary();
       },
+      "materials-layout-list": function () {
+        setMaterialLibraryLayout("list");
+      },
+      "materials-layout-group": function () {
+        setMaterialLibraryLayout("group");
+      },
+      "open-material-layout-settings": openMaterialLayoutSettings,
+      "close-material-layout-settings": closeMaterialLayoutSettings,
+      "reset-material-layout": resetMaterialLayoutDraft,
       "import-materials": openMaterialFilePicker,
       "choose-material-import": openMaterialFilePicker,
       "close-material-import": closeMaterialImportDialog,
@@ -2496,6 +2511,234 @@
     dom[id].textContent = count ? count + " 项" : "全部";
   }
 
+  function getMaterialLibraryPreferences() {
+    data.preferences = storage.normalizePreferences(data.preferences, data.groups);
+    return data.preferences.documentLibrary;
+  }
+
+  function isMaterialGroupLayout() {
+    return getMaterialLibraryPreferences().layout === "group";
+  }
+
+  function defaultMaterialGroupOrder() {
+    return getSortedGroups()
+      .map(function (group) {
+        return group.id;
+      })
+      .concat(MATERIAL_UNGROUPED_KEY);
+  }
+
+  function materialGroupMeta(key) {
+    if (key === MATERIAL_UNGROUPED_KEY) {
+      return {
+        key: key,
+        name: i18n.isEnglish() ? "Ungrouped" : "未分组",
+        color: "#9AA4B7",
+        group: null
+      };
+    }
+    var group = getGroup(key);
+    return group
+      ? { key: key, name: group.name, color: group.color, group: group }
+      : null;
+  }
+
+  function persistMaterialLibraryPreferences(message) {
+    try {
+      data = storage.save(data);
+      sanitizeUiState();
+      renderMaterialLibrary();
+      syncView();
+      if (message) toast(message);
+      return true;
+    } catch (error) {
+      toast(
+        (i18n.isEnglish() ? "Layout preferences could not be saved: " : "布局偏好保存失败：") +
+          error.message,
+        "error",
+        6500
+      );
+      return false;
+    }
+  }
+
+  function setMaterialLibraryLayout(layout) {
+    var nextLayout = layout === "group" ? "group" : "list";
+    var preferences = getMaterialLibraryPreferences();
+    if (preferences.layout === nextLayout) return;
+    preferences.layout = nextLayout;
+    persistMaterialLibraryPreferences(
+      i18n.isEnglish()
+        ? nextLayout === "group"
+          ? "Group layout enabled"
+          : "List layout enabled"
+        : nextLayout === "group"
+          ? "已切换到分组布局"
+          : "已切换到列表布局"
+    );
+  }
+
+  function renderMaterialLibraryLayoutState() {
+    var groupLayout = isMaterialGroupLayout();
+    queryAll('[data-action="materials-layout-list"]').forEach(function (button) {
+      button.classList.toggle("is-active", !groupLayout);
+      button.setAttribute("aria-pressed", String(!groupLayout));
+    });
+    queryAll('[data-action="materials-layout-group"]').forEach(function (button) {
+      button.classList.toggle("is-active", groupLayout);
+      button.setAttribute("aria-pressed", String(groupLayout));
+    });
+    dom["material-layout-settings-button"].hidden = !groupLayout;
+    dom["materials-table-section"].hidden = groupLayout;
+    dom["materials-group-section"].hidden = !groupLayout;
+    ["material-group-filter", "material-flow-filter", "material-task-filter"].forEach(
+      function (id) {
+        dom[id].hidden = groupLayout;
+      }
+    );
+    var scopeToggle = query(".material-scope-toggle", dom["materials-view"]);
+    if (scopeToggle) scopeToggle.hidden = groupLayout;
+  }
+
+  function renderMaterialLayoutOrder(order) {
+    var container = utils.clear(dom["material-layout-order-list"]);
+    var requested = Array.isArray(order) ? order : defaultMaterialGroupOrder();
+    var validOrder = requested
+      .map(materialGroupMeta)
+      .filter(Boolean)
+      .map(function (meta) {
+        return meta.key;
+      });
+    defaultMaterialGroupOrder().forEach(function (key) {
+      if (!validOrder.includes(key)) validOrder.push(key);
+    });
+    validOrder.forEach(function (key, index) {
+      var meta = materialGroupMeta(key);
+      if (!meta) return;
+      var item = utils.el("div", "material-layout-order-item");
+      item.dataset.materialGroupKey = key;
+      item.draggable = true;
+      item.style.setProperty("--group-color", meta.color);
+      var handle = utils.el("span", "material-layout-drag-handle", "⠿");
+      handle.title = i18n.isEnglish() ? "Drag to reorder" : "拖动调整顺序";
+      handle.setAttribute("aria-hidden", "true");
+      var number = utils.el(
+        "span",
+        "material-layout-order-number",
+        String(index + 1).padStart(2, "0")
+      );
+      number.dataset.materialLayoutOrderNumber = "true";
+      var name = utils.el("strong", "", meta.name);
+      if (meta.group) name.dataset.userContent = "true";
+      var controls = utils.el("span", "material-layout-order-controls");
+      var up = utils.el("button", "", "↑");
+      up.type = "button";
+      up.title = i18n.isEnglish() ? "Move up" : "上移";
+      up.disabled = index === 0;
+      up.addEventListener("click", function () {
+        moveMaterialLayoutOrderItem(item, -1);
+      });
+      var down = utils.el("button", "", "↓");
+      down.type = "button";
+      down.title = i18n.isEnglish() ? "Move down" : "下移";
+      down.disabled = index === validOrder.length - 1;
+      down.addEventListener("click", function () {
+        moveMaterialLayoutOrderItem(item, 1);
+      });
+      controls.append(up, down);
+      item.append(handle, number, name, controls);
+      item.addEventListener("dragstart", function (event) {
+        ui.draggedMaterialGroupKey = key;
+        item.classList.add("is-dragging");
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", key);
+      });
+      item.addEventListener("dragover", function (event) {
+        event.preventDefault();
+        var dragging = query(".material-layout-order-item.is-dragging", container);
+        if (!dragging || dragging === item) return;
+        var rect = item.getBoundingClientRect();
+        var placeAfter = event.clientY > rect.top + rect.height / 2;
+        container.insertBefore(dragging, placeAfter ? item.nextSibling : item);
+        refreshMaterialLayoutOrder();
+      });
+      item.addEventListener("drop", function (event) {
+        event.preventDefault();
+        refreshMaterialLayoutOrder();
+      });
+      item.addEventListener("dragend", function () {
+        item.classList.remove("is-dragging");
+        ui.draggedMaterialGroupKey = null;
+        refreshMaterialLayoutOrder();
+      });
+      container.appendChild(item);
+    });
+  }
+
+  function moveMaterialLayoutOrderItem(item, direction) {
+    var container = dom["material-layout-order-list"];
+    if (direction < 0 && item.previousElementSibling) {
+      container.insertBefore(item, item.previousElementSibling);
+    } else if (direction > 0 && item.nextElementSibling) {
+      container.insertBefore(item.nextElementSibling, item);
+    }
+    refreshMaterialLayoutOrder();
+  }
+
+  function refreshMaterialLayoutOrder() {
+    var items = queryAll(
+      ".material-layout-order-item",
+      dom["material-layout-order-list"]
+    );
+    items.forEach(function (item, index) {
+      var number = query("[data-material-layout-order-number]", item);
+      if (number) number.textContent = String(index + 1).padStart(2, "0");
+      var buttons = queryAll("button", item);
+      if (buttons[0]) buttons[0].disabled = index === 0;
+      if (buttons[1]) buttons[1].disabled = index === items.length - 1;
+    });
+  }
+
+  function openMaterialLayoutSettings() {
+    var preferences = getMaterialLibraryPreferences();
+    dom["material-layout-columns"].value = String(preferences.columns);
+    renderMaterialLayoutOrder(preferences.groupOrder);
+    dom["material-layout-dialog"].showModal();
+  }
+
+  function closeMaterialLayoutSettings() {
+    ui.draggedMaterialGroupKey = null;
+    dom["material-layout-dialog"].close();
+  }
+
+  function resetMaterialLayoutDraft() {
+    dom["material-layout-columns"].value = "4";
+    renderMaterialLayoutOrder(defaultMaterialGroupOrder());
+  }
+
+  function saveMaterialLayoutPreferences(event) {
+    event.preventDefault();
+    var preferences = getMaterialLibraryPreferences();
+    preferences.layout = "group";
+    preferences.columns = Math.max(
+      1,
+      Math.min(4, Number(dom["material-layout-columns"].value) || 4)
+    );
+    preferences.groupOrder = queryAll(
+      ".material-layout-order-item",
+      dom["material-layout-order-list"]
+    ).map(function (item) {
+      return item.dataset.materialGroupKey;
+    });
+    if (
+      persistMaterialLibraryPreferences(
+        i18n.isEnglish() ? "Group layout updated" : "分组布局已更新"
+      )
+    ) {
+      closeMaterialLayoutSettings();
+    }
+  }
+
   function clearMaterialFilter(key) {
     ui.materialFilters[key] = [];
     renderMaterialLibrary();
@@ -2615,7 +2858,7 @@
     setMaterialFilterLabel("material-filter-group-label", ui.materialFilters.groupIds.length);
   }
 
-  function materialMatchesFilters(material) {
+  function materialMatchesFilters(material, groupLayout) {
     var filters = ui.materialFilters;
     var relations = materialTools.resolveRelations(material, data);
     if (
@@ -2626,6 +2869,7 @@
     }
     if (filters.types.length && !filters.types.includes(material.type)) return false;
     if (
+      !groupLayout &&
       filters.taskIds.length &&
       !filters.taskIds.some(function (id) {
         return relations.taskIds.includes(id);
@@ -2634,6 +2878,7 @@
       return false;
     }
     if (
+      !groupLayout &&
       filters.flowIds.length &&
       !filters.flowIds.some(function (id) {
         return relations.flowIds.includes(id);
@@ -2641,7 +2886,7 @@
     ) {
       return false;
     }
-    if (filters.groupIds.length) {
+    if (!groupLayout && filters.groupIds.length) {
       var groupMatch = filters.groupIds.some(function (id) {
         return id === "__ungrouped__"
           ? relations.groupIds.length === 0
@@ -2650,6 +2895,7 @@
       if (!groupMatch) return false;
     }
     if (
+      !groupLayout &&
       filters.recentOnly &&
       !materialTools.openedInCurrentOrPreviousWeek(material, new Date())
     ) {
@@ -2755,10 +3001,132 @@
     return row;
   }
 
+  function createMaterialGroupCard(meta, materials, index) {
+    var card = utils.el("article", "material-group-card");
+    card.dataset.materialGroupKey = meta.key;
+    card.style.setProperty("--group-color", meta.color);
+
+    var header = utils.el("header", "material-group-card-head");
+    var headingWrap = utils.el("div", "material-group-card-title");
+    var marker = utils.el("i", "material-group-marker");
+    marker.setAttribute("aria-hidden", "true");
+    var titleCopy = utils.el("div");
+    titleCopy.append(
+      utils.el(
+        "small",
+        "",
+        (i18n.isEnglish() ? "GROUP " : "分组 ") + String(index + 1).padStart(2, "0")
+      ),
+      utils.el("h2", "", meta.name)
+    );
+    if (meta.group) query("h2", titleCopy).dataset.userContent = "true";
+    headingWrap.append(marker, titleCopy);
+    var count = utils.el(
+      "span",
+      "material-group-count",
+      i18n.isEnglish()
+        ? materials.length + (materials.length === 1 ? " document" : " documents")
+        : materials.length + " 条资料"
+    );
+    header.append(headingWrap, count);
+
+    var list = utils.el("div", "material-group-list");
+    list.dataset.materialGroupScroll = meta.key;
+    if (!materials.length) {
+      list.appendChild(
+        utils.el(
+          "p",
+          "material-group-empty",
+          i18n.isEnglish() ? "No matching documents" : "暂无符合条件的资料"
+        )
+      );
+    } else {
+      materialTools.sortByRecentUsage(materials, new Date()).forEach(function (material) {
+        var row = utils.el("div", "material-group-document");
+        row.dataset.materialId = material.id;
+        var select = utils.el("input");
+        select.type = "checkbox";
+        select.value = material.id;
+        select.dataset.materialSelect = "true";
+        select.checked = ui.selectedMaterialIds.includes(material.id);
+        select.setAttribute(
+          "aria-label",
+          (i18n.isEnglish() ? "Select document " : "选择资料 ") + material.title
+        );
+        var nameButton = utils.el("button", "material-group-name", material.title);
+        nameButton.type = "button";
+        nameButton.dataset.userContent = "true";
+        nameButton.title = material.title;
+        nameButton.addEventListener("click", function () {
+          openMaterialDialog(material.id);
+        });
+        var goButton = utils.el(
+          "button",
+          "material-group-go",
+          i18n.isEnglish() ? "Go to" : "前往"
+        );
+        goButton.type = "button";
+        goButton.title =
+          (i18n.isEnglish() ? "Open " : "打开 ") + material.title;
+        goButton.addEventListener("click", function () {
+          openMaterialLink(material.id);
+        });
+        row.append(select, nameButton, goButton);
+        list.appendChild(row);
+      });
+    }
+    card.append(header, list);
+    return card;
+  }
+
+  function renderMaterialGroupBoard(visibleMaterials) {
+    var board = utils.clear(dom["materials-group-board"]);
+    var preferences = getMaterialLibraryPreferences();
+    board.style.setProperty("--materials-group-columns", preferences.columns);
+    var grouped = new Map();
+    preferences.groupOrder.forEach(function (key) {
+      grouped.set(key, []);
+    });
+    visibleMaterials.forEach(function (material) {
+      var groupIds = materialTools.resolveRelations(material, data).groupIds;
+      if (!groupIds.length) {
+        if (grouped.has(MATERIAL_UNGROUPED_KEY)) {
+          grouped.get(MATERIAL_UNGROUPED_KEY).push(material);
+        }
+        return;
+      }
+      groupIds.forEach(function (groupId) {
+        if (grouped.has(groupId)) grouped.get(groupId).push(material);
+      });
+    });
+    preferences.groupOrder.forEach(function (key, index) {
+      var meta = materialGroupMeta(key);
+      if (!meta) return;
+      board.appendChild(createMaterialGroupCard(meta, grouped.get(key) || [], index));
+    });
+  }
+
   function getVisibleMaterials() {
-    return materialTools
-      .sortByGroup(data.materials, data)
-      .filter(materialMatchesFilters);
+    var groupLayout = isMaterialGroupLayout();
+    var filtered = data.materials.filter(function (material) {
+      return materialMatchesFilters(material, groupLayout);
+    });
+    return groupLayout
+      ? materialTools.sortByRecentUsage(filtered, new Date())
+      : materialTools.sortByGroup(filtered, data);
+  }
+
+  function handleMaterialSelectionChange(event) {
+    if (!event.target.matches("[data-material-select]")) return;
+    var id = event.target.value;
+    if (event.target.checked && !ui.selectedMaterialIds.includes(id)) {
+      ui.selectedMaterialIds.push(id);
+    } else if (!event.target.checked) {
+      ui.selectedMaterialIds = ui.selectedMaterialIds.filter(function (selectedId) {
+        return selectedId !== id;
+      });
+    }
+    syncMaterialSelectionState();
   }
 
   function syncMaterialSelectionState(visibleIds) {
@@ -2779,7 +3147,7 @@
       ids.length > 0 && selectedVisibleCount === ids.length;
     dom["material-select-visible"].indeterminate =
       selectedVisibleCount > 0 && selectedVisibleCount < ids.length;
-    queryAll("[data-material-select]", dom["materials-table-body"]).forEach(
+    queryAll("[data-material-select]", dom["materials-view"]).forEach(
       function (checkbox) {
         checkbox.checked = selectedIds.has(checkbox.value);
       }
@@ -2789,6 +3157,7 @@
   function renderMaterialLibrary() {
     dom["material-filter-name"].value = ui.materialFilters.name;
     renderMaterialFilterOptions();
+    renderMaterialLibraryLayoutState();
 
     var frequentCount = data.materials.filter(function (material) {
       return materialTools.openedInCurrentOrPreviousWeek(material, new Date());
@@ -2831,11 +3200,13 @@
       emptyCell.colSpan = 8;
       emptyRow.appendChild(emptyCell);
       body.appendChild(emptyRow);
-      return;
+    } else {
+      visible.forEach(function (material) {
+        body.appendChild(createMaterialTableRow(material));
+      });
     }
-    visible.forEach(function (material) {
-      body.appendChild(createMaterialTableRow(material));
-    });
+    if (isMaterialGroupLayout()) renderMaterialGroupBoard(visible);
+    else utils.clear(dom["materials-group-board"]);
   }
 
   function setVisibleMaterialsSelected(selected) {
@@ -2879,14 +3250,41 @@
       toast("资料链接无效，无法打开。", "error");
       return;
     }
+    var groupScrolls = captureMaterialGroupScrolls();
     materialTools.recordOpen(material, new Date());
     try {
       data = storage.save(data);
       renderMaterialLibrary();
+      restoreMaterialGroupScrolls(groupScrolls);
     } catch (error) {
       toast("打开次数保存失败：" + error.message, "warning", 5500);
     }
     utils.safeOpen(material.url);
+  }
+
+  function captureMaterialGroupScrolls() {
+    var positions = {};
+    queryAll("[data-material-group-scroll]", dom["materials-group-board"]).forEach(
+      function (list) {
+        positions[list.dataset.materialGroupScroll] = list.scrollTop;
+      }
+    );
+    return positions;
+  }
+
+  function restoreMaterialGroupScrolls(positions) {
+    if (!positions || !isMaterialGroupLayout()) return;
+    function restore() {
+      queryAll("[data-material-group-scroll]", dom["materials-group-board"]).forEach(
+        function (list) {
+          if (Object.prototype.hasOwnProperty.call(positions, list.dataset.materialGroupScroll)) {
+            list.scrollTop = positions[list.dataset.materialGroupScroll];
+          }
+        }
+      );
+    }
+    restore();
+    window.requestAnimationFrame(restore);
   }
 
   function applyDashboardFilter(groupId, overdueOnly) {
@@ -2947,6 +3345,7 @@
     dom["materials-view"].hidden = ui.view !== "materials";
     dom["filter-bar"].hidden = ui.view !== "timeline";
     dom["materials-filter-bar"].hidden = ui.view !== "materials";
+    dom["materials-layout-controls"].hidden = ui.view !== "materials";
     var simplifiedHeader = ui.view === "dashboard" || ui.view === "materials";
     dom["header-summary"].hidden = simplifiedHeader;
     dom["header-actions"].hidden = simplifiedHeader;

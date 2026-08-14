@@ -53,6 +53,7 @@
   var VERSION = 3;
   var SUPPORTED_VERSIONS = [1, 2, 3];
   var COLORS = ["#665CFF", "#0AA6B5", "#9B5DE5", "#FF7A45", "#2CA77B", "#E94E89", "#7BA23F"];
+  var UNGROUPED_MATERIAL_KEY = "__ungrouped__";
   var memoryData = null;
   var lastWarning = "";
 
@@ -108,6 +109,56 @@
       collapsed: Boolean(flow && flow.collapsed),
       createdAt: created,
       updatedAt: String((flow && flow.updatedAt) || created)
+    };
+  }
+
+  function normalizeDocumentLibraryPreferences(preferences, groups) {
+    var source = preferences && typeof preferences === "object" ? preferences : {};
+    var sortedGroupIds = (Array.isArray(groups) ? groups : [])
+      .slice()
+      .sort(function (left, right) {
+        return (
+          Number(left.order || 0) - Number(right.order || 0) ||
+          left.name.localeCompare(right.name, "zh-CN", { numeric: true })
+        );
+      })
+      .map(function (group) {
+        return group.id;
+      });
+    var validKeys = new Set(sortedGroupIds.concat(UNGROUPED_MATERIAL_KEY));
+    var seen = new Set();
+    var groupOrder = (Array.isArray(source.groupOrder) ? source.groupOrder : [])
+      .map(function (value) {
+        return String(value || "").trim();
+      })
+      .filter(function (value) {
+        if (!validKeys.has(value) || seen.has(value)) return false;
+        seen.add(value);
+        return true;
+      });
+    sortedGroupIds.forEach(function (groupId) {
+      if (seen.has(groupId)) return;
+      var ungroupedIndex = groupOrder.indexOf(UNGROUPED_MATERIAL_KEY);
+      if (ungroupedIndex >= 0) groupOrder.splice(ungroupedIndex, 0, groupId);
+      else groupOrder.push(groupId);
+      seen.add(groupId);
+    });
+    if (!seen.has(UNGROUPED_MATERIAL_KEY)) groupOrder.push(UNGROUPED_MATERIAL_KEY);
+    var columns = Number(source.columns);
+    return {
+      layout: source.layout === "group" ? "group" : "list",
+      columns: Number.isInteger(columns) && columns >= 1 && columns <= 4 ? columns : 4,
+      groupOrder: groupOrder
+    };
+  }
+
+  function normalizePreferences(preferences, groups) {
+    var source = preferences && typeof preferences === "object" ? preferences : {};
+    return {
+      documentLibrary: normalizeDocumentLibraryPreferences(
+        source.documentLibrary,
+        groups
+      )
     };
   }
 
@@ -381,6 +432,7 @@
       flows: flows,
       tasks: tasks,
       materials: materials,
+      preferences: normalizePreferences(input.preferences, groups),
       updatedAt: String(input.updatedAt || nowISO())
     };
     return { valid: errors.length === 0, errors: errors, data: data };
@@ -394,6 +446,7 @@
       flows: [],
       tasks: [],
       materials: [],
+      preferences: normalizePreferences(null, []),
       updatedAt: stamp
     };
   }
@@ -487,6 +540,7 @@
     save: persist,
     validateData: validateData,
     makeEmptyData: makeEmptyData,
+    normalizePreferences: normalizePreferences,
     nextGroupColor: nextGroupColor,
     getLastWarning: getLastWarning
   };

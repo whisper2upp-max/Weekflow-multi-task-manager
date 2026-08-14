@@ -1,8 +1,8 @@
 <p align="right"><a href="README.md">中文</a> · <strong>English</strong></p>
 
-# Weekflow v2.5 · Bilingual Task Management
+# Weekflow v2.6 · Bilingual Task Management
 
-Weekflow is a desktop-first, backend-free Multi-task management cockpit for tracking several workstreams and organizing all Task-related documents in one place. It combines weekly and daily deadline timelines, `Group → optional Flow → ordered Task` workflows, an Overall Dashboard, a unified Document Library, Excel bulk import/export, and local JSON backup.
+Weekflow is a desktop-first, backend-free Multi-task management cockpit for tracking several workstreams and organizing all Task-related documents in one place. It combines weekly and daily deadline timelines, `Group → optional Flow → ordered Task` workflows, an Overall Dashboard, a dual-layout Document Library, Excel bulk import/export, and local JSON backup.
 
 The bilingual interface changes language only. It does not change the v2.4-compatible data model, business rules, recurrence logic, storage behavior, filtering, linking, or scrolling mechanisms.
 
@@ -18,7 +18,7 @@ Then open `http://localhost:8080/Weekflow.html`. You may also open `Weekflow.htm
 
 ## Language Switch
 
-The `Chinese / EN` switch sits immediately to the right of **Document Library** in the main navigation. English is the default language. The selected language is stored separately under `weekflow-v2.4:language` and never rewrites user-entered Group, Flow, Task, document, person, Deliverable, progress, or note content.
+The `Chinese / EN` switch sits immediately to the right of **Document Library** in the main navigation on every page. Document Library layout controls appear farther right without moving the language switch. English is the default language. The selected language is stored separately under `weekflow-v2.4:language` and never rewrites user-entered Group, Flow, Task, document, person, Deliverable, progress, or note content.
 
 The selected language applies to:
 
@@ -71,9 +71,13 @@ Both English and Chinese import headers and supported field values remain accept
 
 - Documentation, Deliverables, Control Sheets, and Folders share one document record and can relate to multiple Tasks, Flows, and Groups.
 - Editing from a Task or the Document Library updates the same data source.
-- The library supports name search and Type, Group, Flow, and Task multi-select filters; Notes are displayed but are not searched.
+- Switch between **List** and **Group** from the upper right. **Arrange Layout** sits to the left of the List / Group switch and appears only in Group mode.
+- **List** keeps the existing full table, name search, and Type, Group, Flow, and Task multi-select filters; Notes are displayed but are not searched.
+- **Group** defaults to four Group columns per row. Additional Groups wrap to the next row; every card has a fixed height with its own vertical scroll and shows only a checkbox, document name, and **Go to** button.
+- Group mode keeps name search and Type filtering but hides Group, Flow, Task, and Recently Used filters. Documents sort by opens during the current and previous natural week, descending; ties sort by name.
+- **Arrange Layout** selects one to four Group columns per row and reorders Groups by dragging or move controls. Applying the dialog saves the preference immediately.
 - New or edited relations follow Group → Flow → Task cascading selection.
-- Recently Used includes links opened at least once in the current or previous natural week.
+- In List mode, Recently Used includes links opened at least once in the current or previous natural week.
 - Select the current result set from the header checkbox. Individual checkbox changes update in place and do not rebuild or scroll the table to the top.
 - Bulk deletion and overwrite-all import each require two confirmations.
 
@@ -95,9 +99,9 @@ Business data is stored in `localStorage` for the current browser and page origi
 weekflow-v2.4:data:v3
 ```
 
-To avoid migrating or clearing existing user data during the v2.5 upgrade, Weekflow keeps the v2.4 storage namespace. This is a compatibility key and does not indicate that the application is still v2.4.
+To avoid migrating or clearing existing user data during the v2.6 upgrade, Weekflow keeps the v2.4 storage namespace. This is a compatibility key and does not indicate that the application is still v2.4.
 
-The top-level data structure is `version: 3` with `groups`, `flows`, `tasks`, and `materials`. Recurrence settings and occurrence completion history live on each Task, so recurring deadlines do not create duplicate Tasks. Weekflow can migrate same-origin v2.3, v2.2, v2.1, v2.0, v1.1, and v1.0 data while leaving older keys available for rollback.
+The top-level data structure is `version: 3` with `groups`, `flows`, `tasks`, `materials`, and `preferences`. `preferences.documentLibrary` stores List / Group mode, columns per row, and Group order. Recurrence settings and occurrence completion history live on each Task, so recurring deadlines do not create duplicate Tasks. Weekflow can migrate same-origin v2.3, v2.2, v2.1, v2.0, v1.1, and v1.0 data while leaving older keys available for rollback.
 
 Clearing site data, using a private window, changing browsers, or changing the launch origin changes which data is visible.
 
@@ -111,7 +115,7 @@ Before bulk import, complete replacement, overwrite-all Document import, browser
 
 Use **Restore from JSON** to restore. Weekflow validates versions, unique IDs, dates, Group/Flow/Task relations, recurrence ranges and completion history, document types, URLs, relations, and open events before asking for confirmation. It attempts a `pre-import-backup` before replacement.
 
-The JSON backup includes the complete data object, including documents that are not linked to a Task. For backward compatibility, these records remain stored under the internal `materials` property.
+The JSON backup includes the complete data object, including documents that are not linked to a Task. It also preserves the Document Library List / Group mode, columns per row, and custom Group order, so restoring the backup restores the same layout preference. For backward compatibility, document records remain stored under the internal `materials` property.
 
 ## Excel Bulk Import
 
@@ -212,7 +216,7 @@ Weekflow/
 
 - Developer: Wesley Yan
 - First release (v1.0): July 30, 2026
-- Latest release (v2.5): August 12, 2026
+- Latest release (v2.6): August 14, 2026
 - Bilingual interface release: August 12, 2026
 
 ## Security and Limits

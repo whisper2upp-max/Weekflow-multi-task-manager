@@ -299,6 +299,19 @@
     });
   }
 
+  function sortByRecentUsage(materials, now) {
+    return (Array.isArray(materials) ? materials : []).slice().sort(function (left, right) {
+      return (
+        currentAndPreviousWeekOpenCount(right, now) -
+          currentAndPreviousWeekOpenCount(left, now) ||
+        left.title.localeCompare(right.title, i18n ? i18n.locale() : "zh-CN", {
+          numeric: true,
+          sensitivity: "base"
+        })
+      );
+    });
+  }
+
   return {
     TYPES: TYPES.slice(),
     TYPE_LABELS: Object.assign({}, TYPE_LABELS),
@@ -317,6 +330,7 @@
     openedInCurrentOrPreviousWeek: openedInCurrentOrPreviousWeek,
     recentOpenCount: recentOpenCount,
     recordOpen: recordOpen,
-    sortByGroup: sortByGroup
+    sortByGroup: sortByGroup,
+    sortByRecentUsage: sortByRecentUsage
   };
 });
