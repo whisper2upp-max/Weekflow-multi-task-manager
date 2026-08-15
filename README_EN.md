@@ -58,6 +58,9 @@ Both English and Chinese import headers and supported field values remain accept
 
 - Tasks support create, edit, delete, complete/reopen, DDL, Urgency, Report To, Managed Person, Deliverable, multi-entry progress history, and related documents.
 - Use **+ New Record** to append progress. Every entry keeps its own created and last-edited timestamps; the dialog opens on the latest entry and lets users select, edit, or double-confirm deletion of earlier entries. Rich text supports bold, italic, HTTP/HTTPS links, plus Excel-like 20-color preset palettes for text and highlight colors—no manual color picker is required.
+
+![Manage Task progress history](readme-images-en/progress-history.png)
+
 - Urgency, Report To, and Deliverable are required. Report To and Managed Person are person names, and previously used names become suggestions.
 - Flow is an optional ordered layer between a Group and its Tasks. A new Flow inherits its Group color unless the user customizes it.
 - Reorder Tasks inside a Flow by drag-and-drop or move controls.
@@ -70,12 +73,20 @@ Both English and Chinese import headers and supported field values remain accept
 
 - The fourth business page, **Quick Notes**, provides a titled rich-text-only writing area and a left list sorted by latest update. Search covers title and body, and unsaved-change prompts protect navigation, note switching, language switching, and page closing.
 - Formatting supports bold, italic, pasted SharePoint/HTTP/HTTPS links, and Excel-like 20-color preset palettes for text and highlights. Arbitrary color pickers, images, attachments, and tables are intentionally excluded.
+
+![Quick Notes editor](readme-images-en/quick-notes.png)
+
 - **Add to Progress History** selects Group → optional Flow → Task and appends a new timestamped progress entry. The original note remains, and later edits do not synchronize either copy.
+
+![Add a Quick Note to Task progress history](readme-images-en/note-to-progress.png)
+
 - **Convert to Task Drafts** uses deterministic bilingual local rules only—no AI and no network request. Separate lines beginning with `1 / 2 / 3`, `1. / 2. / 3.`, or Chinese numerals become separate Task candidates by default. Explicit labels and full dates may be prefilled.
 - Common English labels include `Task / Todo / Action Item`, `Group`, `Flow / Workflow`, `DDL / Deadline / Due Date`, `Urgency / Priority`, `Report To`, `Managed Person`, and `Deliverable`; the corresponding Chinese aliases are recognized as well. `Every Wednesday...` or `每周三……` prefills Weekly recurrence with next Wednesday as both DDL and Recurrence Start. `Monthly on the 5th...` or `每月 5 日……` prefills Monthly recurrence with the 5th of next month. The user still confirms Recurrence End before saving.
 - Each non-empty unlabeled line becomes a separate Task candidate by default; field lines such as `DDL:`, `Group:`, and `Flow:` remain attached to the preceding Task. Leading Chinese date expressions such as this/next/the-week-after-next weekday, a bare weekday (current week), `8-25 / 8.25 / 8/25 / August 25`-style numeric Chinese forms, and variants with a two- or four-digit year are removed from the Task name and prefilled as high-confidence DDL values. A yearless month/day uses the current year unless it has already passed, in which case it uses the next year.
 - Relative expressions outside those precise prefix rules, plus fuzzy names such as `Servce Development` or `Lcy`, remain suggestions rather than silent form values.
 - The split conversion view keeps the source note selectable and copyable, always shows detected count/current position, and supports Previous, Next, Skip, Save & Continue, and **+ Add Task Draft**. A manually added draft can be blank or parsed from selected source text. Conversion completes only after every candidate is saved or skipped.
+
+![Convert a Quick Note to Task drafts](readme-images-en/task-draft-conversion.png)
 
 ### Related Documents and Document Library
 
@@ -88,6 +99,9 @@ Both English and Chinese import headers and supported field values remain accept
 - **Group** defaults to four Group columns per row. Additional Groups wrap to the next row; every card has a fixed height with its own vertical scroll and shows only a checkbox, document name, and **Go to** button.
 - Group mode keeps name search and Type filtering but hides Group, Flow, Task, and Recently Used filters. Documents sort by opens during the current and previous natural week, descending; ties sort by name.
 - **Arrange Layout** selects one to four Group columns per row and reorders Groups by dragging or move controls. Applying the dialog saves the preference immediately.
+
+![Document Library Group layout](readme-images-en/document-library-group.png)
+
 - New or edited relations follow Group → Flow → Task cascading selection.
 - In List mode, Recently Used includes links opened at least once in the current or previous natural week.
 - Select the current result set from the header checkbox. Individual checkbox changes update in place and do not rebuild or scroll the table to the top.
