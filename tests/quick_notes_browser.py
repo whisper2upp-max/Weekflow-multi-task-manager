@@ -167,7 +167,7 @@ with sync_playwright() as playwright:
     note_text_palette = note_toolbar.locator('[data-color-palette][data-color-mode="text"]')
     assert note_text_palette.is_visible()
     assert note_text_palette.locator(".preset-color-swatch").count() == 20
-    page.screenshot(path="/tmp/weekflow-v2.7-note-color-palette.png", full_page=False)
+    page.screenshot(path="/tmp/weekflow-v3.0-note-color-palette.png", full_page=False)
     note_text_palette.locator('[data-color-value="#2563EB"]').click()
     assert not note_text_palette.is_visible()
 
@@ -240,7 +240,7 @@ with sync_playwright() as playwright:
     page.locator('[data-task-id="t1"] .progress-button').dblclick()
     assert page.locator("#progress-entry-list .progress-entry-item").count() == 2
     assert "Manual browser progress" in page.locator("#progress-note").inner_text()
-    page.screenshot(path="/tmp/weekflow-v2.7-progress-history-en.png", full_page=False)
+    page.screenshot(path="/tmp/weekflow-v3.0-progress-history-en.png", full_page=False)
     page.locator('[data-action="close-progress-dialog"]').last.click()
 
     page.get_by_role("button", name="Quick Notes", exact=True).click()
@@ -259,7 +259,7 @@ with sync_playwright() as playwright:
     assert page.locator("#task-urgency").input_value() == "high"
     assert page.locator("#task-draft-source-content").is_visible()
     assert "Browser Draft B" in page.locator("#task-draft-source-content").inner_text()
-    page.screenshot(path="/tmp/weekflow-v2.7-task-conversion-en.png", full_page=False)
+    page.screenshot(path="/tmp/weekflow-v3.0-task-conversion-en.png", full_page=False)
 
     page.get_by_role("button", name="Save & Continue", exact=True).click()
     assert page.locator("#task-name").input_value() == "Browser Draft B"
@@ -369,7 +369,7 @@ with sync_playwright() as playwright:
     page.locator('[data-action="task-draft-next"]').click()
     assert page.locator("#task-name").input_value() == "无形资产的徽章考题完事"
     assert page.locator("#task-ddl").input_value() == expected_prefixed_dates[2]
-    page.screenshot(path="/tmp/weekflow-v2.7-date-prefixed-drafts.png", full_page=False)
+    page.screenshot(path="/tmp/weekflow-v3.0-date-prefixed-drafts.png", full_page=False)
     page.once("dialog", lambda dialog: dialog.accept())
     page.locator('[data-action="close-task-dialog"]').first.click()
     assert not task_dialog.is_visible()
@@ -394,13 +394,13 @@ with sync_playwright() as playwright:
         }"""
     )
     assert not remaining_han, remaining_han
-    page.screenshot(path="/tmp/weekflow-v2.7-quick-notes-en.png", full_page=False)
+    page.screenshot(path="/tmp/weekflow-v3.0-quick-notes-en.png", full_page=False)
 
     page.get_by_role("button", name="Timeline", exact=True).click()
     page.locator(".more-menu > summary").click()
     with page.expect_download() as backup_info:
         page.locator('[data-action="export-json"]').click()
-    backup_path = Path("/tmp/weekflow-v2.7-full-backup.json")
+    backup_path = Path("/tmp/weekflow-v3.0-full-backup.json")
     backup_info.value.save_as(backup_path)
     backup = json.loads(backup_path.read_text(encoding="utf-8"))
     assert backup["version"] == 4
@@ -418,4 +418,4 @@ with sync_playwright() as playwright:
 
     browser.close()
     print("Quick Notes and progress-history browser workflow passed")
-    print(Path("/tmp/weekflow-v2.7-quick-notes-en.png"))
+    print(Path("/tmp/weekflow-v3.0-quick-notes-en.png"))

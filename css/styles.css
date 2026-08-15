@@ -5668,7 +5668,7 @@ html[data-language="en"] .urgency-badge {
   }
 }
 
-/* v2.7 随手记、富文本与多条进度历史。 */
+/* v3.0 随手记、富文本与多条进度历史。 */
 .notes-view {
   width: min(1440px, 100%);
   margin: 0 auto;

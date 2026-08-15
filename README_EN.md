@@ -1,10 +1,10 @@
 <p align="right"><a href="README.md">中文</a> · <strong>English</strong></p>
 
-# Weekflow v2.7 · Bilingual Task Management
+# Weekflow v3.0 · Bilingual Task Management
 
 Weekflow is a desktop-first, backend-free Multi-task management cockpit for tracking several workstreams and organizing all Task-related documents in one place. It combines weekly and daily deadline timelines, `Group → optional Flow → ordered Task` workflows, Quick Notes, multi-entry progress history, an Overall Dashboard, a dual-layout Document Library, Excel bulk import/export, and local JSON backup.
 
-The Chinese / English switch changes presentation and download language only; it never rewrites user-entered content. Weekflow v2.7 adds Quick Notes and multi-entry progress history while preserving recurrence, linking, filtering, and scroll-position safeguards.
+The Chinese / English switch changes presentation and download language only; it never rewrites user-entered content. Weekflow v3.0 adds Quick Notes and multi-entry progress history while preserving recurrence, linking, filtering, and scroll-position safeguards.
 
 ## Quick Start
 
@@ -125,7 +125,7 @@ Business data is stored in `localStorage` for the current browser and page origi
 weekflow-v2.4:data:v4
 ```
 
-To avoid clearing existing user data during the v2.7 upgrade, Weekflow keeps the v2.4 storage namespace and advances the internal structure to v4. This compatibility key does not indicate that the application is still v2.4.
+To avoid clearing existing user data during the v3.0 upgrade, Weekflow keeps the v2.4 storage namespace and advances the internal structure to v4. This compatibility key does not indicate that the application is still v2.4.
 
 The top-level data structure is `version: 4` with `groups`, `flows`, `tasks`, `materials`, `notes`, and `preferences`. Task `progressEntries` stores multi-entry progress history; `notes` stores Quick Notes and one-time conversion records. `preferences.documentLibrary` stores List / Group mode, columns per row, and Group order. Recurrence settings remain on each Task, so recurring deadlines do not create duplicate Tasks. Existing v3 `progressNote` content migrates into one history entry, and older same-origin releases remain readable.
 
@@ -245,7 +245,7 @@ Weekflow/
 
 - Developer: Wesley Yan
 - First release (v1.0): July 30, 2026
-- Latest release (v2.7): August 15, 2026
+- Latest release (v3.0): August 15, 2026
 - Bilingual interface release: August 12, 2026
 
 ## Security and Limits

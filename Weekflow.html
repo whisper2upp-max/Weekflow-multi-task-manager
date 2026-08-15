@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Weekflow v2.7 中英双语本地 Task 管理工具，支持周/日双时间轴、随手记、多条进度历史、Task 草稿转换、资料库、看板、备份和 Excel 批量导入导出。"
+      content="Weekflow v3.0 中英双语本地 Task 管理工具，支持周/日双时间轴、随手记、多条进度历史、Task 草稿转换、资料库、看板、备份和 Excel 批量导入导出。"
     />
-    <title>Weekflow v2.7 · Task management</title>
+    <title>Weekflow v3.0 · Task management</title>
     <link rel="stylesheet" href="./css/styles.css" />
   </head>
   <body>
@@ -271,7 +271,7 @@
         <section id="home-view" class="view-panel home-view" aria-labelledby="home-heading">
           <div class="home-hero">
             <div class="home-hero-copy">
-              <p class="eyebrow">Weekflow v2.7</p>
+              <p class="eyebrow">Weekflow v3.0</p>
               <h1 id="home-heading">把工作拆成清晰的下一步</h1>
               <p>
                 用分组建立工作版图，用 Flow 串起执行步骤，再用周时间轴看清每一个 DDL。
@@ -367,7 +367,7 @@
               <span class="home-entry-copy">
                 <small>WHAT'S NEW</small>
                 <strong>更新日志</strong>
-                <span>查看 Weekflow v2.7 的发布内容</span>
+                <span>查看 Weekflow v3.0 的发布内容</span>
               </span>
               <span class="home-entry-arrow" aria-hidden="true">↗</span>
             </button>
@@ -879,7 +879,7 @@
           <h3>数据保存位置</h3>
           <p>数据保存在当前浏览器、当前页面来源的 <code>localStorage</code> 中，主数据键为：</p>
           <pre>weekflow-v2.4:data:v4</pre>
-          <p>v2.7 继续沿用 v2.4 兼容命名空间，并把内部结构升级到 v4；旧单条进度会自动迁移为一条历史记录。</p>
+          <p>v3.0 继续沿用 v2.4 兼容命名空间，并把内部结构升级到 v4；旧单条进度会自动迁移为一条历史记录。</p>
           <p>清除浏览器网站数据、使用无痕窗口、更换浏览器或更换启动地址，都会影响可见数据。</p>
         </section>
         <section>
@@ -918,7 +918,7 @@
           <h3>开发团队</h3>
           <p>开发团队：Wesley Yan</p>
           <p>首个正式版本（v1.0）：2026年7月30日</p>
-          <p>最新版本（v2.7）更新时间：2026年8月15日</p>
+          <p>最新版本（v3.0）更新时间：2026年8月15日</p>
         </section>
       </article>
       <div class="modal-actions">
@@ -935,9 +935,9 @@
         <button class="icon-button" type="button" data-action="close-changelog" aria-label="关闭">×</button>
       </div>
       <article class="document-content changelog-content">
-        <div class="release-entry" data-version="2.7">
+        <div class="release-entry" data-version="3.0">
           <div class="release-heading">
-            <span>v2.7 随手记与进度历史版</span>
+            <span>v3.0 随手记与进度历史版</span>
             <time datetime="2026-08-15">2026-08-15</time>
           </div>
           <p class="release-lead">新增随手记、本地 Task 草稿转换和可持续追加的多条 Task 进度历史。</p>
@@ -963,6 +963,7 @@
               <li>三个报告工作表均不冻结视图，并通过 Windows-safe OOXML 工作表关系、属性、AutoFilter、无宏/无外链/无连接校验。</li>
               <li>继续保护 Task 完成、分组/Flow 展开折叠和资料复选的滚动位置，避免历史版本的跳回顶部问题。</li>
               <li>英文版五个主导航入口保持单行，并在完整/精简顶部操作区之间切换时保持位置和尺寸稳定。</li>
+              <li>修复随手记和 Task 进度历史从右向左选择整行或多行后，加粗、斜体、字色、底色等格式命令失效的问题。</li>
             </ul>
           </section>
         </div>

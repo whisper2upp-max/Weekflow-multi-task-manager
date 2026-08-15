@@ -1122,7 +1122,7 @@
       Title: english(options)
         ? isTemplate ? "Weekflow Task Import Template" : "Weekflow Current Task Data"
         : isTemplate ? "Weekflow Task 导入模板" : "Weekflow Task 当前数据",
-      Subject: "Weekflow v2.7 re-importable Task data",
+      Subject: "Weekflow v3.0 re-importable Task data",
       Author: "Wesley Yan",
       Comments: english(options)
         ? isTemplate ? "Blank Task import template." : "Matches the Weekflow Task import template and can be imported again."

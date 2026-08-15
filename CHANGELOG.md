@@ -1,6 +1,6 @@
 # Weekflow Changelog
 
-## v2.7 Quick Notes and Progress History — 2026-08-15
+## v3.0 Quick Notes and Progress History — 2026-08-15
 
 Added a fourth business page for reusable Quick Notes, deterministic local Task-draft conversion, and multi-entry Task progress history.
 
@@ -24,6 +24,7 @@ Added a fourth business page for reusable Quick Notes, deterministic local Task-
 - Kept reports free of frozen panes and validated all generated workbooks for Windows-safe OOXML: consistent three-sheet relationships/properties, standard AutoFilter metadata, `DocSecurity=0` where applicable, and no VBA, false macro markers, external links, connections, ActiveX, or OLE parts.
 - Preserved Task completion and Group/Flow viewport anchoring in Task by Week and Task by Day, plus in-place Document Library checkbox updates, so earlier jump-to-top regressions do not return.
 - Stabilized the English main navigation at desktop widths so all five page tabs stay on one line and retain identical geometry when switching between full and simplified headers.
+- Fixed right-to-left whole-line and multi-line selections in Quick Notes and Task progress history so Bold, Italic, text color, highlight, and other formatting commands retain the intended selection.
 
 ## v2.6 Document Library Dual Layout — 2026-08-14
 

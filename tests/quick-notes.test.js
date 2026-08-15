@@ -60,7 +60,7 @@ function arrayBuffer(buffer) {
   return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
 }
 
-test("v2.6 single progress text migrates to one v2.7 history entry", () => {
+test("v2.6 single progress text migrates to one v3.0 history entry", () => {
   const old = baseData();
   old.version = 3;
   delete old.notes;

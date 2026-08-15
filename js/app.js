@@ -387,6 +387,7 @@
   function bindEvents() {
     document.addEventListener("click", handleActionClick);
     document.addEventListener("click", closeOtherPopoverMenus);
+    document.addEventListener("mousedown", preserveRichTextSelectionBeforeToolbarAction, true);
     document.addEventListener("keydown", handleKeyboard);
     window.addEventListener("beforeunload", function (event) {
       if (!ui.noteDirty && !ui.progressDirty && !ui.taskDraftConversion) return;
@@ -3667,13 +3668,38 @@
     editor.focus();
   }
 
+  function selectionRangeInsideEditor(editor, selection) {
+    if (!editor || !selection || !selection.rangeCount) return null;
+    var range = selection.getRangeAt(0);
+    if (editor.contains(range.commonAncestorContainer)) return range.cloneRange();
+    try {
+      if (!range.intersectsNode(editor)) return null;
+    } catch (_error) {
+      return null;
+    }
+    var clipped = range.cloneRange();
+    if (!editor.contains(clipped.startContainer)) clipped.setStart(editor, 0);
+    if (!editor.contains(clipped.endContainer)) {
+      clipped.setEnd(editor, editor.childNodes.length);
+    }
+    return clipped;
+  }
+
   function rememberRichTextSelection(event) {
     var editor = event && event.currentTarget;
     var selection = window.getSelection && window.getSelection();
     if (!editor || !selection || !selection.rangeCount) return;
-    var range = selection.getRangeAt(0);
-    if (!editor.contains(range.commonAncestorContainer)) return;
-    ui.richTextSelection = { editorId: editor.id, range: range.cloneRange() };
+    var range = selectionRangeInsideEditor(editor, selection);
+    if (!range) return;
+    ui.richTextSelection = { editorId: editor.id, range: range };
+  }
+
+  function preserveRichTextSelectionBeforeToolbarAction(event) {
+    if (event.button !== 0) return;
+    var control = event.target.closest(".rich-text-toolbar [data-editor]");
+    if (!control) return;
+    var editor = dom[control.dataset.editor];
+    if (editor) rememberRichTextSelection({ currentTarget: editor });
   }
 
   function restoreRichTextSelection(editor) {
