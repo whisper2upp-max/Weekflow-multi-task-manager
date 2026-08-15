@@ -1,5 +1,30 @@
 # Weekflow Changelog
 
+## v2.7 Quick Notes and Progress History — 2026-08-15
+
+Added a fourth business page for reusable Quick Notes, deterministic local Task-draft conversion, and multi-entry Task progress history.
+
+### Added and changed
+
+- Added bilingual Quick Notes with editable titles, rich-text-only content, SharePoint/HTTP/HTTPS links, title/body search, latest-updated sorting, unsaved-change protection, and double-confirm deletion.
+- Replaced arbitrary text/highlight color inputs in Quick Notes and Task progress history with two Excel-like 20-color preset palettes.
+- Added one-time Note → progress conversion through Group → optional Flow → Task selection. The source Note remains, and a new independently timestamped progress entry is appended to the selected Task.
+- Added deterministic Chinese/English local Task parsing without AI or network access. Explicit high-confidence fields prefill the existing Task form; fuzzy Group/Flow/person matches and relative or yearless dates remain visible suggestions for user confirmation.
+- Split bare numbered lines (`1 / 2 / 3`, punctuation variants, and Chinese numerals) into separate Task candidates. Explicit weekly weekday and monthly day-of-month phrases now prefill recurrence plus next-week/next-month DDL and start date; users still confirm the recurrence end date.
+- Treat each non-empty unlabeled line as a Task candidate while keeping labeled field lines attached to the preceding Task. Leading Chinese current/next/two-weeks-ahead weekday expressions, bare weekdays, numeric month-day forms, and year-qualified variants now prefill DDL and are removed from the Task name.
+- Added sequential review for one or more candidate Tasks with source-note split view, detected/current count, Previous, Next, Skip, Save & Continue, and Complete Conversion.
+- Added **+ Add Task Draft** so users can create missed candidates as a blank draft or from selected source text. Conversion cannot complete until every candidate is saved or skipped.
+- Replaced the single Task progress box with a history manager. Every record has its own created/last-edited timestamps, rich formatting, source metadata, edit selection, new-record action, and double-confirm deletion; the latest record opens by default.
+- Upgraded JSON data to v4 with `notes` and Task `progressEntries`. Existing v3 `progressNote` content migrates into one legacy history entry; JSON export and restore preserve all Notes, conversions, documents, history, and preferences.
+
+### Excel and stability
+
+- Kept the 20-column Task main import format and legacy single Progress Note compatibility. New current-data downloads add **Progress History**, one entry per row, while the main progress cell aggregates all entries newest-first with line breaks.
+- Added the same Progress History worksheet to dashboard and Managed Person / Report To reports. Aggregate cells respect Excel's 32,767-character limit and point to the complete history when truncated.
+- Kept reports free of frozen panes and validated all generated workbooks for Windows-safe OOXML: consistent three-sheet relationships/properties, standard AutoFilter metadata, `DocSecurity=0` where applicable, and no VBA, false macro markers, external links, connections, ActiveX, or OLE parts.
+- Preserved Task completion and Group/Flow viewport anchoring in Task by Week and Task by Day, plus in-place Document Library checkbox updates, so earlier jump-to-top regressions do not return.
+- Stabilized the English main navigation at desktop widths so all five page tabs stay on one line and retain identical geometry when switching between full and simplified headers.
+
 ## v2.6 Document Library Dual Layout — 2026-08-14
 
 Added a Group layout for browsing documents by Task Group while preserving the existing List layout, data relations, imports, exports, and visual language.

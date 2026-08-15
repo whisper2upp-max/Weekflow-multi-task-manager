@@ -18,19 +18,26 @@
         ? root.App.materials
         : typeof require === "function"
           ? require("./materials.js")
+          : null,
+    richText:
+      root.App && root.App.richText
+        ? root.App.richText
+        : typeof require === "function"
+          ? require("./rich-text.js")
           : null
   };
-  var api = factory(deps.dates, deps.utils, deps.materials);
+  var api = factory(deps.dates, deps.utils, deps.materials, deps.richText);
   if (typeof module === "object" && module.exports) module.exports = api;
   root.App = root.App || {};
   root.App.storage = api;
-})(typeof self !== "undefined" ? self : globalThis, function (dates, utils, materialTools) {
+})(typeof self !== "undefined" ? self : globalThis, function (dates, utils, materialTools, richText) {
   "use strict";
 
-  var STORAGE_KEY = "weekflow-v2.4:data:v3";
-  var LEGACY_STORAGE_KEY = "weekflow-v2.4:data:v2";
+  var STORAGE_KEY = "weekflow-v2.4:data:v4";
+  var LEGACY_STORAGE_KEY = "weekflow-v2.4:data:v3";
   var CORRUPT_KEY = "weekflow-v2.4:corrupt-backup";
   var PREVIOUS_STORAGE_KEYS = [
+    "weekflow-v2.4:data:v3",
     "weekflow-v2.4:data:v2",
     "weekflow-v2.4:data:v1",
     "weekflow-v2.3:data:v3",
@@ -50,8 +57,8 @@
     "weekflow-v1.0:data:v2",
     "weekflow-v1.0:data:v1"
   ];
-  var VERSION = 3;
-  var SUPPORTED_VERSIONS = [1, 2, 3];
+  var VERSION = 4;
+  var SUPPORTED_VERSIONS = [1, 2, 3, 4];
   var COLORS = ["#665CFF", "#0AA6B5", "#9B5DE5", "#FF7A45", "#2CA77B", "#E94E89", "#7BA23F"];
   var UNGROUPED_MATERIAL_KEY = "__ungrouped__";
   var memoryData = null;
@@ -170,19 +177,118 @@
     };
   }
 
+  function normalizeProgressEntry(entry, fallback) {
+    var source = entry && typeof entry === "object" ? entry : {};
+    var base = fallback && typeof fallback === "object" ? fallback : {};
+    var created = [source.createdAt, base.createdAt, base.updatedAt, nowISO()].find(
+      isValidTimestamp
+    );
+    var updated = [source.updatedAt, created].find(isValidTimestamp);
+    var rawHtml = String(source.contentHtml || "");
+    var rawText = String(source.contentText || source.content || base.contentText || "");
+    var contentHtml = rawHtml
+      ? richText.sanitizeHtml(rawHtml, richText.MAX_PROGRESS_TEXT)
+      : richText.fromPlainText(rawText.slice(0, richText.MAX_PROGRESS_TEXT));
+    var contentText = richText
+      .plainText(contentHtml)
+      .slice(0, richText.MAX_PROGRESS_TEXT);
+    if (!contentText) return null;
+    var sourceType = ["manual", "quick-note", "excel-import", "legacy"].includes(
+      source.sourceType
+    )
+      ? source.sourceType
+      : base.sourceType || "manual";
+    return {
+      id: safeId(source.id, "progress"),
+      contentHtml: contentHtml,
+      contentText: contentText,
+      sourceType: sourceType,
+      sourceNoteId: source.sourceNoteId ? String(source.sourceNoteId) : null,
+      createdAt: String(created),
+      updatedAt: String(updated)
+    };
+  }
+
+  function normalizeProgressEntries(task, created) {
+    var source = Array.isArray(task && task.progressEntries)
+      ? task.progressEntries
+      : [];
+    if (!source.length && String((task && task.progressNote) || "").trim()) {
+      source = [
+        {
+          contentText: String(task.progressNote),
+          sourceType: "legacy",
+          createdAt: task.progressUpdatedAt || task.updatedAt || created,
+          updatedAt: task.progressUpdatedAt || task.updatedAt || created
+        }
+      ];
+    }
+    return source
+      .map(function (entry) {
+        return normalizeProgressEntry(entry, {
+          createdAt: created,
+          updatedAt: task && task.updatedAt,
+          sourceType: "manual"
+        });
+      })
+      .filter(Boolean);
+  }
+
+  function normalizeConversion(conversion) {
+    var source = conversion && typeof conversion === "object" ? conversion : {};
+    var type = source.type === "task" ? "task" : "progress";
+    var created = isValidTimestamp(source.createdAt) ? String(source.createdAt) : nowISO();
+    function uniqueIds(values) {
+      var seen = new Set();
+      return (Array.isArray(values) ? values : [])
+        .map(function (value) {
+          return String(value || "").trim();
+        })
+        .filter(function (value) {
+          if (!value || seen.has(value)) return false;
+          seen.add(value);
+          return true;
+        });
+    }
+    return {
+      id: safeId(source.id, "conversion"),
+      type: type,
+      taskIds: uniqueIds(source.taskIds),
+      progressEntryIds: uniqueIds(source.progressEntryIds),
+      skippedCount: Math.max(0, Number(source.skippedCount) || 0),
+      createdAt: created
+    };
+  }
+
+  function normalizeNote(note) {
+    var source = note && typeof note === "object" ? note : {};
+    var created = isValidTimestamp(source.createdAt) ? String(source.createdAt) : nowISO();
+    var updated = isValidTimestamp(source.updatedAt) ? String(source.updatedAt) : created;
+    var rawHtml = String(source.contentHtml || "");
+    var rawText = String(source.contentText || source.content || "");
+    var contentHtml = rawHtml
+      ? richText.sanitizeHtml(rawHtml, richText.MAX_NOTE_TEXT)
+      : richText.fromPlainText(rawText.slice(0, richText.MAX_NOTE_TEXT));
+    return {
+      id: safeId(source.id, "note"),
+      title: String(source.title || "").trim().slice(0, 160),
+      contentHtml: contentHtml,
+      contentText: richText.plainText(contentHtml).slice(0, richText.MAX_NOTE_TEXT),
+      conversions: (Array.isArray(source.conversions) ? source.conversions : []).map(
+        normalizeConversion
+      ),
+      createdAt: created,
+      updatedAt: updated
+    };
+  }
+
   function normalizeTask(task) {
     var created = String((task && task.createdAt) || nowISO());
     var status = task && task.status === "completed" ? "completed" : "pending";
-    var progressNote = String((task && task.progressNote) || "").trim().slice(0, 4000);
-    var progressTimestamp = null;
-    if (progressNote) {
-      progressTimestamp = [
-        task && task.progressUpdatedAt,
-        task && task.updatedAt,
-        created
-      ].find(isValidTimestamp);
-      progressTimestamp = String(progressTimestamp || nowISO());
-    }
+    var progressEntries = normalizeProgressEntries(task, created);
+    var latestProgress = richText.latestProgressEntry({ progressEntries: progressEntries });
+    var progressNote = latestProgress ? latestProgress.contentText : "";
+    var progressTimestamp = latestProgress ? latestProgress.updatedAt : null;
     var urgency = ["high", "medium", "low"].includes(task && task.urgency)
       ? task.urgency
       : "medium";
@@ -210,6 +316,7 @@
           : null,
       progressNote: progressNote,
       progressUpdatedAt: progressTimestamp,
+      progressEntries: progressEntries,
       recurrenceCadence: recurrenceCadence,
       recurrenceStart:
         recurrenceCadence === "none" ? null : dates.formatDate(task && task.recurrenceStart),
@@ -246,8 +353,11 @@
     if (inputVersion >= 2 && !Array.isArray(input.flows)) {
       errors.push("flows 必须是数组。");
     }
-    if (inputVersion === VERSION && !Array.isArray(input.materials)) {
+    if (inputVersion >= 3 && !Array.isArray(input.materials)) {
       errors.push("materials 必须是数组。");
+    }
+    if (inputVersion === VERSION && !Array.isArray(input.notes)) {
+      errors.push("notes 必须是数组。");
     }
     if (errors.length) return { valid: false, errors: errors, data: null };
 
@@ -350,6 +460,27 @@
       ) {
         errors.push("Task「" + (task.name || index + 1) + "」的进度更新时间无效。");
       }
+      if (Array.isArray(rawTask.progressEntries)) {
+        rawTask.progressEntries.forEach(function (entry, entryIndex) {
+          ["createdAt", "updatedAt"].forEach(function (field) {
+            if (
+              entry &&
+              entry[field] !== undefined &&
+              entry[field] !== null &&
+              String(entry[field]).trim() &&
+              !isValidTimestamp(entry[field])
+            ) {
+              errors.push(
+                "Task「" +
+                  (task.name || index + 1) +
+                  "」第 " +
+                  (entryIndex + 1) +
+                  " 条进度记录的时间无效。"
+              );
+            }
+          });
+        });
+      }
       if (inputVersion < VERSION) {
         task.documentLinks.concat(task.deliverableLinks).forEach(function (link) {
           if (!link.title || !utils.isValidUrl(link.url)) {
@@ -382,7 +513,7 @@
     });
 
     var sourceMaterials =
-      inputVersion === VERSION
+      inputVersion >= 3
         ? input.materials
         : materialTools.migrateLegacyLinks(tasks, String(input.updatedAt || nowISO()));
     var materialIds = new Set();
@@ -426,12 +557,32 @@
       delete task.deliverableLinks;
     });
 
+    var noteIds = new Set();
+    var notes = (Array.isArray(input.notes) ? input.notes : []).map(normalizeNote);
+    notes.forEach(function (note, index) {
+      if (!note.title) errors.push("第 " + (index + 1) + " 条随手记缺少标题。");
+      if (noteIds.has(note.id)) errors.push("随手记 ID 重复：" + note.id);
+      noteIds.add(note.id);
+      var rawNote = (input.notes || [])[index] || {};
+      ["createdAt", "updatedAt"].forEach(function (field) {
+        if (
+          rawNote[field] !== undefined &&
+          rawNote[field] !== null &&
+          String(rawNote[field]).trim() &&
+          !isValidTimestamp(rawNote[field])
+        ) {
+          errors.push("随手记「" + (note.title || index + 1) + "」的时间无效。");
+        }
+      });
+    });
+
     var data = {
       version: VERSION,
       groups: groups,
       flows: flows,
       tasks: tasks,
       materials: materials,
+      notes: notes,
       preferences: normalizePreferences(input.preferences, groups),
       updatedAt: String(input.updatedAt || nowISO())
     };
@@ -446,6 +597,7 @@
       flows: [],
       tasks: [],
       materials: [],
+      notes: [],
       preferences: normalizePreferences(null, []),
       updatedAt: stamp
     };
@@ -489,7 +641,7 @@
       if (!checked.valid) throw new Error(checked.errors.join("\n"));
       if (loadedFromLegacy) {
         var migrated = persist(checked.data);
-        lastWarning = "已自动迁移 Weekflow v2.3/v2.2/v2.1/v2.0/v1.1/v1.0 或旧版数据到 v2.4，并保留统一资料库。";
+        lastWarning = "已自动迁移旧版 Weekflow 数据，并将原进度记录转换为可继续追加的进度历史。";
         return migrated;
       }
       memoryData = checked.data;
@@ -541,6 +693,8 @@
     validateData: validateData,
     makeEmptyData: makeEmptyData,
     normalizePreferences: normalizePreferences,
+    normalizeProgressEntry: normalizeProgressEntry,
+    normalizeNote: normalizeNote,
     nextGroupColor: nextGroupColor,
     getLastWarning: getLastWarning
   };

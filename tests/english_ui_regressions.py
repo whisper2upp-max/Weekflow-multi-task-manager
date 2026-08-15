@@ -67,7 +67,7 @@ print("Starting English UI screenshot regressions", flush=True)
 with sync_playwright() as playwright:
     browser = playwright.chromium.launch(headless=True)
     # A Chinese browser locale reproduces the native date placeholder reported by users.
-    context = browser.new_context(viewport={"width": 2048, "height": 900}, locale="zh-CN")
+    context = browser.new_context(viewport={"width": 1440, "height": 900}, locale="zh-CN")
     page = context.new_page()
     errors = []
     page.on("console", lambda message: errors.append(message.text) if message.type == "error" else None)
@@ -75,11 +75,45 @@ with sync_playwright() as playwright:
     print("Opening page", flush=True)
     page.goto(BASE_URL)
     print("Seeding data", flush=True)
-    page.evaluate("payload => localStorage.setItem('weekflow-v2.4:data:v3', JSON.stringify(payload))", DATA)
+    page.evaluate("payload => localStorage.setItem('weekflow-v2.4:data:v4', JSON.stringify(payload))", DATA)
     page.evaluate("localStorage.setItem('weekflow-v2.4:language', 'en')")
     page.reload()
     page.wait_for_load_state("networkidle")
     print("Page ready", flush=True)
+
+    nav_reference = page.locator(".nav-tab").evaluate_all(
+        """nodes => nodes.map(node => {
+          const box = node.getBoundingClientRect();
+          return {
+            view: node.dataset.view,
+            left: box.left,
+            top: box.top,
+            width: box.width,
+            height: box.height,
+            scrollWidth: node.scrollWidth,
+            clientWidth: node.clientWidth,
+            whiteSpace: getComputedStyle(node).whiteSpace,
+          };
+        })"""
+    )
+    assert all(item["whiteSpace"] == "nowrap" for item in nav_reference), nav_reference
+    assert all(item["scrollWidth"] <= item["clientWidth"] + 1 for item in nav_reference), nav_reference
+    for view in ("timeline", "dashboard", "materials", "notes", "home"):
+        page.locator(f'.nav-tab[data-view="{view}"]').click()
+        page.wait_for_timeout(100)
+        current = page.locator(".nav-tab").evaluate_all(
+            """nodes => nodes.map(node => {
+              const box = node.getBoundingClientRect();
+              return {view: node.dataset.view, left: box.left, top: box.top, width: box.width, height: box.height};
+            })"""
+        )
+        for expected, actual in zip(nav_reference, current):
+            assert expected["view"] == actual["view"]
+            for key in ("left", "top", "width", "height"):
+                assert abs(expected[key] - actual[key]) <= 1, (view, key, expected, actual)
+        assert page.evaluate("document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1")
+    page.screenshot(path=str(OUTPUT / "stable-header.png"), full_page=False)
+    print("Header navigation geometry checked across all views", flush=True)
 
     page.get_by_role("button", name="Timeline", exact=True).click()
     page.wait_for_timeout(250)
@@ -212,7 +246,7 @@ with sync_playwright() as playwright:
     page.locator('[data-action="close-task-dialog"]').first.click()
 
     page.locator('[data-task-id="t1"] .progress-button').dblclick()
-    assert "Record current progress" in page.locator("#progress-dialog-task").inner_text()
+    assert "Each update is stored as an independent timestamped record" in page.locator("#progress-dialog-task").inner_text()
     assert_no_han(page, "progress dialog")
     print("Progress checked", flush=True)
     page.locator('[data-action="close-progress-dialog"]').first.click()

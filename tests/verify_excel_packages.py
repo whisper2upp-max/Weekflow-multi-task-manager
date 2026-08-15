@@ -34,9 +34,11 @@ for file in files:
     workbook = load_workbook(file, read_only=False, data_only=False, keep_links=False)
     assert workbook.sheetnames, file
     if file.name in report_files:
-        assert workbook.sheetnames == ["Overall Dashboard", "Timeline Dashboard"], (file, workbook.sheetnames)
+        assert workbook.sheetnames == ["Overall Dashboard", "Timeline Dashboard", "Progress History"], (file, workbook.sheetnames)
         for sheet in workbook.worksheets:
             assert sheet.freeze_panes is None, (file, sheet.title, sheet.freeze_panes)
+    if file.name in {"01_Task_Import_Template_EN.xlsx", "02_Current_Task_Data_EN.xlsx"}:
+        assert workbook.sheetnames == ["Task Import", "Progress History", "Instructions"], (file, workbook.sheetnames)
     workbook.close()
 
 print("openpyxl/OOXML verification passed:", ", ".join(file.name for file in files))

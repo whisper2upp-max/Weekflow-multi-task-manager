@@ -110,12 +110,12 @@ with sync_playwright() as playwright:
     page.locator('[data-action="open-user-guide"]').click()
     guide = page.locator("#user-guide-dialog")
     assert guide.get_by_text("Group Layout:", exact=False).is_visible()
-    assert guide.get_by_text("Latest release (v2.6): August 14, 2026", exact=True).is_visible()
+    assert guide.get_by_text("Latest release (v2.7): August 15, 2026", exact=True).is_visible()
     page.locator('[data-action="close-user-guide"]').first.click()
     page.locator('[data-action="open-changelog"]').click()
     changelog = page.locator("#changelog-dialog")
     assert changelog.locator(".release-heading").first.get_by_text(
-        "v2.6 Document Library Dual Layout", exact=True
+        "v2.7 Quick Notes and Progress History", exact=True
     ).is_visible()
     page.locator('[data-action="close-changelog"]').first.click()
     layout = page.evaluate(
@@ -132,7 +132,7 @@ with sync_playwright() as playwright:
     assert layout["actionsLeft"] > layout["navRight"], layout
 
     data = seed_data()
-    page.evaluate("payload => localStorage.setItem('weekflow-v2.4:data:v3', JSON.stringify(payload))", data)
+    page.evaluate("payload => localStorage.setItem('weekflow-v2.4:data:v4', JSON.stringify(payload))", data)
     page.reload()
     page.wait_for_load_state("networkidle")
 
@@ -274,7 +274,7 @@ with sync_playwright() as playwright:
     page = context.new_page()
     page.goto(BASE_URL)
     page.wait_for_load_state("networkidle")
-    page.evaluate("payload => localStorage.setItem('weekflow-v2.4:data:v3', JSON.stringify(payload))", seed_data())
+    page.evaluate("payload => localStorage.setItem('weekflow-v2.4:data:v4', JSON.stringify(payload))", seed_data())
     page.evaluate("localStorage.setItem('weekflow-v2.4:language', 'en')")
     page.reload()
     page.wait_for_load_state("networkidle")

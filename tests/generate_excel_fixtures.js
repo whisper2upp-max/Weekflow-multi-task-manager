@@ -13,7 +13,7 @@ fs.mkdirSync(outputDir, { recursive: true });
 i18n.setLanguage("en");
 
 const data = {
-  version: 3,
+  version: 4,
   groups: [{ id: "g1", name: "Service Delivery", color: "#665CFF", order: 1 }],
   flows: [{ id: "f1", groupId: "g1", name: "Review Flow", color: "#665CFF", order: 1 }],
   tasks: [{
@@ -21,11 +21,26 @@ const data = {
     reportTo: "Lucy Chen", managedObject: "Jack Wang", deliverable: "Approved package",
     ddl: "2026-08-14", urgency: "high", status: "pending", completedAt: null,
     recurrenceCadence: "none", recurrenceStart: null, recurrenceEnd: null,
-    recurrenceCompletions: [], progressNote: "Ready for review"
+    recurrenceCompletions: [], progressNote: "Second progress update",
+    progressUpdatedAt: "2026-08-15T09:00:00.000Z",
+    progressEntries: [{
+      id: "p1", contentHtml: "<p>Ready for review</p>", contentText: "Ready for review",
+      sourceType: "manual", sourceNoteId: null,
+      createdAt: "2026-08-14T09:00:00.000Z", updatedAt: "2026-08-14T09:00:00.000Z"
+    }, {
+      id: "p2", contentHtml: "<p><strong>Second progress update</strong></p>", contentText: "Second progress update",
+      sourceType: "quick-note", sourceNoteId: "n1",
+      createdAt: "2026-08-15T09:00:00.000Z", updatedAt: "2026-08-15T09:00:00.000Z"
+    }]
   }],
   materials: [{
     id: "m1", title: "Review Guide", url: "https://example.com/guide", type: "document",
     taskIds: ["t1"], flowIds: ["f1"], groupIds: ["g1"], note: "Reference", openEvents: []
+  }],
+  notes: [{
+    id: "n1", title: "Review status", contentHtml: "<p><strong>Second progress update</strong></p>",
+    contentText: "Second progress update", conversions: [],
+    createdAt: "2026-08-15T09:00:00.000Z", updatedAt: "2026-08-15T09:00:00.000Z"
   }]
 };
 

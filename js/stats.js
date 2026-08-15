@@ -46,6 +46,11 @@
           task.managedObject,
           task.deliverable,
           task.progressNote,
+          (Array.isArray(task.progressEntries) ? task.progressEntries : [])
+            .map(function (entry) {
+              return entry.contentText || "";
+            })
+            .join(" "),
           task.flowId && flowMap.get(task.flowId) ? flowMap.get(task.flowId).name : ""
         ]
           .map(normalized)

@@ -68,7 +68,7 @@ test("Document Library exposes bilingual List and Group layout controls", () => 
   assert.equal(i18n.translateText("前往"), "Go to");
 });
 
-test("v2.6 version and release documentation stay aligned", () => {
+test("v2.7 version and release documentation stay aligned", () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
   const html = fs.readFileSync(path.join(root, "Weekflow.html"), "utf8");
   const readme = fs.readFileSync(path.join(root, "README.md"), "utf8");
@@ -76,19 +76,19 @@ test("v2.6 version and release documentation stay aligned", () => {
   const changelog = fs.readFileSync(path.join(root, "CHANGELOG.md"), "utf8");
   const release = fs.readFileSync(path.join(root, "RELEASE.txt"), "utf8");
 
-  assert.equal(pkg.version, "2.6.0");
-  assert.match(html, /<title>Weekflow v2\.6/);
-  assert.match(readme, /^# Weekflow v2\.6/m);
-  assert.match(readmeEn, /^# Weekflow v2\.6/m);
-  assert.match(changelog, /^## v2\.6 Document Library Dual Layout — 2026-08-14/m);
-  assert.match(release, /^Weekflow v2\.6\nRelease date: 2026-08-14/);
+  assert.equal(pkg.version, "2.7.0");
+  assert.match(html, /<title>Weekflow v2\.7/);
+  assert.match(readme, /^# Weekflow v2\.7/m);
+  assert.match(readmeEn, /^# Weekflow v2\.7/m);
+  assert.match(changelog, /^## v2\.7 Quick Notes and Progress History — 2026-08-15/m);
+  assert.match(release, /^Weekflow v2\.7\nRelease date: 2026-08-15/);
 });
 
 test("English current-Task workbook has English sheets and can be imported", async () => {
   i18n.setLanguage("en");
   const workbook = excelImport.buildWorkbook(sampleData(), { language: "en" });
-  assert.deepEqual(workbook.SheetNames, ["Task Import", "Instructions"]);
-  assert.equal(workbook.Props.Subject, "Weekflow v2.6 re-importable Task data");
+  assert.deepEqual(workbook.SheetNames, ["Task Import", "Progress History", "Instructions"]);
+  assert.equal(workbook.Props.Subject, "Weekflow v2.7 re-importable Task data");
   assert.equal(workbook.Sheets["Task Import"].A4.v, "Group*");
   assert.equal(workbook.Sheets["Task Import"].L5.v, "High");
   const buffer = await excelImport.buildXlsxPackage(sampleData(), JSZip, "nodebuffer", { language: "en" });
@@ -115,7 +115,7 @@ test("English and Chinese blank templates use the selected language and re-impor
   );
   const zhTask = XLSX.read(zhTaskBuffer, { type: "buffer" });
   const zhMaterials = XLSX.read(zhMaterialsBuffer, { type: "buffer" });
-  assert.deepEqual(zhTask.SheetNames, ["Task导入", "填写说明"]);
+  assert.deepEqual(zhTask.SheetNames, ["Task导入", "进度历史", "填写说明"]);
   assert.equal(zhTask.Sheets["Task导入"].A4.v, "分组*");
   assert.deepEqual(zhMaterials.SheetNames, ["资料库导入"]);
   assert.equal(zhMaterials.Sheets["资料库导入"].A1.v, "链接名称*");
@@ -125,7 +125,7 @@ test("English Document Library workbook has English headers and can be imported"
   i18n.setLanguage("en");
   const workbook = materialExcel.buildWorkbook(sampleData(), { language: "en" });
   assert.deepEqual(workbook.SheetNames, ["Document Library"]);
-  assert.equal(workbook.Props.Title, "Weekflow v2.6 Document Library");
+  assert.equal(workbook.Props.Title, "Weekflow v2.7 Document Library");
   assert.equal(workbook.Sheets["Document Library"].A1.v, "Link Name*");
   assert.equal(workbook.Sheets["Document Library"].C2.v, "Documentation");
   const buffer = await materialExcel.buildXlsxPackage(sampleData(), JSZip, "nodebuffer", { language: "en" });
@@ -158,6 +158,7 @@ test("English dashboard report keeps Windows-safe OOXML and English names", asyn
   const contentTypes = await zip.file("[Content_Types].xml").async("string");
   assert.match(workbookXml, /name="Overall Dashboard"/);
   assert.match(workbookXml, /name="Timeline Dashboard"/);
+  assert.match(workbookXml, /name="Progress History"/);
   assert.match(workbookXml, /&apos;Timeline Dashboard&apos;!\$A\$1/);
   assert.match(appXml, /<DocSecurity>0<\/DocSecurity>/);
   assert.doesNotMatch(contentTypes, /macroEnabled|vbaProject|Extension="bin"/i);
@@ -165,7 +166,7 @@ test("English dashboard report keeps Windows-safe OOXML and English names", asyn
   assert.equal(zip.file("xl/externalLinks/externalLink1.xml"), null);
   assert.equal(zip.file("xl/connections.xml"), null);
   const workbook = XLSX.read(buffer, { type: "buffer" });
-  assert.deepEqual(workbook.SheetNames, ["Overall Dashboard", "Timeline Dashboard"]);
+  assert.deepEqual(workbook.SheetNames, ["Overall Dashboard", "Timeline Dashboard", "Progress History"]);
   assert.equal(workbook.Sheets["Timeline Dashboard"].A1.v, "Group");
   assert.equal(workbook.Sheets["Timeline Dashboard"].R1.v, "Related Documents");
 });

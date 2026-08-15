@@ -13,10 +13,58 @@
   var materialTools = App.materials;
   var materialExcel = App.materialExcel;
   var automation = App.automation;
+  var richText = App.richText;
+  var taskDraftParser = App.taskDraftParser;
 
   var urgencyLabels = i18n.urgencyLabels();
   var statusLabels = i18n.statusLabels();
   var MATERIAL_UNGROUPED_KEY = "__ungrouped__";
+  var RICH_TEXT_COLOR_PALETTES = {
+    text: [
+      ["#172033", "墨黑", "Ink"],
+      ["#475569", "石板灰", "Slate"],
+      ["#64748B", "灰蓝", "Blue Gray"],
+      ["#665CFF", "Weekflow 紫", "Weekflow Indigo"],
+      ["#4338CA", "深靛蓝", "Deep Indigo"],
+      ["#2563EB", "蓝色", "Blue"],
+      ["#0E7490", "青蓝", "Cyan Blue"],
+      ["#0F766E", "青绿", "Teal"],
+      ["#15803D", "绿色", "Green"],
+      ["#4D7C0F", "橄榄绿", "Olive"],
+      ["#A16207", "赭黄", "Ochre"],
+      ["#D97706", "橙色", "Orange"],
+      ["#C2410C", "赤橙", "Burnt Orange"],
+      ["#DC2626", "红色", "Red"],
+      ["#BE123C", "玫红", "Rose"],
+      ["#DB2777", "粉红", "Pink"],
+      ["#9333EA", "紫色", "Purple"],
+      ["#7C2D12", "棕色", "Brown"],
+      ["#0F172A", "深蓝黑", "Navy Black"],
+      ["#FFFFFF", "白色", "White"]
+    ],
+    highlight: [
+      ["#FFF1A8", "浅黄", "Soft Yellow"],
+      ["#FDE68A", "金黄", "Gold"],
+      ["#FEF3C7", "浅琥珀", "Soft Amber"],
+      ["#FED7AA", "浅橙", "Soft Orange"],
+      ["#FECACA", "浅红", "Soft Red"],
+      ["#FFE4E6", "浅玫红", "Soft Rose"],
+      ["#FBCFE8", "浅粉", "Soft Pink"],
+      ["#E9D5FF", "浅紫", "Soft Purple"],
+      ["#DDD6FE", "浅靛蓝", "Soft Indigo"],
+      ["#C7D2FE", "靛蓝灰", "Indigo Mist"],
+      ["#BFDBFE", "浅蓝", "Soft Blue"],
+      ["#BAE6FD", "天空蓝", "Sky Blue"],
+      ["#A5F3FC", "浅青", "Soft Cyan"],
+      ["#99F6E4", "浅青绿", "Soft Teal"],
+      ["#BBF7D0", "浅绿", "Soft Green"],
+      ["#D9F99D", "浅青柠", "Soft Lime"],
+      ["#E2E8F0", "浅灰蓝", "Soft Slate"],
+      ["#CBD5E1", "中性灰", "Neutral Gray"],
+      ["#F1F5F9", "雾灰", "Mist"],
+      ["#FFFFFF", "白色", "White"]
+    ]
+  };
   var data = storage.load();
   var ui = {
     view: "home",
@@ -37,9 +85,17 @@
     windowFutureWeeks: 11,
     dashboardModule: null,
     taskDraftMaterials: [],
+    taskDraftConversion: null,
     managedMaterials: [],
     managedTaskId: null,
     managedProgressTaskId: null,
+    managedProgressEntryId: null,
+    progressDraftEntry: null,
+    progressDirty: false,
+    selectedNoteId: null,
+    noteSearch: "",
+    noteDirty: false,
+    noteIsNew: false,
     editingMaterialId: null,
     selectedMaterialIds: [],
     materialFilters: {
@@ -86,6 +142,7 @@
       "timeline-view",
       "dashboard-view",
       "materials-view",
+      "notes-view",
       "materials-layout-controls",
       "material-layout-settings-button",
       "filter-bar",
@@ -95,6 +152,7 @@
       "home-group-total",
       "home-flow-total",
       "home-material-total",
+      "home-note-total",
       "filter-search",
       "filter-status",
       "filter-status-label",
@@ -146,6 +204,20 @@
       "materials-table-body",
       "materials-group-section",
       "materials-group-board",
+      "notes-count",
+      "note-search",
+      "note-list",
+      "note-editor-panel",
+      "note-empty-state",
+      "note-editor-shell",
+      "note-title",
+      "note-save-state",
+      "note-editor",
+      "note-updated-at",
+      "note-character-count",
+      "note-conversion-summary",
+      "note-delete-button",
+      "note-save-button",
       "material-selection-count",
       "material-select-visible",
       "material-filter-name",
@@ -187,6 +259,16 @@
       "task-dialog",
       "task-form",
       "task-dialog-title",
+      "task-dialog-cancel-button",
+      "task-draft-source-pane",
+      "task-draft-source-title",
+      "task-draft-source-content",
+      "task-draft-conversion-bar",
+      "task-draft-position",
+      "task-draft-status-summary",
+      "task-draft-recognition",
+      "task-draft-skip-button",
+      "task-draft-complete-button",
       "task-id",
       "task-name",
       "task-group",
@@ -247,8 +329,18 @@
       "progress-dialog-task",
       "progress-dialog-updated",
       "progress-note",
+      "progress-entry-list",
       "progress-character-count",
+      "progress-delete-button",
       "progress-save-button",
+      "note-progress-dialog",
+      "note-progress-form",
+      "note-progress-context",
+      "note-progress-group",
+      "note-progress-flow",
+      "note-progress-task",
+      "note-progress-task-help",
+      "note-progress-preview",
       "user-guide-dialog",
       "changelog-dialog",
       "delete-group-dialog",
@@ -273,6 +365,7 @@
 
   function initialize() {
     cacheDom();
+    renderPresetColorPalettes();
     bindEvents();
     syncLanguageAssets();
     var recurrenceSync = automation.syncRecurringTaskStates(data, new Date());
@@ -295,10 +388,27 @@
     document.addEventListener("click", handleActionClick);
     document.addEventListener("click", closeOtherPopoverMenus);
     document.addEventListener("keydown", handleKeyboard);
+    window.addEventListener("beforeunload", function (event) {
+      if (!ui.noteDirty && !ui.progressDirty && !ui.taskDraftConversion) return;
+      event.preventDefault();
+      event.returnValue = "";
+    });
     queryAll("[data-language]").forEach(function (button) {
       button.addEventListener("click", function () {
         var nextLanguage = i18n.normalizeLanguage(button.dataset.language);
         if (nextLanguage === i18n.getLanguage()) return;
+        if (
+          ui.noteDirty &&
+          !confirmAction("当前笔记尚未保存，切换语言会丢失这些修改。仍要继续吗？")
+        ) {
+          return;
+        }
+        if (
+          ui.taskDraftConversion &&
+          !confirmAction("Task 草稿转换尚未完成，切换语言会退出当前转换。仍要继续吗？")
+        ) {
+          return;
+        }
         i18n.setLanguage(nextLanguage);
         window.location.reload();
       });
@@ -357,8 +467,32 @@
     dom["task-recurrence"].addEventListener("change", syncTaskRecurrenceFields);
     dom["task-status"].addEventListener("change", syncCompletedDate);
     dom["link-form"].addEventListener("submit", saveManagedLinks);
-    dom["progress-form"].addEventListener("submit", saveProgressNote);
-    dom["progress-note"].addEventListener("input", updateProgressCharacterCount);
+    dom["progress-form"].addEventListener("submit", saveProgressEntry);
+    dom["progress-note"].addEventListener("input", function () {
+      ui.progressDirty = true;
+      updateProgressCharacterCount();
+    });
+    dom["progress-note"].addEventListener("paste", handleRichTextPaste);
+    dom["progress-note"].addEventListener("mouseup", rememberRichTextSelection);
+    dom["progress-note"].addEventListener("keyup", rememberRichTextSelection);
+    dom["note-progress-form"].addEventListener("submit", convertNoteToProgress);
+    dom["note-progress-group"].addEventListener("change", populateNoteProgressRelations);
+    dom["note-progress-flow"].addEventListener("change", populateNoteProgressTasks);
+    dom["note-search"].addEventListener(
+      "input",
+      utils.debounce(function (event) {
+        ui.noteSearch = event.target.value.trim();
+        renderNoteList();
+      }, 100)
+    );
+    [dom["note-title"], dom["note-editor"]].forEach(function (field) {
+      field.addEventListener("input", markNoteDirty);
+    });
+    dom["note-editor"].addEventListener("paste", handleRichTextPaste);
+    dom["note-editor"].addEventListener("mouseup", rememberRichTextSelection);
+    dom["note-editor"].addEventListener("keyup", rememberRichTextSelection);
+    dom["task-dialog"].addEventListener("cancel", handleTaskDialogCancel);
+    dom["progress-dialog"].addEventListener("cancel", handleProgressDialogCancel);
     dom["excel-file-input"].addEventListener("change", importExcelFile);
     queryAll('input[name="excel-import-mode"]').forEach(function (input) {
       input.addEventListener("change", renderExcelImportMode);
@@ -455,12 +589,17 @@
   }
 
   function handleKeyboard(event) {
+    if (event.key === "Escape") closePresetColorPalettes();
     if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
       event.preventDefault();
       if (ui.view === "home" || ui.view === "dashboard") switchView("timeline");
       requestAnimationFrame(function () {
         var search =
-          ui.view === "materials" ? dom["material-filter-name"] : dom["filter-search"];
+          ui.view === "materials"
+            ? dom["material-filter-name"]
+            : ui.view === "notes"
+              ? dom["note-search"]
+              : dom["filter-search"];
         search.focus();
         search.select();
       });
@@ -499,6 +638,7 @@
     ).forEach(function (details) {
       if (details !== activeMenu) details.open = false;
     });
+    closePresetColorPalettes(event.target.closest("[data-color-picker]"));
   }
 
   function handleActionClick(event) {
@@ -551,6 +691,32 @@
         openNewFlow();
       },
       "new-task": openNewTask,
+      "new-note": openNewNote,
+      "save-note": function () {
+        saveCurrentNote(false);
+      },
+      "delete-note": deleteCurrentNote,
+      "edit-note": function () {
+        selectNote(actionNode.dataset.noteId);
+      },
+      "note-to-progress": openNoteProgressDialog,
+      "close-note-progress": function () {
+        dom["note-progress-dialog"].close();
+      },
+      "note-to-task-drafts": startNoteTaskConversion,
+      "rich-command": function () {
+        executeRichTextCommand(
+          actionNode.dataset.command,
+          null,
+          dom[actionNode.dataset.editor]
+        );
+      },
+      "toggle-color-palette": function () {
+        togglePresetColorPalette(actionNode);
+      },
+      "apply-preset-color": function () {
+        applyPresetColor(actionNode);
+      },
       "new-material": function () {
         openMaterialDialog();
       },
@@ -558,7 +724,7 @@
         dom["group-dialog"].close();
       },
       "close-task-dialog": function () {
-        dom["task-dialog"].close();
+        requestCloseTaskDialog();
       },
       "close-flow-dialog": closeFlowDialog,
       "close-link-dialog": function () {
@@ -568,8 +734,22 @@
         dom["material-dialog"].close();
       },
       "close-progress-dialog": function () {
-        dom["progress-dialog"].close();
+        requestCloseProgressDialog();
       },
+      "new-progress-entry": newProgressEntry,
+      "select-progress-entry": function () {
+        selectProgressEntry(actionNode.dataset.progressEntryId);
+      },
+      "delete-progress-entry": deleteProgressEntry,
+      "task-draft-previous": function () {
+        moveTaskDraftCandidate(-1);
+      },
+      "task-draft-next": function () {
+        moveTaskDraftCandidate(1);
+      },
+      "task-draft-add": addTaskDraftCandidate,
+      "task-draft-skip": skipTaskDraftCandidate,
+      "task-draft-complete": completeTaskDraftConversion,
       "close-ddl-reminder": closeDdlReminder,
       "delete-group": requestDeleteCurrentGroup,
       "delete-flow": requestDeleteCurrentFlow,
@@ -789,6 +969,16 @@
     ui.selectedMaterialIds = ui.selectedMaterialIds.filter(function (id) {
       return validMaterialIds.has(id);
     });
+    if (
+      ui.selectedNoteId &&
+      !data.notes.some(function (note) {
+        return note.id === ui.selectedNoteId;
+      })
+    ) {
+      ui.selectedNoteId = null;
+      ui.noteDirty = false;
+      ui.noteIsNew = false;
+    }
   }
 
   function renderAll() {
@@ -800,6 +990,7 @@
     renderTimeline();
     renderDashboard();
     renderMaterialLibrary();
+    renderNotes();
     syncView();
   }
 
@@ -821,6 +1012,7 @@
     dom["home-group-total"].textContent = data.groups.length;
     dom["home-flow-total"].textContent = data.flows.length;
     dom["home-material-total"].textContent = data.materials.length;
+    dom["home-note-total"].textContent = data.notes.length;
   }
 
   function renderFilterControls() {
@@ -1056,6 +1248,12 @@
   function getTask(id) {
     return data.tasks.find(function (task) {
       return task.id === id;
+    });
+  }
+
+  function getNote(id) {
+    return data.notes.find(function (note) {
+      return note.id === id;
     });
   }
 
@@ -1815,27 +2013,29 @@
   }
 
   function createProgressButton(task) {
-    var hasProgress = Boolean(String(task.progressNote || "").trim());
+    var entries = richText.sortProgressEntries(task.progressEntries || []);
+    var hasProgress = entries.length > 0;
+    var latest = entries[0];
     var button = utils.el(
       "button",
       "link-button progress-button" + (hasProgress ? " has-progress" : ""),
       i18n.isEnglish()
-        ? "Progress (" + (hasProgress ? "1" : "0") + ")"
-        : "进度（" + (hasProgress ? "1" : "0") + "）"
+        ? "Progress (" + entries.length + ")"
+        : "进度（" + entries.length + "）"
     );
     button.type = "button";
     button.title = i18n.isEnglish()
       ? hasProgress
-        ? "Double-click to edit the progress note\n" + task.progressNote.replace(/\s+/g, " ").slice(0, 160)
-        : "Double-click to add a progress note"
+        ? "Double-click to manage progress history\n" + latest.contentText.replace(/\s+/g, " ").slice(0, 160)
+        : "Double-click to add a progress record"
       : hasProgress
-        ? "双击编辑进度记录\n" + task.progressNote.replace(/\s+/g, " ").slice(0, 160)
+        ? "双击管理进度历史\n" + latest.contentText.replace(/\s+/g, " ").slice(0, 160)
         : "双击添加进度记录";
     button.setAttribute(
       "aria-label",
       i18n.isEnglish()
-        ? "Progress note " + (hasProgress ? "available" : "empty") + "; double-click or press Enter to edit"
-        : "进度记录，" + (hasProgress ? "已有内容" : "暂无内容") + "；双击或按回车编辑"
+        ? entries.length + " progress records; double-click or press Enter to manage"
+        : "进度记录，共 " + entries.length + " 条；双击或按回车管理"
     );
     button.addEventListener("dblclick", function (event) {
       event.preventDefault();
@@ -3316,9 +3516,21 @@
   }
 
   function switchView(view) {
-    var nextView = ["home", "timeline", "dashboard", "materials"].includes(view)
+    var nextView = ["home", "timeline", "dashboard", "materials", "notes"].includes(view)
       ? view
       : "home";
+    if (
+      ui.view === "notes" &&
+      nextView !== "notes" &&
+      ui.noteDirty &&
+      !confirmAction("当前笔记尚未保存，离开后修改会丢失。仍要继续吗？")
+    ) {
+      return;
+    }
+    if (ui.view === "notes" && nextView !== "notes") {
+      ui.noteDirty = false;
+      ui.noteIsNew = false;
+    }
     var resetDayTimeline =
       nextView === "timeline" &&
       ui.view !== "timeline" &&
@@ -3343,10 +3555,12 @@
     dom["timeline-view"].hidden = ui.view !== "timeline";
     dom["dashboard-view"].hidden = ui.view !== "dashboard";
     dom["materials-view"].hidden = ui.view !== "materials";
+    dom["notes-view"].hidden = ui.view !== "notes";
     dom["filter-bar"].hidden = ui.view !== "timeline";
     dom["materials-filter-bar"].hidden = ui.view !== "materials";
     dom["materials-layout-controls"].hidden = ui.view !== "materials";
-    var simplifiedHeader = ui.view === "dashboard" || ui.view === "materials";
+    var simplifiedHeader =
+      ui.view === "dashboard" || ui.view === "materials" || ui.view === "notes";
     dom["header-summary"].hidden = simplifiedHeader;
     dom["header-actions"].hidden = simplifiedHeader;
     queryAll("[data-view]").forEach(function (button) {
@@ -3369,6 +3583,877 @@
     var error = query('[data-error-for="' + fieldId + '"]');
     if (field) field.classList.add("is-invalid");
     if (error) error.textContent = i18n.translateMessage(message);
+  }
+
+  function colorPaletteLabel(mode, color) {
+    var prefix = i18n.isEnglish()
+      ? mode === "highlight" ? "Highlight" : "Text color"
+      : mode === "highlight" ? "高亮颜色" : "字色";
+    return prefix + "：" + (i18n.isEnglish() ? color[2] : color[1]);
+  }
+
+  function renderPresetColorPalettes() {
+    queryAll("[data-color-palette]").forEach(function (container) {
+      var mode = container.dataset.colorMode === "highlight" ? "highlight" : "text";
+      var colors = RICH_TEXT_COLOR_PALETTES[mode];
+      var fragment = document.createDocumentFragment();
+      container.setAttribute(
+        "aria-label",
+        i18n.isEnglish()
+          ? mode === "highlight" ? "Highlight color presets" : "Text color presets"
+          : mode === "highlight" ? "高亮颜色预设" : "字色预设"
+      );
+      colors.forEach(function (color, index) {
+        var swatch = utils.el("button", "preset-color-swatch");
+        swatch.type = "button";
+        swatch.dataset.action = "apply-preset-color";
+        swatch.dataset.editor = container.dataset.editor;
+        swatch.dataset.colorMode = mode;
+        swatch.dataset.colorValue = color[0];
+        swatch.style.setProperty("--swatch-color", color[0]);
+        swatch.title = colorPaletteLabel(mode, color);
+        swatch.setAttribute("aria-label", colorPaletteLabel(mode, color));
+        swatch.setAttribute("role", "menuitemradio");
+        swatch.setAttribute("aria-checked", String(index === 0));
+        swatch.classList.toggle("is-selected", index === 0);
+        fragment.appendChild(swatch);
+      });
+      container.replaceChildren(fragment);
+    });
+  }
+
+  function closePresetColorPalettes(exceptPicker) {
+    queryAll("[data-color-picker]").forEach(function (picker) {
+      if (picker === exceptPicker) return;
+      var popover = query("[data-color-palette]", picker);
+      var trigger = query('[data-action="toggle-color-palette"]', picker);
+      if (popover) popover.hidden = true;
+      if (trigger) trigger.setAttribute("aria-expanded", "false");
+    });
+  }
+
+  function togglePresetColorPalette(trigger) {
+    var picker = trigger && trigger.closest("[data-color-picker]");
+    var popover = picker && query("[data-color-palette]", picker);
+    if (!picker || !popover) return;
+    var opening = popover.hidden;
+    closePresetColorPalettes(picker);
+    popover.hidden = !opening;
+    trigger.setAttribute("aria-expanded", String(opening));
+    if (opening) {
+      var selected = query(".preset-color-swatch.is-selected", popover);
+      setTimeout(function () {
+        var target = selected || query(".preset-color-swatch", popover);
+        if (target) target.focus();
+      }, 0);
+    }
+  }
+
+  function applyPresetColor(swatch) {
+    var editor = dom[swatch.dataset.editor];
+    var mode = swatch.dataset.colorMode;
+    var value = swatch.dataset.colorValue;
+    if (!editor || !value) return;
+    executeRichTextCommand(mode === "highlight" ? "hiliteColor" : "foreColor", value, editor);
+    var picker = swatch.closest("[data-color-picker]");
+    queryAll(".preset-color-swatch", picker).forEach(function (item) {
+      var selected = item === swatch;
+      item.classList.toggle("is-selected", selected);
+      item.setAttribute("aria-checked", String(selected));
+    });
+    var preview = query("[data-color-preview]", picker);
+    if (preview) preview.style.setProperty("--swatch-color", value);
+    closePresetColorPalettes();
+    editor.focus();
+  }
+
+  function rememberRichTextSelection(event) {
+    var editor = event && event.currentTarget;
+    var selection = window.getSelection && window.getSelection();
+    if (!editor || !selection || !selection.rangeCount) return;
+    var range = selection.getRangeAt(0);
+    if (!editor.contains(range.commonAncestorContainer)) return;
+    ui.richTextSelection = { editorId: editor.id, range: range.cloneRange() };
+  }
+
+  function restoreRichTextSelection(editor) {
+    if (!editor) return;
+    editor.focus();
+    var saved = ui.richTextSelection;
+    if (!saved || saved.editorId !== editor.id || !saved.range) return;
+    var selection = window.getSelection && window.getSelection();
+    if (!selection) return;
+    try {
+      selection.removeAllRanges();
+      selection.addRange(saved.range);
+    } catch (_error) {
+      /* 编辑区内容变化后使用浏览器默认光标位置。 */
+    }
+  }
+
+  function executeRichTextCommand(command, value, editor) {
+    if (!editor || !command) return;
+    restoreRichTextSelection(editor);
+    var applied = false;
+    try {
+      applied = document.execCommand(command, false, value || null);
+      if (!applied && command === "hiliteColor") {
+        applied = document.execCommand("backColor", false, value || "#FFF1A8");
+      }
+    } catch (_error) {
+      applied = false;
+    }
+    if (!applied && command !== "removeFormat") {
+      toast(i18n.isEnglish() ? "This text format is not supported by the current browser." : "当前浏览器不支持该文字格式。", "warning");
+    }
+    if (editor === dom["note-editor"]) markNoteDirty();
+    if (editor === dom["progress-note"]) {
+      ui.progressDirty = true;
+      updateProgressCharacterCount();
+    }
+    rememberRichTextSelection({ currentTarget: editor });
+  }
+
+  function handleRichTextPaste(event) {
+    event.preventDefault();
+    var editor = event.currentTarget;
+    var text = event.clipboardData ? event.clipboardData.getData("text/plain") : "";
+    restoreRichTextSelection(editor);
+    if (!richText.insertHtmlAtSelection(richText.fromPlainText(text), editor)) {
+      editor.appendChild(document.createTextNode(text));
+    }
+    editor.dispatchEvent(new Event("input", { bubbles: true }));
+  }
+
+  function noteTimeLabel(value) {
+    return value
+      ? new Date(value).toLocaleString(i18n.locale(), {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit"
+        })
+      : "";
+  }
+
+  function markNoteDirty() {
+    ui.noteDirty = true;
+    dom["note-save-state"].textContent = i18n.isEnglish() ? "Unsaved changes" : "有未保存修改";
+    dom["note-save-state"].classList.add("is-dirty");
+    updateNoteCharacterCount();
+  }
+
+  function updateNoteCharacterCount() {
+    var length = richText.plainText(dom["note-editor"].innerHTML).length;
+    dom["note-character-count"].textContent = length + " / " + richText.MAX_NOTE_TEXT;
+    dom["note-character-count"].style.color =
+      length > richText.MAX_NOTE_TEXT ? "var(--coral)" : "";
+  }
+
+  function renderNotes() {
+    renderNoteList();
+    if (ui.noteDirty) return;
+    if (!ui.noteIsNew && !ui.selectedNoteId && data.notes.length) {
+      ui.selectedNoteId = data.notes
+        .slice()
+        .sort(function (left, right) {
+          return new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime();
+        })[0].id;
+    }
+    renderSelectedNote();
+  }
+
+  function renderNoteList() {
+    var container = utils.clear(dom["note-list"]);
+    var queryText = String(ui.noteSearch || "").trim().toLocaleLowerCase();
+    var notes = data.notes
+      .filter(function (note) {
+        if (!queryText) return true;
+        return (note.title + "\n" + note.contentText).toLocaleLowerCase().includes(queryText);
+      })
+      .slice()
+      .sort(function (left, right) {
+        return new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime();
+      });
+    dom["notes-count"].textContent = data.notes.length + (i18n.isEnglish() ? " notes" : " 条笔记");
+    if (!notes.length) {
+      container.appendChild(
+        utils.el(
+          "p",
+          "note-list-empty",
+          data.notes.length
+            ? i18n.isEnglish()
+              ? "No notes match the search."
+              : "没有符合搜索条件的笔记。"
+            : i18n.isEnglish()
+              ? "Saved notes will appear here."
+              : "保存后的笔记会显示在这里。"
+        )
+      );
+      return;
+    }
+    notes.forEach(function (note) {
+      var button = utils.el(
+        "button",
+        "note-list-item" + (note.id === ui.selectedNoteId ? " is-active" : "")
+      );
+      button.type = "button";
+      button.dataset.action = "edit-note";
+      button.dataset.noteId = note.id;
+      button.dataset.userContent = "";
+      button.setAttribute("role", "listitem");
+      button.append(
+        utils.el("strong", "", note.title),
+        utils.el(
+          "span",
+          "",
+          note.contentText
+            ? note.contentText.replace(/\s+/g, " ").slice(0, 72)
+            : i18n.isEnglish()
+              ? "Empty note"
+              : "空白笔记"
+        ),
+        utils.el("small", "", noteTimeLabel(note.updatedAt))
+      );
+      container.appendChild(button);
+    });
+  }
+
+  function renderSelectedNote() {
+    var note = getNote(ui.selectedNoteId);
+    var editing = Boolean(note || ui.noteIsNew);
+    dom["note-empty-state"].hidden = editing;
+    dom["note-editor-shell"].hidden = !editing;
+    if (!editing) return;
+    dom["note-title"].value = note ? note.title : "";
+    dom["note-title"].classList.remove("is-invalid");
+    dom["note-editor"].innerHTML = note ? note.contentHtml : "";
+    dom["note-save-state"].textContent = note
+      ? i18n.isEnglish()
+        ? "Saved"
+        : "已保存"
+      : i18n.isEnglish()
+        ? "Not saved"
+        : "尚未保存";
+    dom["note-save-state"].classList.remove("is-dirty");
+    dom["note-updated-at"].textContent = note
+      ? (i18n.isEnglish() ? "Last updated: " : "最后更新：") + noteTimeLabel(note.updatedAt)
+      : i18n.isEnglish()
+        ? "Not saved"
+        : "尚未保存";
+    dom["note-delete-button"].hidden = !note;
+    renderNoteConversionSummary(note);
+    updateNoteCharacterCount();
+  }
+
+  function renderNoteConversionSummary(note) {
+    var container = dom["note-conversion-summary"];
+    var conversions = note && Array.isArray(note.conversions) ? note.conversions : [];
+    container.hidden = !conversions.length;
+    if (!conversions.length) {
+      container.textContent = "";
+      return;
+    }
+    var progressCount = conversions.filter(function (item) { return item.type === "progress"; }).length;
+    var taskCount = conversions
+      .filter(function (item) { return item.type === "task"; })
+      .reduce(function (total, item) { return total + item.taskIds.length; }, 0);
+    container.textContent = i18n.isEnglish()
+      ? "Converted snapshots: " + progressCount + " progress records · " + taskCount + " Tasks"
+      : "已完成一次性转换：" + progressCount + " 条进度记录 · " + taskCount + " 个 Task";
+  }
+
+  function confirmDiscardNoteChanges() {
+    return (
+      !ui.noteDirty ||
+      confirmAction("当前笔记尚未保存，继续后修改会丢失。仍要继续吗？")
+    );
+  }
+
+  function openNewNote() {
+    if (!confirmDiscardNoteChanges()) return;
+    ui.selectedNoteId = null;
+    ui.noteIsNew = true;
+    ui.noteDirty = false;
+    renderNoteList();
+    renderSelectedNote();
+    setTimeout(function () { dom["note-title"].focus(); }, 0);
+  }
+
+  function selectNote(noteId) {
+    if (noteId === ui.selectedNoteId && !ui.noteIsNew) return;
+    if (!confirmDiscardNoteChanges()) return;
+    if (!getNote(noteId)) return;
+    ui.selectedNoteId = noteId;
+    ui.noteIsNew = false;
+    ui.noteDirty = false;
+    renderNoteList();
+    renderSelectedNote();
+  }
+
+  function saveCurrentNote(silent) {
+    var title = dom["note-title"].value.trim();
+    if (!title) {
+      dom["note-title"].classList.add("is-invalid");
+      dom["note-title"].focus();
+      if (!silent) toast(i18n.isEnglish() ? "Enter a note title." : "请输入笔记标题。", "error");
+      return null;
+    }
+    var contentHtml = richText.sanitizeHtml(
+      dom["note-editor"].innerHTML,
+      richText.MAX_NOTE_TEXT
+    );
+    var contentText = richText.plainText(contentHtml);
+    if (contentText.length > richText.MAX_NOTE_TEXT) {
+      toast(i18n.isEnglish() ? "The note is too long." : "笔记内容过长。", "error");
+      return null;
+    }
+    var stamp = new Date().toISOString();
+    var note = getNote(ui.selectedNoteId);
+    if (note) {
+      note.title = title;
+      note.contentHtml = contentHtml;
+      note.contentText = contentText;
+      note.updatedAt = stamp;
+    } else {
+      note = {
+        id: utils.uid("note"),
+        title: title,
+        contentHtml: contentHtml,
+        contentText: contentText,
+        conversions: [],
+        createdAt: stamp,
+        updatedAt: stamp
+      };
+      data.notes.push(note);
+    }
+    ui.selectedNoteId = note.id;
+    ui.noteIsNew = false;
+    ui.noteDirty = false;
+    if (!persistAndRender(silent ? "" : i18n.isEnglish() ? "Note saved" : "笔记已保存")) {
+      ui.noteDirty = true;
+      return null;
+    }
+    return getNote(note.id);
+  }
+
+  function ensureCurrentNoteSaved() {
+    var note = getNote(ui.selectedNoteId);
+    if (!note || ui.noteDirty || ui.noteIsNew) note = saveCurrentNote(true);
+    return note;
+  }
+
+  function deleteCurrentNote() {
+    var note = getNote(ui.selectedNoteId);
+    if (!note) return;
+    if (!confirmAction("确认删除笔记「" + note.title + "」？已转换的 Task 和进度记录不会删除。")) return;
+    if (!confirmAction("请再次确认删除这条笔记。删除后无法恢复。")) return;
+    data.notes = data.notes.filter(function (item) { return item.id !== note.id; });
+    ui.selectedNoteId = null;
+    ui.noteDirty = false;
+    ui.noteIsNew = false;
+    persistAndRender(i18n.isEnglish() ? "Note deleted" : "笔记已删除");
+  }
+
+  function populateNoteProgressRelations() {
+    var groupSelect = dom["note-progress-group"];
+    if (!groupSelect.options.length) {
+      getSortedGroups().forEach(function (group) {
+        var option = utils.el("option", "", group.name);
+        option.value = group.id;
+        groupSelect.appendChild(option);
+      });
+    }
+    var groupId = groupSelect.value;
+    var flowSelect = utils.clear(dom["note-progress-flow"]);
+    var all = utils.el("option", "", i18n.isEnglish() ? "All Flows" : "全部 Flow");
+    all.value = "all";
+    flowSelect.appendChild(all);
+    var standalone = utils.el("option", "", i18n.isEnglish() ? "No Flow" : "未加入 Flow");
+    standalone.value = "none";
+    flowSelect.appendChild(standalone);
+    getSortedFlows(groupId).forEach(function (flow) {
+      var option = utils.el("option", "", flow.name);
+      option.value = flow.id;
+      flowSelect.appendChild(option);
+    });
+    populateNoteProgressTasks();
+  }
+
+  function populateNoteProgressTasks() {
+    var groupId = dom["note-progress-group"].value;
+    var flowId = dom["note-progress-flow"].value || "all";
+    var select = utils.clear(dom["note-progress-task"]);
+    var tasks = data.tasks
+      .filter(function (task) {
+        if (task.groupId !== groupId) return false;
+        if (flowId === "none") return !task.flowId;
+        return flowId === "all" || task.flowId === flowId;
+      })
+      .slice()
+      .sort(function (left, right) {
+        return left.name.localeCompare(right.name, i18n.locale(), { numeric: true });
+      });
+    tasks.forEach(function (task) {
+      var option = utils.el("option", "", task.name + " · DDL " + task.ddl);
+      option.value = task.id;
+      select.appendChild(option);
+    });
+    dom["note-progress-task-help"].textContent = tasks.length
+      ? i18n.isEnglish()
+        ? tasks.length + " Tasks available"
+        : "可选择 " + tasks.length + " 个 Task"
+      : i18n.isEnglish()
+        ? "No Tasks are available under the selected scope."
+        : "当前范围下没有可选择的 Task。";
+  }
+
+  function openNoteProgressDialog() {
+    var note = ensureCurrentNoteSaved();
+    if (!note) return;
+    if (!data.tasks.length) {
+      toast(i18n.isEnglish() ? "Create a Task before adding a progress record." : "请先创建 Task，再添加进度记录。", "warning");
+      return;
+    }
+    utils.clear(dom["note-progress-group"]);
+    dom["note-progress-context"].textContent = note.title + (i18n.isEnglish() ? " · A new timestamped record will be appended." : " · 将按当前时间新增一条独立记录。" );
+    dom["note-progress-preview"].innerHTML = note.contentHtml || richText.fromPlainText(note.contentText);
+    populateNoteProgressRelations();
+    dom["note-progress-dialog"].showModal();
+  }
+
+  function updateTaskProgressAliases(task) {
+    var latest = richText.latestProgressEntry(task);
+    task.progressNote = latest ? latest.contentText : "";
+    task.progressUpdatedAt = latest ? latest.updatedAt : null;
+  }
+
+  function convertNoteToProgress(event) {
+    event.preventDefault();
+    var note = getNote(ui.selectedNoteId);
+    var task = getTask(dom["note-progress-task"].value);
+    if (!note || !task) {
+      toast(i18n.isEnglish() ? "Select a valid Task." : "请选择有效 Task。", "error");
+      return;
+    }
+    var stamp = new Date().toISOString();
+    var entry = storage.normalizeProgressEntry({
+      id: utils.uid("progress"),
+      contentHtml: note.contentHtml,
+      contentText: note.contentText,
+      sourceType: "quick-note",
+      sourceNoteId: note.id,
+      createdAt: stamp,
+      updatedAt: stamp
+    });
+    task.progressEntries = (task.progressEntries || []).concat(entry);
+    updateTaskProgressAliases(task);
+    task.updatedAt = stamp;
+    note.conversions.push({
+      id: utils.uid("conversion"),
+      type: "progress",
+      taskIds: [task.id],
+      progressEntryIds: [entry.id],
+      skippedCount: 0,
+      createdAt: stamp
+    });
+    note.updatedAt = stamp;
+    if (persistAndRender(i18n.isEnglish() ? "Progress record added" : "已新增一条 Task 进度记录")) {
+      dom["note-progress-dialog"].close();
+    }
+  }
+
+  function taskDraftParserContext() {
+    return {
+      groups: data.groups,
+      flows: data.flows,
+      reportToValues: collectTaskSuggestionValues("reportTo"),
+      managedObjectValues: collectTaskSuggestionValues("managedObject"),
+      referenceDate: new Date()
+    };
+  }
+
+  function prepareTaskDraftCandidate(parsed) {
+    return Object.assign({}, parsed || {}, {
+      id: utils.uid("candidate"),
+      status: "pending",
+      taskId: null,
+      form: null,
+      recognizedFields: Array.isArray(parsed && parsed.recognizedFields)
+        ? parsed.recognizedFields.slice()
+        : [],
+      suggestions: Array.isArray(parsed && parsed.suggestions)
+        ? parsed.suggestions.slice()
+        : []
+    });
+  }
+
+  function startNoteTaskConversion() {
+    var note = ensureCurrentNoteSaved();
+    if (!note) return;
+    if (!data.groups.length) {
+      toast(i18n.isEnglish() ? "Create a Group before converting the note." : "请先创建分组，再转换 Task 草稿。", "warning");
+      return;
+    }
+    var parsed = taskDraftParser.parse(note.contentText, taskDraftParserContext());
+    ui.taskDraftConversion = {
+      noteId: note.id,
+      currentIndex: 0,
+      candidates: parsed.map(prepareTaskDraftCandidate),
+      createdTaskIds: [],
+      startedAt: new Date().toISOString()
+    };
+    dom["task-dialog"].classList.add("is-note-conversion");
+    dom["task-draft-source-pane"].hidden = false;
+    dom["task-draft-conversion-bar"].hidden = false;
+    dom["task-draft-recognition"].hidden = false;
+    dom["task-draft-skip-button"].hidden = false;
+    dom["task-draft-complete-button"].hidden = false;
+    dom["task-draft-source-title"].textContent = note.title;
+    dom["task-draft-source-content"].innerHTML = note.contentHtml;
+    dom["task-dialog-cancel-button"].textContent = i18n.isEnglish() ? "Exit Conversion" : "退出转换";
+    loadTaskDraftCandidate(0);
+    dom["task-dialog"].showModal();
+  }
+
+  function currentTaskDraftCandidate() {
+    var conversion = ui.taskDraftConversion;
+    return conversion ? conversion.candidates[conversion.currentIndex] : null;
+  }
+
+  function captureTaskDraftForm() {
+    var candidate = currentTaskDraftCandidate();
+    if (!candidate) return;
+    candidate.form = {
+      taskName: dom["task-name"].value,
+      groupId: dom["task-group"].value,
+      flowId: dom["task-flow"].value === "__new_flow__" ? "" : dom["task-flow"].value,
+      ddl: dom["task-ddl"].value,
+      recurrenceCadence: dom["task-recurrence"].value,
+      recurrenceStart: dom["task-recurrence-start"].value,
+      recurrenceEnd: dom["task-recurrence-end"].value,
+      urgency: dom["task-urgency"].value,
+      reportTo: dom["task-report-to"].value,
+      managedObject: dom["task-managed-object"].value,
+      deliverable: dom["task-deliverable"].value,
+      materials: utils.clone(ui.taskDraftMaterials)
+    };
+  }
+
+  function taskDraftFormSource(candidate) {
+    if (candidate.taskId) {
+      var task = getTask(candidate.taskId);
+      if (task) {
+        return {
+          taskName: task.name,
+          groupId: task.groupId,
+          flowId: task.flowId || "",
+          ddl: task.ddl,
+          recurrenceCadence: dates.recurrenceCadence(task),
+          recurrenceStart: task.recurrenceStart || "",
+          recurrenceEnd: task.recurrenceEnd || "",
+          urgency: task.urgency,
+          reportTo: task.reportTo,
+          managedObject: task.managedObject,
+          deliverable: task.deliverable,
+          materials: utils.clone(getTaskMaterials(task.id))
+        };
+      }
+    }
+    return candidate.form || {
+      taskName: candidate.taskName || "",
+      groupId: candidate.groupId || "",
+      flowId: candidate.flowId || "",
+      ddl: candidate.ddl || "",
+      recurrenceCadence: candidate.recurrenceCadence || "none",
+      recurrenceStart: candidate.recurrenceStart || "",
+      recurrenceEnd: candidate.recurrenceEnd || "",
+      urgency: candidate.urgency || "",
+      reportTo: candidate.reportTo || "",
+      managedObject: candidate.managedObject || "",
+      deliverable: candidate.deliverable || "",
+      materials: []
+    };
+  }
+
+  function loadTaskDraftCandidate(index) {
+    var conversion = ui.taskDraftConversion;
+    if (!conversion || !conversion.candidates.length) return;
+    conversion.currentIndex = Math.max(0, Math.min(index, conversion.candidates.length - 1));
+    var candidate = currentTaskDraftCandidate();
+    var source = taskDraftFormSource(candidate);
+    clearFieldErrors(dom["task-form"]);
+    dom["task-dialog-title"].textContent = candidate.taskId
+      ? i18n.isEnglish()
+        ? "Review Created Task"
+        : "复核已创建 Task"
+      : i18n.isEnglish()
+        ? "Confirm Task Draft"
+        : "确认 Task 草稿";
+    dom["task-id"].value = candidate.taskId || "";
+    dom["task-name"].value = source.taskName;
+    var validGroup = getGroup(source.groupId);
+    populateTaskGroupSelect(validGroup ? source.groupId : "", true);
+    populateTaskFlowSelect(validGroup ? source.groupId : "", source.flowId);
+    dom["task-ddl"].value = source.ddl;
+    dom["task-recurrence"].value = ["none", "weekly", "monthly"].includes(source.recurrenceCadence)
+      ? source.recurrenceCadence
+      : "none";
+    dom["task-recurrence-start"].value = source.recurrenceStart;
+    dom["task-recurrence-end"].value = source.recurrenceEnd;
+    dom["task-urgency"].value = source.urgency;
+    dom["task-status"].value = "pending";
+    dom["task-completed-at"].value = "";
+    syncTaskRecurrenceFields();
+    dom["task-report-to"].value = source.reportTo;
+    dom["task-managed-object"].value = source.managedObject;
+    dom["task-deliverable"].value = source.deliverable;
+    dom["task-delete-button"].hidden = true;
+    ui.taskDraftMaterials = utils.clone(source.materials || []);
+    renderDraftMaterials();
+    dom["task-save-button"].textContent = candidate.taskId
+      ? i18n.isEnglish()
+        ? "Update & Continue"
+        : "更新并继续"
+      : i18n.isEnglish()
+        ? "Save & Continue"
+        : "保存并继续";
+    renderTaskDraftConversionState();
+    setTimeout(function () { dom["task-name"].focus(); }, 0);
+  }
+
+  function taskDraftFieldLabel(field) {
+    var labels = i18n.isEnglish()
+      ? {
+          taskName: "Task Name", group: "Group", flow: "Flow", ddl: "DDL",
+          recurrence: "Recurrence", urgency: "Urgency", reportTo: "Report To",
+          managedObject: "Managed Person", deliverable: "Deliverable"
+        }
+      : {
+          taskName: "Task name", group: "分组", flow: "Flow", ddl: "DDL",
+          recurrence: "周期", urgency: "紧急程度", reportTo: "汇报对象",
+          managedObject: "管理对象", deliverable: "交付物"
+        };
+    return labels[field] || field;
+  }
+
+  function renderTaskDraftRecognition(candidate) {
+    var recognized = (candidate.recognizedFields || []).map(taskDraftFieldLabel);
+    var messages = [];
+    if (recognized.length) {
+      messages.push(
+        (i18n.isEnglish() ? "Prefilled: " : "已预填：") + recognized.join("、")
+      );
+    } else {
+      messages.push(
+        i18n.isEnglish()
+          ? "No reliable fields were detected. Complete the required fields manually."
+          : "未识别到可可靠预填的字段，请根据原笔记补充必填信息。"
+      );
+    }
+    (candidate.suggestions || []).forEach(function (suggestion) {
+      if (suggestion.field === "ddlCalculated") {
+        messages.push(
+          i18n.isEnglish()
+            ? "Calculated date “" + suggestion.value + "” from “" + suggestion.source + "”; please confirm."
+            : "根据“" + suggestion.source + "”推算日期为 " + suggestion.value + "，请确认。"
+        );
+      } else {
+        messages.push(
+          (i18n.isEnglish() ? "Possible " : "可能的") +
+            taskDraftFieldLabel(suggestion.field) +
+            (i18n.isEnglish() ? ": " : "：") +
+            suggestion.value +
+            (i18n.isEnglish() ? " (not auto-filled)" : "（未自动填入）")
+        );
+      }
+    });
+    dom["task-draft-recognition"].textContent = messages.join(" · ");
+  }
+
+  function renderTaskDraftConversionState() {
+    var conversion = ui.taskDraftConversion;
+    if (!conversion) return;
+    var candidate = currentTaskDraftCandidate();
+    var counts = conversion.candidates.reduce(
+      function (result, item) {
+        result[item.status] = (result[item.status] || 0) + 1;
+        return result;
+      },
+      { pending: 0, saved: 0, skipped: 0 }
+    );
+    dom["task-draft-position"].textContent = i18n.isEnglish()
+      ? "Detected " + conversion.candidates.length + " potential Tasks · Editing " + (conversion.currentIndex + 1)
+      : "识别到 " + conversion.candidates.length + " 个潜在 Task，正在编辑第 " + (conversion.currentIndex + 1) + " 个";
+    dom["task-draft-status-summary"].textContent = i18n.isEnglish()
+      ? counts.pending + " pending · " + counts.saved + " saved · " + counts.skipped + " skipped"
+      : counts.pending + " 个待处理 · " + counts.saved + " 个已保存 · " + counts.skipped + " 个已跳过";
+    var navButtons = queryAll(".task-draft-nav-actions button", dom["task-draft-conversion-bar"]);
+    if (navButtons[0]) navButtons[0].disabled = conversion.currentIndex === 0;
+    if (navButtons[1]) navButtons[1].disabled = conversion.currentIndex === conversion.candidates.length - 1;
+    dom["task-draft-skip-button"].disabled = candidate.status === "saved";
+    dom["task-draft-skip-button"].textContent = candidate.status === "saved"
+      ? i18n.isEnglish()
+        ? "Saved"
+        : "已保存"
+      : candidate.status === "skipped"
+        ? i18n.isEnglish()
+          ? "Restore This Draft"
+          : "恢复此草稿"
+        : i18n.isEnglish()
+          ? "Skip This Draft"
+          : "跳过此项";
+    dom["task-draft-complete-button"].disabled = counts.pending > 0;
+    renderTaskDraftRecognition(candidate);
+  }
+
+  function moveTaskDraftCandidate(direction) {
+    var conversion = ui.taskDraftConversion;
+    if (!conversion) return;
+    captureTaskDraftForm();
+    loadTaskDraftCandidate(conversion.currentIndex + direction);
+  }
+
+  function selectedTaskDraftSourceText() {
+    var selection = window.getSelection && window.getSelection();
+    if (!selection || selection.isCollapsed || !selection.rangeCount) return "";
+    var range = selection.getRangeAt(0);
+    return dom["task-draft-source-content"].contains(range.commonAncestorContainer)
+      ? selection.toString().trim()
+      : "";
+  }
+
+  function addTaskDraftCandidate() {
+    var conversion = ui.taskDraftConversion;
+    if (!conversion) return;
+    captureTaskDraftForm();
+    var selectedText = selectedTaskDraftSourceText();
+    var parsed = taskDraftParser.parseSingle(selectedText, taskDraftParserContext());
+    if (!selectedText) {
+      parsed.sourceText = "";
+      parsed.taskName = "";
+      parsed.groupId = "";
+      parsed.groupName = "";
+      parsed.flowId = "";
+      parsed.flowName = "";
+      parsed.ddl = "";
+      parsed.recurrenceCadence = "none";
+      parsed.recurrenceStart = "";
+      parsed.recurrenceEnd = "";
+      parsed.urgency = "";
+      parsed.reportTo = "";
+      parsed.managedObject = "";
+      parsed.deliverable = "";
+      parsed.recognizedFields = [];
+      parsed.suggestions = [];
+    }
+    conversion.candidates.push(prepareTaskDraftCandidate(parsed));
+    loadTaskDraftCandidate(conversion.candidates.length - 1);
+    toast(
+      selectedText
+        ? i18n.isEnglish()
+          ? "A Task draft was added from the selected text."
+          : "已根据选中的原文增加 Task 草稿。"
+        : i18n.isEnglish()
+          ? "A blank Task draft was added."
+          : "已增加一个空白 Task 草稿。"
+    );
+  }
+
+  function skipTaskDraftCandidate() {
+    var conversion = ui.taskDraftConversion;
+    var candidate = currentTaskDraftCandidate();
+    if (!conversion || !candidate) return;
+    captureTaskDraftForm();
+    candidate.status = candidate.status === "skipped" ? "pending" : "skipped";
+    if (candidate.status === "skipped") {
+      var nextPending = conversion.candidates.findIndex(function (item, index) {
+        return index > conversion.currentIndex && item.status === "pending";
+      });
+      if (nextPending >= 0) {
+        loadTaskDraftCandidate(nextPending);
+        return;
+      }
+    }
+    renderTaskDraftConversionState();
+  }
+
+  function nextPendingTaskDraftIndex() {
+    var conversion = ui.taskDraftConversion;
+    if (!conversion) return -1;
+    for (var index = conversion.currentIndex + 1; index < conversion.candidates.length; index += 1) {
+      if (conversion.candidates[index].status === "pending") return index;
+    }
+    for (var previous = 0; previous < conversion.currentIndex; previous += 1) {
+      if (conversion.candidates[previous].status === "pending") return previous;
+    }
+    return -1;
+  }
+
+  function resetTaskDraftConversionUi() {
+    ui.taskDraftConversion = null;
+    dom["task-dialog"].classList.remove("is-note-conversion");
+    dom["task-draft-source-pane"].hidden = true;
+    dom["task-draft-conversion-bar"].hidden = true;
+    dom["task-draft-recognition"].hidden = true;
+    dom["task-draft-skip-button"].hidden = true;
+    dom["task-draft-skip-button"].disabled = false;
+    dom["task-draft-complete-button"].hidden = true;
+    dom["task-dialog-cancel-button"].textContent = i18n.isEnglish() ? "Cancel" : "取消";
+    dom["task-save-button"].textContent = i18n.isEnglish() ? "Save Task" : "保存 Task";
+  }
+
+  function completeTaskDraftConversion() {
+    var conversion = ui.taskDraftConversion;
+    if (!conversion) return;
+    var pending = conversion.candidates.filter(function (candidate) { return candidate.status === "pending"; });
+    if (pending.length) {
+      toast(
+        i18n.isEnglish()
+          ? "Save or skip every Task draft before completing the conversion."
+          : "请先保存或明确跳过全部 Task 草稿。",
+        "warning"
+      );
+      return;
+    }
+    var note = getNote(conversion.noteId);
+    var stamp = new Date().toISOString();
+    if (note) {
+      note.conversions.push({
+        id: utils.uid("conversion"),
+        type: "task",
+        taskIds: conversion.createdTaskIds.slice(),
+        progressEntryIds: [],
+        skippedCount: conversion.candidates.filter(function (candidate) { return candidate.status === "skipped"; }).length,
+        createdAt: stamp
+      });
+      note.updatedAt = stamp;
+    }
+    dom["task-dialog"].close();
+    resetTaskDraftConversionUi();
+    persistAndRender(
+      i18n.isEnglish()
+        ? "Task draft conversion completed"
+        : "Task 草稿转换已完成"
+    );
+  }
+
+  function requestCloseTaskDialog() {
+    if (ui.taskDraftConversion) {
+      var created = ui.taskDraftConversion.createdTaskIds.length;
+      var message = created
+        ? "退出后，已保存的 " + created + " 个 Task 会保留，其余草稿不会创建。确认退出？"
+        : "Task 草稿转换尚未完成，确认退出？";
+      if (!confirmAction(message)) return;
+      resetTaskDraftConversionUi();
+    }
+    dom["task-dialog"].close();
+  }
+
+  function handleTaskDialogCancel(event) {
+    event.preventDefault();
+    requestCloseTaskDialog();
   }
 
   function openNewGroup() {
@@ -4011,8 +5096,18 @@
     persistAndRender("分组及其中 Flow、Task 已删除");
   }
 
-  function populateTaskGroupSelect(selectedId) {
+  function populateTaskGroupSelect(selectedId, allowBlank) {
     var select = utils.clear(dom["task-group"]);
+    if (allowBlank) {
+      var placeholder = utils.el(
+        "option",
+        "",
+        i18n.isEnglish() ? "Select a Group" : "请选择分组"
+      );
+      placeholder.value = "";
+      placeholder.selected = !selectedId;
+      select.appendChild(placeholder);
+    }
     getSortedGroups().forEach(function (group) {
       var option = utils.el("option", "", group.name);
       option.value = group.id;
@@ -4138,6 +5233,7 @@
   }
 
   function openNewTask() {
+    if (ui.taskDraftConversion) resetTaskDraftConversionUi();
     if (!data.groups.length) {
       toast("请先新建一个分组，再创建 Task。", "warning");
       openNewGroup();
@@ -4176,6 +5272,7 @@
   }
 
   function openEditTask(taskId) {
+    if (ui.taskDraftConversion) resetTaskDraftConversionUi();
     var task = getTask(taskId);
     if (!task) return;
     clearFieldErrors(dom["task-form"]);
@@ -4543,6 +5640,7 @@
       }),
       progressNote: existing ? existing.progressNote : "",
       progressUpdatedAt: existing ? existing.progressUpdatedAt : null,
+      progressEntries: existing ? utils.clone(existing.progressEntries || []) : [],
       createdAt: existing ? existing.createdAt : stamp,
       updatedAt: stamp
     };
@@ -4556,7 +5654,30 @@
     }
     reconcileTaskMaterials(task.id, materialResult.materials, stamp);
     if (persistAndRender(existing ? "Task 已更新" : "Task 已创建")) {
-      dom["task-dialog"].close();
+      if (ui.taskDraftConversion) {
+        var candidate = currentTaskDraftCandidate();
+        if (candidate) {
+          candidate.taskId = task.id;
+          candidate.status = "saved";
+          candidate.form = null;
+          if (!ui.taskDraftConversion.createdTaskIds.includes(task.id)) {
+            ui.taskDraftConversion.createdTaskIds.push(task.id);
+          }
+        }
+        var nextIndex = nextPendingTaskDraftIndex();
+        if (nextIndex >= 0) {
+          loadTaskDraftCandidate(nextIndex);
+        } else {
+          renderTaskDraftConversionState();
+          toast(
+            i18n.isEnglish()
+              ? "Every draft is resolved. Review them or select Complete Conversion."
+              : "所有草稿均已处理，可复核后点击“完成转换”。"
+          );
+        }
+      } else {
+        dom["task-dialog"].close();
+      }
     }
     ui.isSavingTask = false;
     dom["task-save-button"].disabled = false;
@@ -4606,24 +5727,20 @@
     var task = getTask(taskId);
     if (!task) return;
     ui.managedProgressTaskId = taskId;
+    ui.managedProgressEntryId = null;
+    ui.progressDraftEntry = null;
+    ui.progressDirty = false;
     dom["progress-dialog-task"].textContent =
       task.name +
       (i18n.isEnglish()
-        ? " · Record current progress, blockers, or next steps"
-        : " · 自由记录当前进展、阻塞事项或下一步计划");
-    dom["progress-note"].value = task.progressNote || "";
-    dom["progress-dialog-updated"].textContent = task.progressUpdatedAt
-      ? (i18n.isEnglish() ? "Last updated: " : "最后更新：") +
-        formatProgressTimestamp(task.progressUpdatedAt)
-      : i18n.isEnglish() ? "No progress recorded" : "尚未记录进度";
-    updateProgressCharacterCount();
+        ? " · Each update is stored as an independent timestamped record"
+        : " · 每次更新都保存为一条独立的时间戳记录");
+    var latest = richText.latestProgressEntry(task);
+    if (latest) loadProgressEntry(latest.id);
+    else prepareNewProgressEntry();
     dom["progress-dialog"].showModal();
     setTimeout(function () {
       dom["progress-note"].focus();
-      dom["progress-note"].setSelectionRange(
-        dom["progress-note"].value.length,
-        dom["progress-note"].value.length
-      );
     }, 0);
   }
 
@@ -4640,11 +5757,132 @@
   }
 
   function updateProgressCharacterCount() {
+    var length = richText.plainText(dom["progress-note"].innerHTML).length;
     dom["progress-character-count"].textContent =
-      dom["progress-note"].value.length + " / 4000";
+      length + " / " + richText.MAX_PROGRESS_TEXT;
+    dom["progress-character-count"].style.color =
+      length > richText.MAX_PROGRESS_TEXT ? "var(--coral)" : "";
   }
 
-  function saveProgressNote(event) {
+  function progressEntrySourceLabel(entry) {
+    if (!entry) return "";
+    if (entry.sourceType === "quick-note") {
+      var note = getNote(entry.sourceNoteId);
+      return i18n.isEnglish()
+        ? "From Quick Notes" + (note ? ": " + note.title : "")
+        : "来自随手记" + (note ? "：“" + note.title + "”" : "");
+    }
+    if (entry.sourceType === "excel-import") return i18n.isEnglish() ? "Imported from Excel" : "从 Excel 导入";
+    if (entry.sourceType === "legacy") return i18n.isEnglish() ? "Migrated from an earlier version" : "由旧版进度迁移";
+    return i18n.isEnglish() ? "Manual record" : "手动记录";
+  }
+
+  function renderProgressEntryList() {
+    var task = getTask(ui.managedProgressTaskId);
+    var container = utils.clear(dom["progress-entry-list"]);
+    if (!task) return;
+    var entries = richText.sortProgressEntries(task.progressEntries || []);
+    if (ui.progressDraftEntry && !ui.managedProgressEntryId) {
+      var draftButton = utils.el("button", "progress-entry-item is-active");
+      draftButton.type = "button";
+      draftButton.append(
+        utils.el("strong", "", i18n.isEnglish() ? "New record" : "新记录"),
+        utils.el("small", "", i18n.isEnglish() ? "Not saved" : "尚未保存")
+      );
+      container.appendChild(draftButton);
+    }
+    entries.forEach(function (entry) {
+      var button = utils.el(
+        "button",
+        "progress-entry-item" + (entry.id === ui.managedProgressEntryId ? " is-active" : "")
+      );
+      button.type = "button";
+      button.dataset.action = "select-progress-entry";
+      button.dataset.progressEntryId = entry.id;
+      button.dataset.userContent = "";
+      button.append(
+        utils.el("strong", "", entry.contentText.replace(/\s+/g, " ").slice(0, 54)),
+        utils.el("small", "", formatProgressTimestamp(entry.updatedAt || entry.createdAt))
+      );
+      container.appendChild(button);
+    });
+    if (!entries.length && !ui.progressDraftEntry) {
+      container.appendChild(
+        utils.el(
+          "p",
+          "progress-entry-list-empty",
+          i18n.isEnglish()
+            ? "No progress history yet. Select New Record to begin."
+            : "暂无进度历史，点击“新建记录”开始。"
+        )
+      );
+    }
+  }
+
+  function showProgressDraft(entry, existingId) {
+    ui.managedProgressEntryId = existingId || null;
+    ui.progressDraftEntry = utils.clone(entry);
+    ui.progressDirty = false;
+    dom["progress-note"].innerHTML = entry.contentHtml || "";
+    dom["progress-dialog-updated"].textContent = existingId
+      ? (i18n.isEnglish() ? "Created: " : "创建：") +
+        formatProgressTimestamp(entry.createdAt) +
+        " · " +
+        (i18n.isEnglish() ? "Last updated: " : "最后编辑：") +
+        formatProgressTimestamp(entry.updatedAt) +
+        " · " +
+        progressEntrySourceLabel(entry)
+      : i18n.isEnglish()
+        ? "New record · not saved"
+        : "新记录 · 尚未保存";
+    dom["progress-delete-button"].hidden = !existingId;
+    updateProgressCharacterCount();
+    renderProgressEntryList();
+  }
+
+  function loadProgressEntry(entryId) {
+    var task = getTask(ui.managedProgressTaskId);
+    var entry = task && (task.progressEntries || []).find(function (item) { return item.id === entryId; });
+    if (!entry) return;
+    showProgressDraft(entry, entry.id);
+  }
+
+  function prepareNewProgressEntry() {
+    var stamp = new Date().toISOString();
+    showProgressDraft(
+      {
+        id: utils.uid("progress"),
+        contentHtml: "",
+        contentText: "",
+        sourceType: "manual",
+        sourceNoteId: null,
+        createdAt: stamp,
+        updatedAt: stamp
+      },
+      null
+    );
+  }
+
+  function confirmDiscardProgressChanges() {
+    return (
+      !ui.progressDirty ||
+      confirmAction("当前进度记录尚未保存，继续后修改会丢失。仍要继续吗？")
+    );
+  }
+
+  function selectProgressEntry(entryId) {
+    if (entryId === ui.managedProgressEntryId) return;
+    if (!confirmDiscardProgressChanges()) return;
+    loadProgressEntry(entryId);
+  }
+
+  function newProgressEntry() {
+    if (!confirmDiscardProgressChanges()) return;
+    prepareNewProgressEntry();
+    setTimeout(function () { dom["progress-note"].focus(); }, 0);
+  }
+
+  function saveProgressEntry(event) {
     event.preventDefault();
     var task = getTask(ui.managedProgressTaskId);
     if (!task) {
@@ -4652,15 +5890,83 @@
       return;
     }
     dom["progress-save-button"].disabled = true;
-    var note = dom["progress-note"].value.trim().slice(0, 4000);
+    var contentHtml = richText.sanitizeHtml(
+      dom["progress-note"].innerHTML,
+      richText.MAX_PROGRESS_TEXT
+    );
+    var contentText = richText.plainText(contentHtml);
+    if (!contentText) {
+      toast(i18n.isEnglish() ? "Enter progress content." : "请输入进度内容。", "error");
+      dom["progress-save-button"].disabled = false;
+      return;
+    }
+    if (contentText.length > richText.MAX_PROGRESS_TEXT) {
+      toast(i18n.isEnglish() ? "The progress record is too long." : "进度记录内容过长。", "error");
+      dom["progress-save-button"].disabled = false;
+      return;
+    }
     var stamp = new Date().toISOString();
-    task.progressNote = note;
-    task.progressUpdatedAt = note ? stamp : null;
+    var existing = ui.managedProgressEntryId
+      ? (task.progressEntries || []).find(function (entry) {
+          return entry.id === ui.managedProgressEntryId;
+        })
+      : null;
+    var entry = storage.normalizeProgressEntry({
+      id: existing ? existing.id : ui.progressDraftEntry.id,
+      contentHtml: contentHtml,
+      contentText: contentText,
+      sourceType: existing ? existing.sourceType : "manual",
+      sourceNoteId: existing ? existing.sourceNoteId : null,
+      createdAt: existing ? existing.createdAt : stamp,
+      updatedAt: stamp
+    });
+    if (existing) {
+      task.progressEntries[task.progressEntries.indexOf(existing)] = entry;
+    } else {
+      task.progressEntries = (task.progressEntries || []).concat(entry);
+    }
+    updateTaskProgressAliases(task);
     task.updatedAt = stamp;
-    if (persistAndRender(note ? "进度记录已保存" : "进度记录已清空")) {
+    ui.progressDirty = false;
+    var saved = ui.view === "timeline"
+      ? persistAndRenderTimelineAction("task", task.id, "进度记录已保存")
+      : persistAndRender("进度记录已保存");
+    if (saved) {
       dom["progress-dialog"].close();
     }
     dom["progress-save-button"].disabled = false;
+  }
+
+  function deleteProgressEntry() {
+    var task = getTask(ui.managedProgressTaskId);
+    var entry = task && (task.progressEntries || []).find(function (item) {
+      return item.id === ui.managedProgressEntryId;
+    });
+    if (!entry) return;
+    if (!confirmAction("确认删除当前这条进度记录？")) return;
+    if (!confirmAction("请再次确认。删除后无法恢复。")) return;
+    task.progressEntries = task.progressEntries.filter(function (item) { return item.id !== entry.id; });
+    updateTaskProgressAliases(task);
+    task.updatedAt = new Date().toISOString();
+    ui.progressDirty = false;
+    var saved = ui.view === "timeline"
+      ? persistAndRenderTimelineAction("task", task.id, "进度记录已删除")
+      : persistAndRender("进度记录已删除");
+    if (!saved) return;
+    var latest = richText.latestProgressEntry(getTask(task.id));
+    if (latest) loadProgressEntry(latest.id);
+    else prepareNewProgressEntry();
+  }
+
+  function requestCloseProgressDialog() {
+    if (!confirmDiscardProgressChanges()) return;
+    ui.progressDirty = false;
+    dom["progress-dialog"].close();
+  }
+
+  function handleProgressDialogCancel(event) {
+    event.preventDefault();
+    requestCloseProgressDialog();
   }
 
   function openLinkManager(taskId) {
@@ -5647,6 +6953,57 @@
     };
   }
 
+  function importedProgressEntries(row, existing, stamp) {
+    var supplied = Array.isArray(row && row.progressEntries)
+      ? row.progressEntries
+      : [];
+    if (supplied.length) {
+      return supplied
+        .map(function (entry) {
+          return storage.normalizeProgressEntry(entry, {
+            createdAt: stamp,
+            updatedAt: stamp,
+            sourceType: "excel-import"
+          });
+        })
+        .filter(Boolean);
+    }
+
+    var aggregate = richText.normalizePlainText(row && row.progressNote, 32767);
+    if (!aggregate) return [];
+    if (
+      existing &&
+      Array.isArray(existing.progressEntries) &&
+      existing.progressEntries.length &&
+      richText.normalizePlainText(existing.progressNote, 32767) === aggregate
+    ) {
+      return utils.clone(existing.progressEntries);
+    }
+    return [
+      storage.normalizeProgressEntry(
+        {
+          id: utils.uid("progress"),
+          contentHtml: richText.fromPlainText(aggregate),
+          contentText: aggregate,
+          sourceType: "excel-import",
+          createdAt: stamp,
+          updatedAt: stamp
+        },
+        stamp
+      )
+    ].filter(Boolean);
+  }
+
+  function importedProgressState(row, existing, stamp) {
+    var entries = importedProgressEntries(row, existing, stamp);
+    var latest = richText.latestProgressEntry(entries);
+    return {
+      progressEntries: entries,
+      progressNote: latest ? latest.contentText : "",
+      progressUpdatedAt: latest ? latest.updatedAt : null
+    };
+  }
+
   function appendExcelRows(rows) {
     var stamp = new Date().toISOString();
     var groupByName = new Map();
@@ -5752,6 +7109,7 @@
         );
       }
       var recurrence = importedRecurrenceState(row, null);
+      var progress = importedProgressState(row, null, stamp);
       var importedTask = {
         id: utils.uid("task"),
         groupId: group.id,
@@ -5769,8 +7127,9 @@
         recurrenceStart: recurrence.recurrenceStart,
         recurrenceEnd: recurrence.recurrenceEnd,
         recurrenceCompletions: recurrence.recurrenceCompletions,
-        progressNote: row.progressNote,
-        progressUpdatedAt: row.progressNote ? stamp : null,
+        progressEntries: progress.progressEntries,
+        progressNote: progress.progressNote,
+        progressUpdatedAt: progress.progressUpdatedAt,
         createdAt: stamp,
         updatedAt: stamp
       };
@@ -5894,6 +7253,7 @@
       );
       var existing = queue && queue.length ? queue.shift() : null;
       var recurrence = importedRecurrenceState(row, existing);
+      var progress = importedProgressState(row, existing, stamp);
       var flowOrder = null;
       if (flow) {
         flowOrder = row.flowOrder || (maxTaskOrderByFlow.get(flow.id) || 0) + 1;
@@ -5919,14 +7279,9 @@
         recurrenceStart: recurrence.recurrenceStart,
         recurrenceEnd: recurrence.recurrenceEnd,
         recurrenceCompletions: recurrence.recurrenceCompletions,
-        progressNote: row.progressNote,
-        progressUpdatedAt: row.progressNote
-          ? existing &&
-            existing.progressNote === row.progressNote &&
-            existing.progressUpdatedAt
-            ? existing.progressUpdatedAt
-            : stamp
-          : null,
+        progressEntries: progress.progressEntries,
+        progressNote: progress.progressNote,
+        progressUpdatedAt: progress.progressUpdatedAt,
         createdAt: existing ? existing.createdAt : stamp,
         updatedAt: stamp
       });

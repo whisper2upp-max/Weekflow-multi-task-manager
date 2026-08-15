@@ -86,7 +86,7 @@ with sync_playwright() as playwright:
     page.goto(BASE_URL)
     page.wait_for_load_state("networkidle")
     page.evaluate(
-        "payload => localStorage.setItem('weekflow-v2.4:data:v3', JSON.stringify(payload))",
+        "payload => localStorage.setItem('weekflow-v2.4:data:v4', JSON.stringify(payload))",
         seed_data(),
     )
     page.evaluate("localStorage.setItem('weekflow-v2.4:language', 'en')")
@@ -172,7 +172,7 @@ with sync_playwright() as playwright:
     page.wait_for_timeout(200)
 
     preferences = page.evaluate(
-        """() => JSON.parse(localStorage.getItem('weekflow-v2.4:data:v3')).preferences.documentLibrary"""
+        """() => JSON.parse(localStorage.getItem('weekflow-v2.4:data:v4')).preferences.documentLibrary"""
     )
     assert preferences["layout"] == "group", preferences
     assert preferences["columns"] == 3, preferences
@@ -203,7 +203,7 @@ with sync_playwright() as playwright:
     page.wait_for_timeout(250)
     assert page.locator("#materials-group-section").is_visible()
     restored_preferences = page.evaluate(
-        """() => JSON.parse(localStorage.getItem('weekflow-v2.4:data:v3')).preferences.documentLibrary"""
+        """() => JSON.parse(localStorage.getItem('weekflow-v2.4:data:v4')).preferences.documentLibrary"""
     )
     assert restored_preferences == preferences
 
