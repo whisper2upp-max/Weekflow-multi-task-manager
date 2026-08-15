@@ -1,6 +1,7 @@
 /* 筛选、排序与统计的纯函数。等价原 js/stats.js。 */
 import type { Flow, Group, Summary, Task, TaskFilters } from "./types";
 import * as dates from "./date-utils";
+import { progressSearchText } from "./rich-text";
 
 function normalized(value: unknown): string {
   return String(value || "")
@@ -47,6 +48,7 @@ export function filterTasks(
         task.managedObject,
         task.deliverable,
         task.progressNote,
+        progressSearchText(task),
         task.flowId ? flowMap.get(task.flowId)?.name || "" : ""
       ]
         .map(normalized)

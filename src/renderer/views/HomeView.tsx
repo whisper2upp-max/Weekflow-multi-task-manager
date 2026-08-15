@@ -1,5 +1,5 @@
-/* 主页：hero + 动态统计胶囊 + 5 张入口卡。等价原 Weekflow.html:251-345
-   与 app.js renderHomeSummary（802-809）。文案差异：eyebrow 为「Weekflow Desktop v1.0」，
+/* 主页：hero + 动态统计胶囊 + 6 张入口卡。等价 Web v2.7 主页。
+   文案差异：eyebrow 为「Weekflow Desktop v1.1.0」，
    更新日志入口卡描述指向 Weekflow Desktop 发布内容。 */
 import * as stats from "../../shared/stats";
 import { useDataStore } from "../store/dataStore";
@@ -22,7 +22,7 @@ export default function HomeView() {
     >
       <div className="home-hero">
         <div className="home-hero-copy">
-          <p className="eyebrow">Weekflow Desktop v1.0</p>
+          <p className="eyebrow">Weekflow Desktop v1.1.0</p>
           <h1 id="home-heading">把工作拆成清晰的下一步</h1>
           <p>用分组建立工作版图，用 Flow 串起执行步骤，再用周时间轴看清每一个 DDL。</p>
           <div className="home-stats" aria-label="当前数据概览">
@@ -40,6 +40,9 @@ export default function HomeView() {
             </span>
             <span>
               <b id="home-material-total">{data ? data.materials.length : 0}</b> 资料
+            </span>
+            <span>
+              <b id="home-note-total">{data ? data.notes.length : 0}</b> 笔记
             </span>
           </div>
         </div>
@@ -122,6 +125,20 @@ export default function HomeView() {
             <small>FIND THE SOURCE</small>
             <strong>资料库</strong>
             <span>集中管理链接、关联工作并查看最近常用</span>
+          </span>
+          <span className="home-entry-arrow" aria-hidden="true">→</span>
+        </button>
+        <button
+          className="home-entry-card is-notes"
+          type="button"
+          data-view="notes"
+          onClick={() => switchView("notes")}
+        >
+          <span className="home-entry-icon" aria-hidden="true">✎</span>
+          <span className="home-entry-copy">
+            <small>CAPTURE THE MOMENT</small>
+            <strong>随手记</strong>
+            <span>记录想法，并转换为进度记录或 Task 草稿</span>
           </span>
           <span className="home-entry-arrow" aria-hidden="true">→</span>
         </button>

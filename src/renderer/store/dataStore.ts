@@ -9,6 +9,10 @@ import type {
   Group,
   Material,
   MaterialType,
+  NoteConversion,
+  ProgressEntry,
+  ProgressSourceType,
+  QuickNote,
   RecurrenceCadence,
   RecurrenceCompletion,
   Task,
@@ -21,6 +25,7 @@ import * as utils from "../../shared/utils";
 import * as dates from "../../shared/date-utils";
 import * as automation from "../../shared/automation";
 import * as materialTools from "../../shared/materials";
+import * as richText from "../../shared/rich-text";
 import type {
   ParsedLink,
   ParsedTaskRow
@@ -96,6 +101,22 @@ export interface SaveMaterialInput {
   note: string;
 }
 
+export interface SaveProgressEntryInput {
+  id?: string;
+  contentHtml: string;
+  contentText?: string;
+  sourceType?: ProgressSourceType;
+  sourceNoteId?: string | null;
+  createdAt?: string;
+}
+
+export interface SaveQuickNoteInput {
+  id?: string;
+  title: string;
+  contentHtml: string;
+  contentText?: string;
+}
+
 /** 资料库导入行（名称已解析为 id、已检测既有重复地址）。 */
 export interface ResolvedMaterialImportRow {
   sourceRow: number;
@@ -152,6 +173,16 @@ function findTask(data: WeekflowData, id: string | null | undefined): Task | und
 
 function findMaterial(data: WeekflowData, id: string): Material | undefined {
   return data.materials.find((material) => material.id === id);
+}
+
+function findNote(data: WeekflowData, id: string | null | undefined): QuickNote | undefined {
+  return id ? data.notes.find((note) => note.id === id) : undefined;
+}
+
+function syncProgressAliases(task: Task): void {
+  const latest = richText.latestProgressEntry(task.progressEntries);
+  task.progressNote = latest?.contentText || "";
+  task.progressUpdatedAt = latest?.updatedAt || null;
 }
 
 /* 等价 app.js:3625-3647 normalizeTaskSuggestionValue / collectTaskSuggestionValues */
@@ -443,6 +474,54 @@ function importedRecurrenceState(
   };
 }
 
+function importedProgressEntries(
+  row: ParsedTaskRow,
+  existing: Task | null,
+  stamp: string
+): ProgressEntry[] {
+  const supplied = Array.isArray(row.progressEntries) ? row.progressEntries : [];
+  if (supplied.length) {
+    return supplied
+      .map((entry) => schema.normalizeProgressEntry(entry, {
+        createdAt: stamp,
+        updatedAt: stamp,
+        sourceType: "excel-import"
+      }))
+      .filter((entry): entry is ProgressEntry => Boolean(entry));
+  }
+  const aggregate = richText.normalizePlainText(row.progressNote, 32767);
+  if (!aggregate) return [];
+  if (
+    existing?.progressEntries.length &&
+    richText.normalizePlainText(existing.progressNote, 32767) === aggregate
+  ) {
+    return utils.clone(existing.progressEntries);
+  }
+  const entry = schema.normalizeProgressEntry({
+    id: utils.uid("progress"),
+    contentHtml: richText.fromPlainText(aggregate),
+    contentText: aggregate,
+    sourceType: "excel-import",
+    createdAt: stamp,
+    updatedAt: stamp
+  }, { createdAt: stamp, updatedAt: stamp, sourceType: "excel-import" });
+  return entry ? [entry] : [];
+}
+
+function importedProgressState(
+  row: ParsedTaskRow,
+  existing: Task | null,
+  stamp: string
+): Pick<Task, "progressEntries" | "progressNote" | "progressUpdatedAt"> {
+  const progressEntries = importedProgressEntries(row, existing, stamp);
+  const latest = richText.latestProgressEntry(progressEntries);
+  return {
+    progressEntries,
+    progressNote: latest?.contentText || "",
+    progressUpdatedAt: latest?.updatedAt || null
+  };
+}
+
 /* 等价 app.js:5251 appendExcelRows：同名分组/Flow 复用，其余新建 */
 function appendExcelRows(data: WeekflowData, rows: ParsedTaskRow[]): void {
   const stamp = new Date().toISOString();
@@ -548,6 +627,7 @@ function appendExcelRows(data: WeekflowData, rows: ParsedTaskRow[]): void {
       );
     }
     const recurrence = importedRecurrenceState(row, null);
+    const progress = importedProgressState(row, null, stamp);
     const importedTask: Task = {
       id: utils.uid("task"),
       groupId: group.id,
@@ -565,8 +645,9 @@ function appendExcelRows(data: WeekflowData, rows: ParsedTaskRow[]): void {
       recurrenceStart: recurrence.recurrenceStart,
       recurrenceEnd: recurrence.recurrenceEnd,
       recurrenceCompletions: recurrence.recurrenceCompletions,
-      progressNote: row.progressNote,
-      progressUpdatedAt: row.progressNote ? stamp : null,
+      progressNote: progress.progressNote,
+      progressUpdatedAt: progress.progressUpdatedAt,
+      progressEntries: progress.progressEntries,
       createdAt: stamp,
       updatedAt: stamp
     };
@@ -682,6 +763,7 @@ function replaceExcelRows(data: WeekflowData, rows: ParsedTaskRow[]): void {
     );
     const existing = queue && queue.length ? (queue.shift() as Task) : null;
     const recurrence = importedRecurrenceState(row, existing);
+    const progress = importedProgressState(row, existing, stamp);
     let flowOrder: number | null = null;
     if (flow) {
       flowOrder = row.flowOrder || (maxTaskOrderByFlow.get(flow.id) || 0) + 1;
@@ -707,14 +789,9 @@ function replaceExcelRows(data: WeekflowData, rows: ParsedTaskRow[]): void {
       recurrenceStart: recurrence.recurrenceStart,
       recurrenceEnd: recurrence.recurrenceEnd,
       recurrenceCompletions: recurrence.recurrenceCompletions,
-      progressNote: row.progressNote,
-      progressUpdatedAt: row.progressNote
-        ? existing &&
-          existing.progressNote === row.progressNote &&
-          existing.progressUpdatedAt
-          ? existing.progressUpdatedAt
-          : stamp
-        : null,
+      progressNote: progress.progressNote,
+      progressUpdatedAt: progress.progressUpdatedAt,
+      progressEntries: progress.progressEntries,
       createdAt: existing ? existing.createdAt : stamp,
       updatedAt: stamp
     });
@@ -978,6 +1055,22 @@ export interface DataStoreState {
 
   /* 进度记录 */
   saveProgressNote(taskId: string, note: string): Promise<boolean>;
+  saveProgressEntry(taskId: string, input: SaveProgressEntryInput): Promise<boolean>;
+  deleteProgressEntry(taskId: string, entryId: string): Promise<boolean>;
+
+  /* 随手记 */
+  saveQuickNote(input: SaveQuickNoteInput): Promise<string | null>;
+  deleteQuickNote(id: string): Promise<boolean>;
+  convertNoteToProgress(noteId: string, taskId: string): Promise<boolean>;
+  recordNoteTaskConversion(
+    noteId: string,
+    taskIds: string[],
+    skippedCount: number
+  ): Promise<boolean>;
+
+  /* 持久化界面偏好 */
+  setDocumentLibraryLayout(layout: "list" | "group"): Promise<boolean>;
+  saveDocumentLibraryLayout(columns: 1 | 2 | 3 | 4, groupOrder: string[]): Promise<boolean>;
 
   /* 资料 */
   saveMaterial(input: SaveMaterialInput): Promise<boolean>;
@@ -1133,6 +1226,7 @@ export const useDataStore = create<DataStoreState>()((set, get) => {
           recurrenceCompletions: retainRecurringCompletions(existing, schedule),
           progressNote: existing ? existing.progressNote : "",
           progressUpdatedAt: existing ? existing.progressUpdatedAt : null,
+          progressEntries: existing ? utils.clone(existing.progressEntries) : [],
           createdAt: existing ? existing.createdAt : stamp,
           updatedAt: stamp
         };
@@ -1455,7 +1549,7 @@ export const useDataStore = create<DataStoreState>()((set, get) => {
       return persist(collapsed ? "已折叠全部分组与 Flow" : "已展开全部分组与 Flow");
     },
 
-    /* 等价 app.js:4248 saveProgressNote */
+    /* 旧单框兼容入口：内容非空时更新最新一条，清空时移除全部历史。 */
     async saveProgressNote(taskId, note) {
       const data = get().data;
       if (!data) return false;
@@ -1465,11 +1559,177 @@ export const useDataStore = create<DataStoreState>()((set, get) => {
         return false;
       }
       const stamp = new Date().toISOString();
-      const trimmed = note.trim().slice(0, 4000);
-      task.progressNote = trimmed;
-      task.progressUpdatedAt = trimmed ? stamp : null;
+      const trimmed = richText.normalizePlainText(note, richText.MAX_PROGRESS_TEXT);
+      if (!trimmed) {
+        task.progressEntries = [];
+      } else {
+        const latest = richText.latestProgressEntry(task.progressEntries);
+        const entry = schema.normalizeProgressEntry({
+          id: latest?.id || utils.uid("progress"),
+          contentHtml: richText.fromPlainText(trimmed),
+          contentText: trimmed,
+          sourceType: latest?.sourceType || "manual",
+          sourceNoteId: latest?.sourceNoteId || null,
+          createdAt: latest?.createdAt || stamp,
+          updatedAt: stamp
+        });
+        if (!entry) return false;
+        if (latest) task.progressEntries[task.progressEntries.indexOf(latest)] = entry;
+        else task.progressEntries.push(entry);
+      }
+      syncProgressAliases(task);
       task.updatedAt = stamp;
       return persist(trimmed ? "进度记录已保存" : "进度记录已清空");
+    },
+
+    async saveProgressEntry(taskId, input) {
+      const data = get().data;
+      if (!data) return false;
+      const task = findTask(data, taskId);
+      if (!task) {
+        toast("Task 不存在，无法保存进度记录。", "error");
+        return false;
+      }
+      const existing = input.id
+        ? task.progressEntries.find((entry) => entry.id === input.id) || null
+        : null;
+      const stamp = new Date().toISOString();
+      const entry = schema.normalizeProgressEntry({
+        id: existing?.id || input.id || utils.uid("progress"),
+        contentHtml: input.contentHtml,
+        contentText: input.contentText,
+        sourceType: existing?.sourceType || input.sourceType || "manual",
+        sourceNoteId: existing?.sourceNoteId ?? input.sourceNoteId ?? null,
+        createdAt: existing?.createdAt || input.createdAt || stamp,
+        updatedAt: stamp
+      });
+      if (!entry) {
+        toast("请输入进度内容。", "error");
+        return false;
+      }
+      if (existing) task.progressEntries[task.progressEntries.indexOf(existing)] = entry;
+      else task.progressEntries.push(entry);
+      syncProgressAliases(task);
+      task.updatedAt = stamp;
+      return persist("进度记录已保存");
+    },
+
+    async deleteProgressEntry(taskId, entryId) {
+      const data = get().data;
+      if (!data) return false;
+      const task = findTask(data, taskId);
+      if (!task || !task.progressEntries.some((entry) => entry.id === entryId)) return false;
+      task.progressEntries = task.progressEntries.filter((entry) => entry.id !== entryId);
+      syncProgressAliases(task);
+      task.updatedAt = new Date().toISOString();
+      return persist("进度记录已删除");
+    },
+
+    async saveQuickNote(input) {
+      const data = get().data;
+      if (!data) return null;
+      const title = input.title.trim().slice(0, 160);
+      if (!title) {
+        toast("请输入笔记标题。", "error");
+        return null;
+      }
+      const contentHtml = richText.sanitizeHtml(input.contentHtml, richText.MAX_NOTE_TEXT);
+      const contentText = richText.plainText(contentHtml).slice(0, richText.MAX_NOTE_TEXT);
+      const stamp = new Date().toISOString();
+      const existing = input.id ? findNote(data, input.id) : undefined;
+      const note = schema.normalizeNote({
+        id: existing?.id || utils.uid("note"),
+        title,
+        contentHtml,
+        contentText,
+        conversions: existing?.conversions || [],
+        createdAt: existing?.createdAt || stamp,
+        updatedAt: stamp
+      });
+      if (existing) data.notes[data.notes.indexOf(existing)] = note;
+      else data.notes.push(note);
+      return (await persist(existing ? "笔记已保存" : "笔记已创建")) ? note.id : null;
+    },
+
+    async deleteQuickNote(id) {
+      const data = get().data;
+      if (!data || !findNote(data, id)) return false;
+      data.notes = data.notes.filter((note) => note.id !== id);
+      return persist("笔记已删除");
+    },
+
+    async convertNoteToProgress(noteId, taskId) {
+      const data = get().data;
+      if (!data) return false;
+      const note = findNote(data, noteId);
+      const task = findTask(data, taskId);
+      if (!note || !task) {
+        toast("请选择有效 Task。", "error");
+        return false;
+      }
+      const stamp = new Date().toISOString();
+      const entry = schema.normalizeProgressEntry({
+        id: utils.uid("progress"),
+        contentHtml: note.contentHtml,
+        contentText: note.contentText,
+        sourceType: "quick-note",
+        sourceNoteId: note.id,
+        createdAt: stamp,
+        updatedAt: stamp
+      });
+      if (!entry) {
+        toast("笔记没有可转换的正文内容。", "error");
+        return false;
+      }
+      task.progressEntries.push(entry);
+      syncProgressAliases(task);
+      task.updatedAt = stamp;
+      note.conversions.push(schema.normalizeConversion({
+        id: utils.uid("conversion"),
+        type: "progress",
+        taskIds: [task.id],
+        progressEntryIds: [entry.id],
+        skippedCount: 0,
+        createdAt: stamp
+      }));
+      note.updatedAt = stamp;
+      return persist("已新增一条 Task 进度记录");
+    },
+
+    async recordNoteTaskConversion(noteId, taskIds, skippedCount) {
+      const data = get().data;
+      if (!data) return false;
+      const note = findNote(data, noteId);
+      if (!note) return false;
+      const stamp = new Date().toISOString();
+      const conversion: NoteConversion = schema.normalizeConversion({
+        id: utils.uid("conversion"),
+        type: "task",
+        taskIds,
+        progressEntryIds: [],
+        skippedCount,
+        createdAt: stamp
+      });
+      note.conversions.push(conversion);
+      note.updatedAt = stamp;
+      return persist("Task 草稿转换已完成");
+    },
+
+    async setDocumentLibraryLayout(layout) {
+      const data = get().data;
+      if (!data) return false;
+      data.preferences = schema.normalizePreferences(data.preferences, data.groups);
+      data.preferences.documentLibrary.layout = layout === "group" ? "group" : "list";
+      return persist(layout === "group" ? "已切换到分组布局" : "已切换到列表布局");
+    },
+
+    async saveDocumentLibraryLayout(columns, groupOrder) {
+      const data = get().data;
+      if (!data) return false;
+      data.preferences = schema.normalizePreferences({
+        documentLibrary: { layout: "group", columns, groupOrder }
+      }, data.groups);
+      return persist("分组布局已更新");
     },
 
     /* 等价 app.js:4529 saveMaterialFromForm 的数据部分 */

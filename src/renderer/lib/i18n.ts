@@ -1,5 +1,5 @@
 /* Weekflow Desktop 中英双语运行时翻译引擎。
-   忠实移植原 Web 版 js/i18n.js（Weekflow v2.5）：中文是源码内嵌的源文案，
+   对齐原 Web 版 js/i18n.js（Weekflow v2.7）：中文是源码内嵌的源文案，
    英文模式 = EN_TEXT 字典 + 参数化正则 + MutationObserver 运行时 DOM 翻译。
    与原版的有意差异（React 适配，均为最小规避）：
    - 语言偏好 localStorage key 改为 weekflow-desktop:language，默认语言 zh-CN；
@@ -29,6 +29,86 @@ const EN_TEXT: Record<string, string> = {
   "时间轴看板": "Timeline",
   "整体看板": "Overall Dashboard",
   "资料库": "Document Library",
+  "随手记": "Quick Notes",
+  "笔记": "Notes",
+  "记录想法，并转换为进度记录或 Task 草稿": "Capture ideas and convert them into progress records or Task drafts",
+  "记录临时想法，再转为进度或 Task 草稿": "Capture quick thoughts, then convert them into progress or Task drafts",
+  "· 记录临时想法，再转为进度或 Task 草稿": "· Capture quick thoughts, then convert them into progress or Task drafts",
+  "新建笔记": "New Note",
+  "笔记列表": "Note list",
+  "搜索标题或正文": "Search titles or content",
+  "写下第一条随手记": "Write Your First Quick Note",
+  "保存后可以把内容添加为 Task 进度记录，或转换成一个或多个 Task 草稿。": "After saving, append the note to a Task's progress history or convert it into one or more Task drafts.",
+  "笔记标题": "Note title",
+  "尚未保存": "Not saved",
+  "笔记文字格式": "Note text formatting",
+  "加粗": "Bold",
+  "斜体": "Italic",
+  "文字颜色": "Text color",
+  "字色": "Text",
+  "底色高亮": "Highlight color",
+  "高亮": "Highlight",
+  "选择字色": "Choose text color",
+  "选择高亮颜色": "Choose highlight color",
+  "清除格式": "Clear formatting",
+  "在这里记录工作想法、会议要点或 SharePoint 链接…": "Capture work ideas, meeting notes, or SharePoint links here…",
+  "删除笔记": "Delete Note",
+  "添加到进度记录": "Add to Progress History",
+  "转换为 Task 草稿": "Convert to Task Drafts",
+  "保存笔记": "Save Note",
+  "请输入笔记标题。": "Enter a note title.",
+  "笔记已保存": "Note saved",
+  "笔记已创建": "Note created",
+  "笔记已删除": "Note deleted",
+  "没有符合搜索的笔记。": "No notes match the search.",
+  "保存后的笔记会显示在这里。": "Saved notes will appear here.",
+  "空白笔记": "Blank note",
+  "有未保存修改": "Unsaved changes",
+  "已保存": "Saved",
+  "最后更新：": "Last updated: ",
+  "手动记录": "Manual record",
+  "尚无记录": "No records yet",
+  "新记录将在保存时写入时间": "The timestamp is added when the new record is saved",
+  "请输入进度内容。": "Enter progress details.",
+  "进度记录已删除": "Progress record deleted",
+  "进度记录已保存": "Progress record saved",
+  "添加记录": "Add Record",
+  "将按当前时间新增一条独立记录。": "A separate record will be added with the current timestamp.",
+  "当前范围下没有可选择的 Task。": "No Tasks are available in the current scope.",
+  "请选择有效 Task。": "Select a valid Task.",
+  "笔记没有可转换的正文内容。": "The note has no content to convert.",
+  "已新增一条 Task 进度记录": "A Task progress record was added",
+  "Task 草稿转换已完成": "Task draft conversion completed",
+  "请先创建分组，并保存有效笔记。": "Create a Group and save a valid note first.",
+  "请补齐 Task name、分组、DDL、紧急程度、汇报对象和交付物。": "Complete Task Name, Group, DDL, Urgency, Report To, and Deliverable.",
+  "周期 Task 必须填写周期开始和周期结束日期。": "A recurring Task requires Recurrence Start and Recurrence End.",
+  "所有草稿均已处理，可复核后点击“完成转换”。": "All drafts are resolved. Review them, then select Complete Conversion.",
+  "手动增加的 Task 草稿": "Manually added Task draft",
+  "请先保存或明确跳过全部 Task 草稿。": "Save or explicitly skip every Task draft first.",
+  "未识别到可可靠预填的字段，请根据原笔记补充必填信息。": "No fields could be filled reliably. Complete the required details using the source note.",
+  "可直接选择并复制原文，辅助修正右侧 Task。": "Select and copy the source text to help correct the Task on the right.",
+  "复核已创建 Task": "Review Created Task",
+  "确认 Task 草稿": "Confirm Task Draft",
+  "请选择": "Select",
+  "退出转换": "Exit Conversion",
+  "恢复待处理": "Restore Pending",
+  "更新并继续": "Update and Continue",
+  "保存并继续": "Save and Continue",
+  "周期开始": "Recurrence Start",
+  "周期结束": "Recurrence End",
+  "当前笔记尚未保存，切换语言会丢失这些修改。仍要继续吗？": "This note has unsaved changes. Switch language and discard them?",
+  "当前笔记尚未保存，切换语言后修改会丢失。仍要继续吗？": "This note has unsaved changes. Switch language and discard them?",
+  "Task 草稿转换尚未完成，切换语言会退出当前转换。仍要继续吗？": "Task draft conversion is not complete. Switch language and exit the conversion?",
+  "当前笔记尚未保存，离开后修改会丢失。仍要继续吗？": "This note has unsaved changes. Leave and discard them?",
+  "当前笔记尚未保存，继续后修改会丢失。仍要继续吗？": "This note has unsaved changes. Continue and discard them?",
+  "布局": "Layout",
+  "列表": "List",
+  "资料库布局": "Document Library Layout",
+  "资料库布局切换": "Document Library Layout Switch",
+  "调整布局": "Arrange Layout",
+  "已切换到分组布局": "Group layout enabled",
+  "已切换到列表布局": "List layout enabled",
+  "分组布局已更新": "Group layout updated",
   "未完成": "Incomplete",
   "已完成": "Completed",
   "逾期": "Overdue",
@@ -115,6 +195,16 @@ const EN_TEXT: Record<string, string> = {
   "下载资料库": "Download Document Library",
   "上传": "Upload",
   "＋ 添加资料": "+ Add Document",
+  "资料清单": "Document List",
+  "按分组显示资料": "Documents by Group",
+  "调整分组布局": "Arrange Group Layout",
+  "设置每行显示的分组数，并拖动分组调整排列顺序。": "Set the number of Groups per row, then drag Groups to arrange their order.",
+  "每行分组数": "Groups per Row",
+  "分组排列顺序": "Group Order",
+  "恢复默认": "Restore Defaults",
+  "应用布局": "Apply Layout",
+  "前往": "Go to",
+  "暂无符合条件的资料": "No matching documents",
   "链接名称": "Link Name",
   "链接地址": "Link URL",
   "相关 Task": "Related Tasks",
@@ -188,7 +278,24 @@ const EN_TEXT: Record<string, string> = {
   "跳过重复资料": "Skip Duplicate Documents",
   "保留原资料，只导入地址不重复的新内容。": "Keep existing documents and import only new URLs.",
   "导入不会创建 Task、Flow 或分组；无法匹配或存在重名歧义时会阻止导入。补充导入会新增或按选择处理重复地址，全部覆盖会先清空资料库。": "Import does not create Tasks, Flows, or Groups. Missing or ambiguous matches block import. Supplement import adds documents and applies the selected duplicate rule; overwrite clears the library first.",
-  "编辑进度记录": "Edit Progress Note",
+  "编辑进度记录": "Manage Progress History",
+  "＋ 新建记录": "+ New Record",
+  "进度记录文字格式": "Progress record text formatting",
+  "删除本条": "Delete This Record",
+  "添加到 Task 进度记录": "Add to Task Progress History",
+  "Flow（可选筛选）": "Flow (optional filter)",
+  "确认新增记录": "Add Record",
+  "原始笔记": "Source Note",
+  "可选择并复制原文": "Select and copy the source text",
+  "识别到 1 个潜在 Task，正在编辑第 1 个": "Detected 1 potential Task · Editing 1",
+  "1 个待处理": "1 pending",
+  "← 上一个": "← Previous",
+  "下一个 →": "Next →",
+  "＋ 增加 Task 草稿": "+ Add Task Draft",
+  "＋ 增加 Task": "+ Add Task",
+  "跳过此项": "Skip This Draft",
+  "跳过本条": "Skip This Draft",
+  "完成转换": "Complete Conversion",
   "进度内容": "Progress Details",
   "尚未记录进度": "No progress recorded",
   "保存进度": "Save Progress",
@@ -278,7 +385,6 @@ const EN_TEXT: Record<string, string> = {
   "Task 已创建": "Task created",
   "Task 已删除": "Task deleted",
   "Task 不存在，无法保存进度记录。": "The Task no longer exists, so the progress note cannot be saved.",
-  "进度记录已保存": "Progress note saved",
   "进度记录已清空": "Progress note cleared",
   "Task 不存在，无法保存资料。": "The Task no longer exists, so related documents cannot be saved.",
   "相关资料已保存并同步到资料库": "Related documents saved and synced to the Document Library",
@@ -463,6 +569,15 @@ export function translateText(text: string): string {
   if (!clean) return raw;
   if (EN_TEXT[clean]) return leading + EN_TEXT[clean] + trailing;
   const patterns: ReadonlyArray<readonly [RegExp, string]> = [
+    [/^确认删除笔记「(.+)」？已转换的 Task 和进度记录不会删除。$/, "Delete note “$1”? Converted Tasks and progress records will remain."],
+    [/^请再次确认删除这条笔记。删除后无法恢复。$/, "Confirm again: this note cannot be recovered after deletion."],
+    [/^当前笔记尚未保存，继续后修改会丢失。仍要继续吗？$/, "This note has unsaved changes. Continue and discard them?"],
+    [/^当前进度记录尚未保存，继续后修改会丢失。仍要继续吗？$/, "This progress record has unsaved changes. Continue and discard them?"],
+    [/^确认删除当前这条进度记录？$/, "Delete this progress record?"],
+    [/^请再次确认。删除后无法恢复。$/, "Confirm again: deletion cannot be undone."],
+    [/^退出后，已保存的 (\d+) 个 Task 会保留，其余草稿不会创建。确认退出？$/, "Exit conversion? The $1 saved Tasks will remain; unresolved drafts will not be created."],
+    [/^Task 草稿转换尚未完成，确认退出？$/, "Task draft conversion is not complete. Exit anyway?"],
+    [/^Task 草稿转换尚未完成，退出后已创建的 Task 会保留，但本次转换进度不会记录。仍要退出吗？$/, "Task draft conversion is not complete. Created Tasks will remain, but this conversion will not be recorded. Exit anyway?"],
     [/^(\d+) 条可见 Task$/, "$1 visible Tasks"],
     [/^共 (\d+) 条资料$/, "$1 documents"],
     [/^已选 (\d+) 条$/, "$1 selected"],
@@ -624,6 +739,8 @@ export function translateCompositeText(value: string): string {
     [/当前筛选结果统计/g, "Current filtered statistics"],
     [/本自然周或上个自然周至少打开过一次/g, "Opened at least once this or last natural week"],
     [/(\d+) 个分组 · (\d+) 个 Flow/g, "$1 Groups · $2 Flows"],
+    [/(\d+) 条笔记/g, "$1 notes"],
+    [/分组 (\d+)/g, "Group $1"],
     [/Flow (\d+) · (\d+) 个步骤/g, "Flow $1 · $2 steps"],
     [/(\d{4}) · 周五/g, "$1 · Friday"],
     [/([\d-]+ — [\d-]+) · (\d+) 周/g, "$1 · $2 weeks"],
@@ -632,6 +749,15 @@ export function translateCompositeText(value: string): string {
     [/([\d-]+) · 明天/g, "$1 · Tomorrow"],
     [/([\d-]+) · 今天/g, "$1 · Today"],
     [/统计全部 (\d+) 条 Task（不受时间轴筛选影响）/g, "All $1 Tasks included (timeline filters do not apply)"],
+    [/ · 将按当前时间新增一条独立记录。/g, " · A separate record will be added with the current timestamp."],
+    [/可选择 (\d+) 个 Task/g, "$1 Tasks available"],
+    [/最后更新：/g, "Last updated: "],
+    [/最后编辑：/g, "Last edited: "],
+    [/已完成一次性转换：(\d+) 条进度记录 · (\d+) 个 Task/g, "Completed conversions: $1 progress records · $2 Tasks"],
+    [/识别到 (\d+) 个潜在 Task，正在编辑第 (\d+) 个/g, "Detected $1 potential Tasks · Editing $2"],
+    [/(\d+) 个待处理 · (\d+) 个已保存 · (\d+) 个已跳过/g, "$1 pending · $2 saved · $3 skipped"],
+    [/已预填：/g, "Prefilled: "],
+    [/ · 可能的 ([^：]+)：/g, " · Suggested $1: "],
     /* ---- 桌面版新增替换（原版漏译空缺 + 新文案；置于通用尾缀规则之前） ---- */
     [/([\d-]+ — [\d-]+) · 周一至周日/g, "$1 · Monday to Sunday"],
     [/ · 工作表：/g, " · Sheet: "],
@@ -702,16 +828,18 @@ function translateAttribute(name: string, value: string | null): string | null {
     "链接类型": "Link Type",
     "从当前 Task 移除资料关联": "Remove the document relation from this Task",
     "Weekflow Desktop v1.0 中英双语桌面 Task 管理工具，支持周/日双时间轴、分组、Flow、资料库、双向联动、看板、备份和 Excel 批量导入导出。": "Weekflow Desktop v1.0 bilingual desktop Task manager with weekly/daily timelines, Groups, Flows, Document Library, dashboards, backup, and Excel import/export.",
+    "Weekflow Desktop v1.1.0 中英双语桌面 Task 管理工具，支持周/日双时间轴、资料库双布局、随手记、多条进度历史、Task 草稿转换、看板、备份和 Excel 批量导入导出。": "Weekflow Desktop v1.1.0 bilingual desktop Task manager with weekly/daily timelines, dual Document Library layouts, Quick Notes, progress history, Task draft conversion, dashboards, backup, and Excel import/export.",
     "例如：已完成需求确认和接口联调，当前等待业务方验收。\n\n可按日期分段记录，也可以作为持续更新的项目备注。": "Example: Requirements and integration are complete; business acceptance is pending.\n\nUse dated entries or maintain this as a continuously updated project note."
   };
   return attributes[clean] || translateCompositeText(value || "");
 }
 
-/* 用户内容跳过选择器（9 类，等价原版 translateNode 的 closest 列表） */
+/* 用户内容跳过选择器：业务内容和富文本不能被运行时翻译器改写。 */
 const USER_CONTENT_SELECTOR =
   ".task-title, .task-node-label, .group-name, .flow-name, .material-name-button, " +
   ".material-url-button, .material-note-cell, .person-table-name, " +
-  ".group-card-copy strong, .task-dialog-user-value, [data-user-content]";
+  ".group-card-copy strong, .task-dialog-user-value, .note-list-item, " +
+  ".progress-entry-item, .rich-text-editor, [data-user-content]";
 
 function translateNode(node: Node | null): void {
   if (!node || node.nodeType !== 3) return;
@@ -726,7 +854,7 @@ function translateNode(node: Node | null): void {
 function translateElement(element: Node | null): void {
   if (!element || element.nodeType !== 1) return;
   const el = element as Element;
-  ["aria-label", "title", "placeholder", "content"].forEach((name) => {
+  ["aria-label", "title", "placeholder", "content", "data-placeholder"].forEach((name) => {
     if (!el.hasAttribute(name)) return;
     const value = el.getAttribute(name);
     let translated = translateAttribute(name, value);

@@ -72,6 +72,7 @@ export default function MaterialsFilterBar() {
   const setMaterialFilters = useUiStore((state) => state.setMaterialFilters);
   const clearMaterialFilters = useUiStore((state) => state.clearMaterialFilters);
   const data = useDataStore((state) => state.data);
+  const groupLayout = data?.preferences.documentLibrary.layout === "group";
 
   /* 名称搜索：本地草稿 + 120ms 防抖（等价 app.js:374-380）；store 外部重置时同步回输入框 */
   const [nameDraft, setNameDraft] = useState(filters.name);
@@ -201,7 +202,7 @@ export default function MaterialsFilterBar() {
         </div>
       </details>
 
-      <details className="filter-menu" id="material-group-filter">
+      <details className="filter-menu" id="material-group-filter" hidden={groupLayout}>
         <summary>
           <span>分组</span>
           <b id="material-filter-group-label">{countLabel(filters.groupIds.length)}</b>
@@ -242,7 +243,7 @@ export default function MaterialsFilterBar() {
         </div>
       </details>
 
-      <details className="filter-menu" id="material-flow-filter">
+      <details className="filter-menu" id="material-flow-filter" hidden={groupLayout}>
         <summary>
           <span>Flow</span>
           <b id="material-filter-flow-label">{countLabel(filters.flowIds.length)}</b>
@@ -276,7 +277,7 @@ export default function MaterialsFilterBar() {
         </div>
       </details>
 
-      <details className="filter-menu" id="material-task-filter">
+      <details className="filter-menu" id="material-task-filter" hidden={groupLayout}>
         <summary>
           <span>Task</span>
           <b id="material-filter-task-label">{countLabel(filters.taskIds.length)}</b>

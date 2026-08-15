@@ -1,4 +1,4 @@
-/* 数据校验、归一化与 v1/v2 → v3 迁移。等价原 js/storage.js 的校验部分；
+/* 数据校验、归一化与 v1/v2/v3 → v4 迁移。等价 Web v2.7 storage.js；
    localStorage 读写/备份键不移植（持久化由主进程 JSON 文件负责）。
    顶层结构校验用 Zod，跨实体不变量与归一化照搬原 storage.js validateData。 */
 import { z } from "zod";
@@ -7,19 +7,26 @@ import type {
   Group,
   LegacyLink,
   Material,
+  NoteConversion,
+  ProgressEntry,
+  ProgressSourceType,
+  QuickNote,
   RecurrenceCadence,
   RecurrenceCompletion,
   Task,
   TaskStatus,
   Urgency,
-  WeekflowData
+  WeekflowData,
+  WeekflowPreferences
 } from "./types";
+import { UNGROUPED_MATERIAL_KEY } from "./types";
 import * as dates from "./date-utils";
 import * as utils from "./utils";
 import * as materialTools from "./materials";
+import * as richText from "./rich-text";
 
-export const VERSION = 3;
-const SUPPORTED_VERSIONS = [1, 2, 3];
+export const VERSION = 4;
+const SUPPORTED_VERSIONS = [1, 2, 3, 4];
 export const COLORS = [
   "#665CFF",
   "#0AA6B5",
@@ -86,12 +93,154 @@ function normalizeFlow(flow: unknown, index: number): Flow {
   };
 }
 
+export function normalizeDocumentLibraryPreferences(
+  preferences: unknown,
+  groups: Group[] | null | undefined
+): WeekflowPreferences["documentLibrary"] {
+  const source = preferences && typeof preferences === "object"
+    ? (preferences as Record<string, unknown>)
+    : {};
+  const sortedGroupIds = (Array.isArray(groups) ? groups : [])
+    .slice()
+    .sort((left, right) =>
+      Number(left.order || 0) - Number(right.order || 0) ||
+      left.name.localeCompare(right.name, "zh-CN", { numeric: true })
+    )
+    .map((group) => group.id);
+  const validKeys = new Set(sortedGroupIds.concat(UNGROUPED_MATERIAL_KEY));
+  const seen = new Set<string>();
+  const groupOrder = (Array.isArray(source.groupOrder) ? source.groupOrder : [])
+    .map((value) => String(value || "").trim())
+    .filter((value) => {
+      if (!validKeys.has(value) || seen.has(value)) return false;
+      seen.add(value);
+      return true;
+    });
+  sortedGroupIds.forEach((groupId) => {
+    if (seen.has(groupId)) return;
+    const ungroupedIndex = groupOrder.indexOf(UNGROUPED_MATERIAL_KEY);
+    if (ungroupedIndex >= 0) groupOrder.splice(ungroupedIndex, 0, groupId);
+    else groupOrder.push(groupId);
+    seen.add(groupId);
+  });
+  if (!seen.has(UNGROUPED_MATERIAL_KEY)) groupOrder.push(UNGROUPED_MATERIAL_KEY);
+  const columns = Number(source.columns);
+  return {
+    layout: source.layout === "group" ? "group" : "list",
+    columns: Number.isInteger(columns) && columns >= 1 && columns <= 4
+      ? (columns as 1 | 2 | 3 | 4)
+      : 4,
+    groupOrder
+  };
+}
+
+export function normalizePreferences(
+  preferences: unknown,
+  groups: Group[] | null | undefined
+): WeekflowPreferences {
+  const source = preferences && typeof preferences === "object"
+    ? (preferences as Record<string, unknown>)
+    : {};
+  return {
+    documentLibrary: normalizeDocumentLibraryPreferences(source.documentLibrary, groups)
+  };
+}
+
 function normalizeRecurrenceCompletion(record: unknown): RecurrenceCompletion {
   const raw = (record || {}) as Record<string, unknown>;
   return {
     periodKey: String(raw.periodKey || "").trim().slice(0, 20),
     occurrenceDdl: dates.formatDate(raw.occurrenceDdl),
     completedAt: dates.formatDate(raw.completedAt)
+  };
+}
+
+export function normalizeProgressEntry(
+  entry: unknown,
+  fallback?: Partial<ProgressEntry>
+): ProgressEntry | null {
+  const source = entry && typeof entry === "object" ? (entry as Record<string, unknown>) : {};
+  const base = fallback || {};
+  const created = [source.createdAt, base.createdAt, base.updatedAt, nowISO()].find(isValidTimestamp);
+  const updated = [source.updatedAt, created].find(isValidTimestamp);
+  const rawHtml = String(source.contentHtml || "");
+  const rawText = String(source.contentText || source.content || base.contentText || "");
+  const contentHtml = rawHtml
+    ? richText.sanitizeHtml(rawHtml, richText.MAX_PROGRESS_TEXT)
+    : richText.fromPlainText(rawText.slice(0, richText.MAX_PROGRESS_TEXT));
+  const contentText = richText.plainText(contentHtml).slice(0, richText.MAX_PROGRESS_TEXT);
+  if (!contentText) return null;
+  const rawSourceType = String(source.sourceType || "");
+  const sourceType: ProgressSourceType = ["manual", "quick-note", "excel-import", "legacy"].includes(rawSourceType)
+    ? (rawSourceType as ProgressSourceType)
+    : base.sourceType || "manual";
+  return {
+    id: safeId(source.id, "progress"),
+    contentHtml,
+    contentText,
+    sourceType,
+    sourceNoteId: source.sourceNoteId ? String(source.sourceNoteId) : null,
+    createdAt: String(created),
+    updatedAt: String(updated)
+  };
+}
+
+function normalizeProgressEntries(task: Record<string, unknown>, created: string): ProgressEntry[] {
+  let source = Array.isArray(task.progressEntries) ? task.progressEntries : [];
+  if (!source.length && String(task.progressNote || "").trim()) {
+    source = [{
+      contentText: String(task.progressNote),
+      sourceType: "legacy",
+      createdAt: task.progressUpdatedAt || task.updatedAt || created,
+      updatedAt: task.progressUpdatedAt || task.updatedAt || created
+    }];
+  }
+  return source
+    .map((entry) => normalizeProgressEntry(entry, { createdAt: created, updatedAt: String(task.updatedAt || created), sourceType: "manual" }))
+    .filter((entry): entry is ProgressEntry => Boolean(entry));
+}
+
+export function normalizeConversion(conversion: unknown): NoteConversion {
+  const source = conversion && typeof conversion === "object"
+    ? (conversion as Record<string, unknown>)
+    : {};
+  const uniqueIds = (values: unknown): string[] => {
+    const seen = new Set<string>();
+    return (Array.isArray(values) ? values : [])
+      .map((value) => String(value || "").trim())
+      .filter((value) => {
+        if (!value || seen.has(value)) return false;
+        seen.add(value);
+        return true;
+      });
+  };
+  return {
+    id: safeId(source.id, "conversion"),
+    type: source.type === "task" ? "task" : "progress",
+    taskIds: uniqueIds(source.taskIds),
+    progressEntryIds: uniqueIds(source.progressEntryIds),
+    skippedCount: Math.max(0, Number(source.skippedCount) || 0),
+    createdAt: isValidTimestamp(source.createdAt) ? String(source.createdAt) : nowISO()
+  };
+}
+
+export function normalizeNote(note: unknown): QuickNote {
+  const source = note && typeof note === "object" ? (note as Record<string, unknown>) : {};
+  const created = isValidTimestamp(source.createdAt) ? String(source.createdAt) : nowISO();
+  const updated = isValidTimestamp(source.updatedAt) ? String(source.updatedAt) : created;
+  const rawHtml = String(source.contentHtml || "");
+  const rawText = String(source.contentText || source.content || "");
+  const contentHtml = rawHtml
+    ? richText.sanitizeHtml(rawHtml, richText.MAX_NOTE_TEXT)
+    : richText.fromPlainText(rawText.slice(0, richText.MAX_NOTE_TEXT));
+  return {
+    id: safeId(source.id, "note"),
+    title: String(source.title || "").trim().slice(0, 160),
+    contentHtml,
+    contentText: richText.plainText(contentHtml).slice(0, richText.MAX_NOTE_TEXT),
+    conversions: (Array.isArray(source.conversions) ? source.conversions : []).map(normalizeConversion),
+    createdAt: created,
+    updatedAt: updated
   };
 }
 
@@ -105,13 +254,10 @@ function normalizeTask(task: unknown): TaskWithLegacyLinks {
   const raw = (task || {}) as Record<string, unknown>;
   const created = String(raw.createdAt || nowISO());
   const status: TaskStatus = raw.status === "completed" ? "completed" : "pending";
-  const progressNote = String(raw.progressNote || "").trim().slice(0, 4000);
-  let progressTimestamp: string | null = null;
-  if (progressNote) {
-    // progressUpdatedAt 缺失时回退 updatedAt / createdAt，再回退当前时间。
-    const found = [raw.progressUpdatedAt, raw.updatedAt, created].find(isValidTimestamp);
-    progressTimestamp = String(found || nowISO());
-  }
+  const progressEntries = normalizeProgressEntries(raw, created);
+  const latestProgress = richText.latestProgressEntry(progressEntries);
+  const progressNote = latestProgress?.contentText || "";
+  const progressTimestamp = latestProgress?.updatedAt || null;
   const urgency: Urgency = ["high", "medium", "low"].includes(String(raw.urgency))
     ? (raw.urgency as Urgency)
     : "medium";
@@ -139,6 +285,7 @@ function normalizeTask(task: unknown): TaskWithLegacyLinks {
         : null,
     progressNote: progressNote,
     progressUpdatedAt: progressTimestamp,
+    progressEntries,
     recurrenceCadence: recurrenceCadence,
     recurrenceStart:
       recurrenceCadence === "none" ? null : dates.formatDate(raw.recurrenceStart),
@@ -158,8 +305,7 @@ function normalizeTask(task: unknown): TaskWithLegacyLinks {
   };
 }
 
-/* 顶层结构校验：根节点必须是对象；version 支持 1/2/3；groups/tasks 必须是数组，
-   flows（version>=2）与 materials（version=3）必须是数组。错误文案与原 storage.js 一致。 */
+/* 顶层结构校验：v1-v4；v3 起要求 materials，v4 要求 notes。 */
 const structureSchema = z
   .object(
     {
@@ -168,6 +314,8 @@ const structureSchema = z
       tasks: z.unknown(),
       flows: z.unknown().optional(),
       materials: z.unknown().optional(),
+      notes: z.unknown().optional(),
+      preferences: z.unknown().optional(),
       updatedAt: z.unknown().optional()
     },
     {
@@ -197,12 +345,15 @@ const structureSchema = z
     if (inputVersion >= 2 && !Array.isArray(value.flows)) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["flows"], message: "flows 必须是数组。" });
     }
-    if (inputVersion === VERSION && !Array.isArray(value.materials)) {
+    if (inputVersion >= 3 && !Array.isArray(value.materials)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ["materials"],
         message: "materials 必须是数组。"
       });
+    }
+    if (inputVersion === VERSION && !Array.isArray(value.notes)) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["notes"], message: "notes 必须是数组。" });
     }
   });
 
@@ -327,6 +478,22 @@ export function validateData(input: unknown): ValidateDataResult {
     ) {
       errors.push("Task「" + (task.name || index + 1) + "」的进度更新时间无效。");
     }
+    if (Array.isArray(rawTask.progressEntries)) {
+      rawTask.progressEntries.forEach(function (entry, entryIndex) {
+        const rawEntry = entry && typeof entry === "object" ? (entry as Record<string, unknown>) : {};
+        ["createdAt", "updatedAt"].forEach(function (field) {
+          if (
+            rawEntry[field] !== undefined && rawEntry[field] !== null &&
+            String(rawEntry[field]).trim() && !isValidTimestamp(rawEntry[field])
+          ) {
+            errors.push(
+              "Task「" + (task.name || index + 1) + "」第 " + (entryIndex + 1) +
+              " 条进度记录的时间无效。"
+            );
+          }
+        });
+      });
+    }
     if (inputVersion < VERSION) {
       task.documentLinks.concat(task.deliverableLinks).forEach(function (link) {
         if (!link.title || !utils.isValidUrl(link.url)) {
@@ -362,7 +529,7 @@ export function validateData(input: unknown): ValidateDataResult {
 
   // v1/v2 数据没有 materials 数组，由 Task 上的 documentLinks/deliverableLinks 迁移生成。
   const sourceMaterials: unknown[] =
-    inputVersion === VERSION
+    inputVersion >= 3
       ? (rawInput.materials as unknown[])
       : materialTools.migrateLegacyLinks(tasks, String(rawInput.updatedAt || nowISO()));
   const materialIds = new Set<string>();
@@ -408,12 +575,34 @@ export function validateData(input: unknown): ValidateDataResult {
     delete (task as Partial<TaskWithLegacyLinks>).deliverableLinks;
   });
 
+  const rawNotes = (Array.isArray(rawInput.notes) ? rawInput.notes : []) as unknown[];
+  const noteIds = new Set<string>();
+  const notes = rawNotes.map(normalizeNote);
+  notes.forEach(function (note, index) {
+    if (!note.title) errors.push("第 " + (index + 1) + " 条随手记缺少标题。");
+    if (noteIds.has(note.id)) errors.push("随手记 ID 重复：" + note.id);
+    noteIds.add(note.id);
+    const rawNote = rawNotes[index] && typeof rawNotes[index] === "object"
+      ? (rawNotes[index] as Record<string, unknown>)
+      : {};
+    ["createdAt", "updatedAt"].forEach(function (field) {
+      if (
+        rawNote[field] !== undefined && rawNote[field] !== null &&
+        String(rawNote[field]).trim() && !isValidTimestamp(rawNote[field])
+      ) {
+        errors.push("随手记「" + (note.title || index + 1) + "」的时间无效。");
+      }
+    });
+  });
+
   const data: WeekflowData = {
     version: VERSION,
     groups: groups,
     flows: flows,
     tasks: tasks,
     materials: materials,
+    notes,
+    preferences: normalizePreferences(rawInput.preferences, groups),
     updatedAt: String(rawInput.updatedAt || nowISO())
   };
   if (errors.length) return { ok: false, errors: errors };
@@ -428,6 +617,8 @@ export function makeEmptyData(): WeekflowData {
     flows: [],
     tasks: [],
     materials: [],
+    notes: [],
+    preferences: normalizePreferences(null, []),
     updatedAt: stamp
   };
 }

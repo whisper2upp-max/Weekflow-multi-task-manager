@@ -24,6 +24,7 @@ function makeTask(overrides: Partial<Task>): Task {
     completedAt: null,
     progressNote: "",
     progressUpdatedAt: null,
+    progressEntries: [],
     recurrenceCadence: "none",
     recurrenceStart: null,
     recurrenceEnd: null,
@@ -153,9 +154,9 @@ describe("schema validateData", () => {
     expect(notObject.ok).toBe(false);
     if (!notObject.ok) expect(notObject.errors).toEqual(["备份根节点必须是对象。"]);
 
-    const badVersion = validateData({ version: 4, groups: [], tasks: [], flows: [] });
+    const badVersion = validateData({ version: 5, groups: [], tasks: [], flows: [] });
     expect(badVersion.ok).toBe(false);
-    if (!badVersion.ok) expect(badVersion.errors).toContain("不支持的数据版本：4。");
+    if (!badVersion.ok) expect(badVersion.errors).toContain("不支持的数据版本：5。");
 
     const empty = validateData({
       version: 3,
@@ -165,10 +166,10 @@ describe("schema validateData", () => {
       materials: []
     });
     expect(empty.ok).toBe(true);
-    if (empty.ok) expect(empty.data.version).toBe(3);
+    if (empty.ok) expect(empty.data.version).toBe(4);
   });
 
-  it("v1 → v3 迁移：documentLinks 变资料库、颜色大写化、过渡字段被删除", () => {
+  it("v1 → v4 迁移：documentLinks 变资料库、进度历史与界面偏好完成初始化", () => {
     const result = validateData({
       version: 1,
       groups: [{ id: "g1", name: "分组", color: "#665cff", order: 1 }],
@@ -186,12 +187,15 @@ describe("schema validateData", () => {
     });
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.data.version).toBe(3);
+    expect(result.data.version).toBe(4);
     expect(result.data.groups[0].color).toBe("#665CFF");
     expect(result.data.materials).toHaveLength(1);
     expect(result.data.materials[0].type).toBe("document");
     expect(result.data.materials[0].taskIds).toEqual(["t1"]);
     expect("documentLinks" in result.data.tasks[0]).toBe(false);
     expect("deliverableLinks" in result.data.tasks[0]).toBe(false);
+    expect(result.data.tasks[0].progressEntries).toEqual([]);
+    expect(result.data.notes).toEqual([]);
+    expect(result.data.preferences.documentLibrary.layout).toBe("list");
   });
 });

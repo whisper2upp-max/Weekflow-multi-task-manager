@@ -70,6 +70,15 @@ describe("translateText（字典 + 数字句式）", () => {
     expect(translateText("另有 6 条未显示")).toBe("6 more not shown");
   });
 
+  it("v2.6 / v2.7 新功能的静态文案", () => {
+    setLanguage("en");
+    expect(translateText("随手记")).toBe("Quick Notes");
+    expect(translateText("保存笔记")).toBe("Save Note");
+    expect(translateText("添加到进度记录")).toBe("Add to Progress History");
+    expect(translateText("调整分组布局")).toBe("Arrange Group Layout");
+    expect(translateText("前往")).toBe("Go to");
+  });
+
   it("未命中原样返回", () => {
     setLanguage("en");
     expect(translateText("随便一句不在字典里的话")).toBe("随便一句不在字典里的话");
@@ -150,6 +159,16 @@ describe("translateCompositeText（observer 的 DOM 文本入口）", () => {
     expect(translateCompositeText("Flow：未加入")).toBe("Flow: No Flow");
     expect(translateCompositeText("另有 3 条 Task，将在确认后一起导入")).toBe(
       "3 additional Tasks will be imported after confirmation"
+    );
+    expect(translateCompositeText("8 条笔记")).toBe("8 notes");
+    expect(translateCompositeText("识别到 3 个潜在 Task，正在编辑第 2 个")).toBe(
+      "Detected 3 potential Tasks · Editing 2"
+    );
+    expect(translateCompositeText("1 个待处理 · 1 个已保存 · 1 个已跳过")).toBe(
+      "1 pending · 1 saved · 1 skipped"
+    );
+    expect(translateCompositeText("已完成一次性转换：2 条进度记录 · 3 个 Task")).toBe(
+      "Completed conversions: 2 progress records · 3 Tasks"
     );
   });
 

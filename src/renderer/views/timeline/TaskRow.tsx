@@ -6,6 +6,7 @@ import type { CSSProperties } from "react";
 import type { Flow, Group, RecurringOccurrence, Task, Urgency } from "../../../shared/types";
 import * as dates from "../../../shared/date-utils";
 import * as automation from "../../../shared/automation";
+import * as richText from "../../../shared/rich-text";
 import { isEnglish } from "../../lib/i18n";
 import {
   URGENCY_ICONS,
@@ -118,7 +119,9 @@ export default function TaskRow({
     statusLabel = <span className="status-label">{recurring ? "本期未完成" : "未完成"}</span>;
   }
 
-  const hasProgress = Boolean(String(task.progressNote || "").trim());
+  const progressEntries = richText.sortProgressEntries(task.progressEntries);
+  const hasProgress = progressEntries.length > 0;
+  const latestProgress = progressEntries[0] || null;
 
   /* DDL 节点按列归组：日模式列=当天，周模式列=所在周周五（等价 app.js:1700-1708） */
   const occurrencesByColumn = new Map<string, RecurringOccurrence[]>();
@@ -194,14 +197,18 @@ export default function TaskRow({
           title={
             english
               ? hasProgress
-                ? "Double-click to edit the progress note\n" +
-                  task.progressNote.replace(/\s+/g, " ").slice(0, 160)
-                : "Double-click to add a progress note"
+                ? "Double-click to manage progress history\n" +
+                  String(latestProgress?.contentText || "").replace(/\s+/g, " ").slice(0, 160)
+                : "Double-click to add a progress record"
               : hasProgress
-                ? "双击编辑进度记录\n" + task.progressNote.replace(/\s+/g, " ").slice(0, 160)
+                ? "双击管理进度历史\n" + String(latestProgress?.contentText || "").replace(/\s+/g, " ").slice(0, 160)
                 : "双击添加进度记录"
           }
-          aria-label={"进度记录，" + (hasProgress ? "已有内容" : "暂无内容") + "；双击或按回车编辑"}
+          aria-label={
+            english
+              ? `${progressEntries.length} progress records; double-click or press Enter to manage`
+              : `进度记录，共 ${progressEntries.length} 条；双击或按回车管理`
+          }
           onDoubleClick={(event) => {
             event.preventDefault();
             onOpenProgress(task.id);
@@ -212,7 +219,9 @@ export default function TaskRow({
             onOpenProgress(task.id);
           }}
         >
-          {"进度（" + (hasProgress ? "1" : "0") + "）"}
+          {english
+            ? `Progress (${progressEntries.length})`
+            : `进度（${progressEntries.length}）`}
         </button>
         <button
           className={"link-button material-button" + (materialCount > 0 ? " has-links" : "")}

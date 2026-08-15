@@ -12,8 +12,8 @@ function devRelaxCspForHmr(): Plugin {
     apply: "serve",
     transformIndexHtml(html) {
       return html.replace(
-        'content="default-src',
-        'content="script-src \'self\' \'unsafe-inline\'; connect-src ws:; default-src',
+        'content="default-src \'self\'; connect-src ',
+        'content="script-src \'self\' \'unsafe-inline\'; default-src \'self\'; connect-src ws: ',
       );
     },
   };

@@ -1,14 +1,16 @@
 /**
- * Weekflow 数据模型 —— 与原 Weekflow v2.5（storage.js / materials.js）完全等价。
+ * Weekflow 数据模型 —— 与 Web Weekflow v2.7 数据版本 v4 等价。
  * 字段语义、默认值、长度限制见 src/shared/schema.ts（Zod 校验与归一化）。
  */
 
 export interface WeekflowData {
-  version: number; // 恒为 3
+  version: number; // 恒为 4
   groups: Group[];
   flows: Flow[];
   tasks: Task[];
   materials: Material[];
+  notes: QuickNote[];
+  preferences: WeekflowPreferences;
   updatedAt: string; // 完整 ISO 时间戳
 }
 
@@ -58,10 +60,44 @@ export interface Task {
   completedAt: string | null; // YYYY-MM-DD（日期粒度），仅 completed 时非空
   progressNote: string; // ≤4000
   progressUpdatedAt: string | null; // 完整 ISO 时间戳，仅 progressNote 非空时存在
+  progressEntries: ProgressEntry[];
   recurrenceCadence: RecurrenceCadence;
   recurrenceStart: string | null; // YYYY-MM-DD
   recurrenceEnd: string | null; // YYYY-MM-DD
   recurrenceCompletions: RecurrenceCompletion[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type ProgressSourceType = "manual" | "quick-note" | "excel-import" | "legacy";
+
+export interface ProgressEntry {
+  id: string;
+  contentHtml: string;
+  contentText: string;
+  sourceType: ProgressSourceType;
+  sourceNoteId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type NoteConversionType = "task" | "progress";
+
+export interface NoteConversion {
+  id: string;
+  type: NoteConversionType;
+  taskIds: string[];
+  progressEntryIds: string[];
+  skippedCount: number;
+  createdAt: string;
+}
+
+export interface QuickNote {
+  id: string;
+  title: string;
+  contentHtml: string;
+  contentText: string;
+  conversions: NoteConversion[];
   createdAt: string;
   updatedAt: string;
 }
@@ -80,6 +116,19 @@ export interface Material {
   openEvents: string[]; // 完整 ISO 时间戳，字典序排序，≤500 条，90 天滚动窗口
   createdAt: string;
   updatedAt: string;
+}
+
+export const UNGROUPED_MATERIAL_KEY = "__ungrouped__" as const;
+export type DocumentLibraryLayout = "list" | "group";
+
+export interface DocumentLibraryPreferences {
+  layout: DocumentLibraryLayout;
+  columns: 1 | 2 | 3 | 4;
+  groupOrder: string[];
+}
+
+export interface WeekflowPreferences {
+  documentLibrary: DocumentLibraryPreferences;
 }
 
 /** 仅 v1/v2 旧数据迁移使用，v3 数据中不存在。 */
@@ -133,7 +182,7 @@ export interface TaskPeriodState {
   overdue: boolean;
 }
 
-export type ViewName = "home" | "timeline" | "dashboard" | "materials";
+export type ViewName = "home" | "timeline" | "dashboard" | "materials" | "notes";
 export type TimelineGranularity = "week" | "day";
 export type TimelineMode = "window" | "all";
 export type DashboardModule = "group" | "flow" | "managedObject" | "reportTo";

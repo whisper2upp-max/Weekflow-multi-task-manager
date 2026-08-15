@@ -1,6 +1,8 @@
-# Weekflow Desktop v1.0（Tauri v2 版）
+# Weekflow Desktop v1.1.0（Tauri v2 版）
 
 首个桌面版本（v1.0，2026-08-14）：Weekflow 从 Web 版（v2.5）完整移植为 macOS 桌面应用，**功能与 Web 版 v2.5 完全对齐**。前端最初自 `/Users/cici/Desktop/AI/project/task manager kimi`（Electron 版 Weekflow 3.0）逐字移植；Electron 版仅作只读参考，**不要修改它任何文件**。安装包从 Electron 方案的约 277MB 降到约 3.6MB。
+
+当前桌面版本（v1.1.0，2026-08-15）已同步 Web v2.6/v2.7：资料库 List/Group 双布局、布局偏好、随手记、纯本地 Task 草稿规则解析、富文本多条进度历史和进度历史 Excel 工作表。
 
 开发团队 / 署名：**Wesley Yan**（Excel 元数据 Author、使用说明、更新日志等处保持此署名）。
 
@@ -21,7 +23,7 @@ src/
   shared/        与 Electron 版逐字相同（纯逻辑，勿改字段语义）
     types.ts / ipc.ts / schema.ts / utils.ts / date-utils.ts / stats.ts
     automation.ts / materials.ts / xlsx-safe.ts / excel-import.ts
-    excel-export.ts / material-excel.ts
+    excel-export.ts / material-excel.ts / rich-text.ts / task-draft-parser.ts
   renderer/      与 Electron 版逐字相同，**差异点**：
     index.tsx        渲染前调用 installTauriBridge()
     index.html       CSP 增加 connect-src（放行 Tauri IPC）
@@ -37,7 +39,7 @@ src/
                      （替代原版运行时注入，避免与 React 受控节点冲突）
 src-tauri/       Rust 后端
   src/lib.rs     数据读写（轮换备份/损坏恢复）+ 文件保存/打开对话框 commands
-  tauri.conf.json  productName Weekflow Desktop、version 1.0.0、窗口标题 Weekflow Desktop、
+  tauri.conf.json  productName Weekflow Desktop、version 1.1.0、窗口标题 Weekflow Desktop、
                    identifier com.weekflow.app（保持不变以延续数据目录与钥匙串等系统归属）、
                    窗口 1440x900（min 960x640）、CSP；Cargo 包名 weekflow-desktop
                    （二进制同名，lib name weekflow_desktop_lib）
@@ -54,10 +56,11 @@ tests/
 - `npm run build`：tauri build（产出 `Weekflow Desktop.app` 与 `.dmg`，在 `src-tauri/target/release/bundle/`）
 - 手动冒烟：`WEEKFLOW_USER_DATA_DIR=$(mktemp -d) "src-tauri/target/release/bundle/macos/Weekflow Desktop.app/Contents/MacOS/weekflow-desktop"`，15 秒不退出、数据文件被创建即 OK。
 
-## 数据契约（与 Electron 版 / 原 v3 格式完全等价）
+## 数据契约（data v4，向后兼容 v1-v3）
 
-- 顶层：`{version: 3, groups, flows, tasks, materials, updatedAt}`，类型见 `src/shared/types.ts`。
-- 校验/归一化规则照搬 `src/shared/schema.ts`：字符串 trim + 最大长度（分组/Flow 名 80、Task 名 160、reportTo 120、managedObject 160、deliverable 500、progressNote 4000、url 3000、note 2000、periodKey 20）；颜色非法回退调色板；flowOrder 按 Flow 内强制重排；周期任务不变量（起≤止、DDL 在范围内、完成记录连续前缀补齐）；`completedAt` 是**日期粒度**，`progressUpdatedAt`/`createdAt`/`updatedAt`/`openEvents` 是**完整时间戳**。
+- 顶层：`{version: 4, groups, flows, tasks, materials, notes, preferences, updatedAt}`，类型见 `src/shared/types.ts`。`preferences.documentLibrary` 保存 List/Group、每行 1–4 列和分组顺序。
+- Task 以 `progressEntries[]` 保存多条富文本进度；`progressNote/progressUpdatedAt` 保留为最新一条的兼容别名。v1-v3 旧单条进度加载时自动迁移。
+- 校验/归一化规则见 `src/shared/schema.ts`：字符串 trim + 最大长度（笔记正文 20000、单条进度 12000、富文本 HTML 80000）；颜色非法回退调色板；flowOrder 按 Flow 内强制重排；周期任务不变量（起≤止、DDL 在范围内、完成记录连续前缀补齐）；日期与时间戳粒度维持原定义。
 - 每次变更全量校验 + 全量保存：渲染层 validateData → 桥接层 saveData（再次校验）→ Rust `save_data`（旧文件复制进 backups/ → 原子写 tmp+rename → 裁剪到 30 份）。
 - 调色板：`["#665CFF","#0AA6B5","#9B5DE5","#FF7A45","#2CA77B","#E94E89","#7BA23F"]`。
 - ID：`uid(prefix)` = `prefix_` + crypto.randomUUID()。排序一律 zh-CN locale。
@@ -73,7 +76,7 @@ Rust commands（`src-tauri/src/lib.rs`）：`load_data` / `save_data` / `get_dat
 
 - `styles/weekflow.css` 是原样式逐字拷贝；组件必须使用同一套类名/id 与 DOM 结构语义，动态颜色走 `style={{'--group-color': ...}}` 这类 CSS 变量注入。
 - 弹窗用原生 `<dialog>` + `showModal()`（保留 ::backdrop 样式）；toast 右下角；DDL 提醒右下角悬浮卡，10 秒自动关闭。
-- 所有用户内容用 React 文本渲染（等价原 textContent 语义），禁止 dangerouslySetInnerHTML。
+- 普通用户内容用 React 文本渲染；富文本只能先经 `shared/rich-text.ts` 白名单净化，再由 `RichTextView` 转成 React 节点或由 `RichTextEditor` 写入受控编辑区。禁止直接使用 `dangerouslySetInnerHTML`。
 - 时间轴左栏固定列 5 列：`Task / DDL、紧急、进度记录、相关资料、编辑`。
 
 ## 中英切换（i18n）
@@ -95,7 +98,7 @@ Rust commands（`src-tauri/src/lib.rs`）：`load_data` / `save_data` / `get_dat
 6. JSON 恢复前先自动备份当前数据（轮换备份已覆盖，无需单独键）。
 7. 看板点击分组/Flow/逾期数字 → 跳时间轴并自动套用筛选。
 8. Flow 步骤拖拽排序只存在于 Flow 弹窗；时间轴本身不可拖拽。
-9. Cmd/Ctrl+K：主页/看板下切到时间轴并聚焦搜索框；资料库下聚焦资料名称框。
+9. Cmd/Ctrl+K：主页/看板下切到时间轴并聚焦搜索框；资料库下聚焦资料名称框；随手记下聚焦笔记搜索。
 10. 跨午夜定时器（次日 00:00:02）刷新周期状态并重播临期提醒。
 11. 已用过的汇报对象/管理对象成为 datalist 历史建议，保存时按大小写不敏感归一到历史同名片。
 12. 新建 Flow 默认继承分组色，手动改色后不再跟随。
@@ -103,11 +106,11 @@ Rust commands（`src-tauri/src/lib.rs`）：`load_data` / `save_data` / `get_dat
 
 ## Excel 要点
 
-- 任务导入 20 列模板（列名/校验/错误文案逐字照搬）；资料库导入 7 列。模板与"当前数据"均由代码生成（不依赖静态文件）。
+- 任务主表仍为 20 列，另有“进度历史 / Progress History”工作表按一条记录一行保存完整历史；资料库导入 7 列。模板与“当前数据”均由代码生成（不依赖静态文件）。
 - 看板报告 = **手写 OOXML XML + JSZip**（excel-export.ts），不用 SheetJS 写；可回导导出与资料库导出用 SheetJS 写 + xlsx-safe 净化。
 - 文件名时间戳 `YYYYMMDD_HHMM`；workbook Author 固定 `Wesley Yan`。
 - SheetJS 依赖：`xlsx`（SheetJS 官方 CDN tarball 0.20.3）。
 
 ## 与 Electron 版的数据互通
 
-两者 JSON 数据格式完全一致。Electron 版数据在 `~/Library/Application Support/weekflow-electron/`（或对应 userData 目录），本版在 `~/Library/Application Support/weekflow-tauri/`；用户可通过"导出 JSON 备份"→"从 JSON 恢复"迁移，也可直接拷贝 `weekflow-data.json`。
+Web v2.7 与本版 JSON data v4 格式一致；旧 v1-v3 会自动迁移。Electron 版数据在 `~/Library/Application Support/weekflow-electron/`（或对应 userData 目录），本版在 `~/Library/Application Support/weekflow-tauri/`；用户可通过“导出 JSON 备份”→“从 JSON 恢复”迁移，也可直接拷贝 `weekflow-data.json`。

@@ -313,3 +313,10 @@ export function sortByGroup(
       );
     });
 }
+
+export function sortByRecentUsage(materials: unknown, now?: Date | string | number): Material[] {
+  return (Array.isArray(materials) ? (materials as Material[]) : []).slice().sort((left, right) =>
+    currentAndPreviousWeekOpenCount(right, now) - currentAndPreviousWeekOpenCount(left, now) ||
+    left.title.localeCompare(right.title, "zh-CN", { numeric: true, sensitivity: "base" })
+  );
+}

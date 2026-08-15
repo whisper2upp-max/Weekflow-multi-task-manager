@@ -311,10 +311,10 @@ export default function TimelineView() {
     if (!current) return;
     const leftRail =
       parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--left-rail")) || 0;
-    scroller.scrollTo({
-      left: Math.max(0, current.offsetLeft - leftRail - 12),
-      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"
-    });
+    /* 只更新横向周列。这里不能启动 scrollTo({ behavior: "smooth" })：
+       Chromium 会保留该动画的纵向 top 目标，用户随后滚到下方操作 Task 时，
+       旧动画仍可能延迟把 timeline-scroll 拉回顶部。 */
+    scroller.scrollLeft = Math.max(0, current.offsetLeft - leftRail - 12);
   }, [scrollToCurrentWeekToken]);
 
   /* ---------- 交互（等价 app.js:1886-2013 与各行内回调） ---------- */

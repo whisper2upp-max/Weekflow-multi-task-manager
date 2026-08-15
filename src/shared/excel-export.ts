@@ -20,6 +20,12 @@ import {
   summarizeByGroup
 } from "./stats";
 import { TYPE_LABELS } from "./materials";
+import {
+  MAX_PROGRESS_TEXT,
+  plainText,
+  progressCellText,
+  sortProgressEntries
+} from "./rich-text";
 import type {
   Flow,
   Group,
@@ -96,6 +102,7 @@ interface ExcelLabels {
   reportTo: string;
   notProvided: string;
   taskStatus: string;
+  progressHeaders: string[];
 }
 
 const LABELS: ExcelLabels = {
@@ -115,14 +122,15 @@ const LABELS: ExcelLabels = {
   pending: "未完成",
   urgency: urgencyLabels,
   recurrence: recurrenceLabels,
-  sheets: ["整体看板", "时间表看板"],
+  sheets: ["整体看板", "时间表看板", "进度历史"],
   workbook: "工作表",
   dashboardTitle: "Weekflow Task 看板",
   reportFilename: "Task看板_",
   managed: "管理对象",
   reportTo: "汇报对象",
   notProvided: "未填写",
-  taskStatus: "Task状态"
+  taskStatus: "Task状态",
+  progressHeaders: ["分组", "Flow", "Task name", "DDL", "记录 ID", "进度内容", "创建时间", "最后编辑时间", "来源", "来源笔记 ID"]
 };
 
 /* 英文 labels（逐字沿用原 excel-export.js labels() 的英文分支）。
@@ -163,14 +171,15 @@ const EN_LABELS: ExcelLabels = {
   pending: "Incomplete",
   urgency: { high: "High", medium: "Medium", low: "Low" },
   recurrence: { none: "Does not repeat", weekly: "Weekly", monthly: "Monthly" },
-  sheets: ["Overall Dashboard", "Timeline Dashboard"],
+  sheets: ["Overall Dashboard", "Timeline Dashboard", "Progress History"],
   workbook: "Worksheets",
   dashboardTitle: "Weekflow Task Dashboard",
   reportFilename: "Task_Dashboard_",
   managed: "Managed_Person",
   reportTo: "Report_To",
   notProvided: "Not_Provided",
-  taskStatus: "Task_Status"
+  taskStatus: "Task_Status",
+  progressHeaders: ["Group", "Flow", "Task Name", "DDL", "Entry ID", "Progress Content", "Created At", "Last Edited At", "Source", "Source Note ID"]
 };
 
 function labelsFor(english?: boolean): ExcelLabels {
@@ -394,7 +403,13 @@ export function buildTimelineRows(
         task.status === "completed" ? copy.completed : copy.pending,
         task.completedAt || "",
         isOverdue(task, today) ? copy.yes : copy.no,
-        task.progressNote || "",
+        progressCellText(
+          task,
+          32767,
+          options?.english
+            ? "\n… Complete history is available in the Progress History worksheet."
+            : "\n……完整内容请查看“进度历史”工作表。"
+        ),
         formatMaterials(
           (data.materials || []).filter((material) => {
             return material.taskIds.includes(task.id);
@@ -420,6 +435,50 @@ export function buildTimelineRows(
     });
   });
   return { rows: rows, weeks: weeks, tasks: orderedTasks };
+}
+
+function progressEntriesForExport(task: Task) {
+  const entries = sortProgressEntries(task.progressEntries);
+  if (entries.length || !task.progressNote) return entries;
+  return [{
+    id: "",
+    contentHtml: "",
+    contentText: task.progressNote,
+    sourceType: "legacy" as const,
+    sourceNoteId: null,
+    createdAt: task.progressUpdatedAt || task.updatedAt || task.createdAt || "",
+    updatedAt: task.progressUpdatedAt || task.updatedAt || task.createdAt || ""
+  }];
+}
+
+export function buildProgressHistoryRows(
+  data: WeekflowData,
+  now?: Date,
+  options?: ExcelExportOptions
+): CellValue[][] {
+  const copy = labelsFor(options?.english);
+  const groupMap = new Map(data.groups.map((group) => [group.id, group] as const));
+  const flowMap = new Map(data.flows.map((flow) => [flow.id, flow] as const));
+  const rows: CellValue[][] = [copy.progressHeaders.slice()];
+  buildTimelineRows(data, now, options).tasks.forEach((task) => {
+    const group = groupMap.get(task.groupId);
+    const flow = task.flowId ? flowMap.get(task.flowId) : null;
+    progressEntriesForExport(task).forEach((entry) => {
+      rows.push([
+        group?.name || copy.unknownGroup,
+        flow?.name || "",
+        task.name || "",
+        task.ddl || "",
+        entry.id || "",
+        String(entry.contentText || plainText(entry.contentHtml || "")).slice(0, MAX_PROGRESS_TEXT),
+        entry.createdAt || "",
+        entry.updatedAt || entry.createdAt || "",
+        entry.sourceType || "manual",
+        entry.sourceNoteId || ""
+      ]);
+    });
+  });
+  return rows;
 }
 
 function xmlEscape(value: unknown): string {
@@ -713,8 +772,11 @@ function timelineSheetXml(
         else style = overdue ? 6 : 1;
         return cellXml(columnName(col) + excelRow, value, style, dateColumn);
       });
-      const height =
-        rowIndex === 0 ? ' ht="30" customHeight="1"' : ' ht="34" customHeight="1"';
+      const progressLines = rowIndex > 0 ? String(row[16] || "").split("\n").length : 1;
+      const taskHeight = Math.min(120, Math.max(34, 18 + progressLines * 15));
+      const height = rowIndex === 0
+        ? ' ht="30" customHeight="1"'
+        : ` ht="${taskHeight}" customHeight="1"`;
       return '<row r="' + excelRow + '"' + height + ">" + cells.join("") + "</row>";
     })
     .join("");
@@ -745,6 +807,42 @@ function timelineSheetXml(
   );
 }
 
+function progressHistorySheetXml(
+  data: WeekflowData,
+  now?: Date,
+  options?: ExcelExportOptions
+): string {
+  const rows = buildProgressHistoryRows(data, now, options);
+  const rowXml = rows.map((row, rowIndex) => {
+    const excelRow = rowIndex + 1;
+    const cells = row.map((value, columnIndex) => {
+      const isDate = rowIndex > 0 && columnIndex === 3;
+      return cellXml(
+        columnName(columnIndex) + excelRow,
+        value,
+        rowIndex === 0 ? 2 : isDate ? 7 : 1,
+        isDate
+      );
+    });
+    const height = rowIndex === 0 ? ' ht="30" customHeight="1"' : ' ht="42" customHeight="1"';
+    return `<row r="${excelRow}"${height}>${cells.join("")}</row>`;
+  }).join("");
+  const lastColumn = columnName(labelsFor(options?.english).progressHeaders.length - 1);
+  const lastRow = Math.max(1, rows.length);
+  return (
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+    `<dimension ref="A1:${lastColumn}${lastRow}"/>` +
+    '<sheetViews><sheetView workbookViewId="0"><selection activeCell="A1" sqref="A1"/></sheetView></sheetViews>' +
+    '<sheetFormatPr defaultRowHeight="15"/>' +
+    columnsXml([18, 22, 34, 13, 24, 70, 25, 25, 16, 24]) +
+    `<sheetData>${rowXml}</sheetData>` +
+    `<autoFilter ref="A1:${lastColumn}${lastRow}"/>` +
+    '<pageMargins left="0.25" right="0.25" top="0.5" bottom="0.5" header="0.2" footer="0.2"/>' +
+    '</worksheet>'
+  );
+}
+
 function contentTypesXml(): string {
   return (
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
@@ -754,9 +852,10 @@ function contentTypesXml(): string {
     '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' +
     '<Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>' +
     '<Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>' +
+    '<Override PartName="/xl/worksheets/sheet3.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>' +
     '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' +
     '<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>' +
-    '<Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-package.extended-properties+xml"/>' +
+    '<Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/>' +
     "</Types>"
   );
 }
@@ -790,7 +889,9 @@ function workbookXml(
     xmlEscape(copy.sheets[0]) +
     '" sheetId="1" state="visible" r:id="rId1"/><sheet name="' +
     xmlEscape(copy.sheets[1]) +
-    '" sheetId="2" state="visible" r:id="rId2"/></sheets>' +
+    '" sheetId="2" state="visible" r:id="rId2"/><sheet name="' +
+    xmlEscape(copy.sheets[2]) +
+    '" sheetId="3" state="visible" r:id="rId3"/></sheets>' +
     '<definedNames><definedName name="_xlnm._FilterDatabase" localSheetId="1" hidden="1">&apos;' +
     xmlEscape(copy.sheets[1]) +
     '&apos;!$A$1:$' +
@@ -808,7 +909,8 @@ function workbookRelationshipsXml(): string {
     '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
     '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/>' +
     '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/>' +
-    '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>' +
+    '<Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet3.xml"/>' +
+    '<Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>' +
     "</Relationships>"
   );
 }
@@ -846,11 +948,13 @@ function appPropertiesXml(options?: ExcelExportOptions): string {
     '<HeadingPairs><vt:vector size="2" baseType="variant"><vt:variant><vt:lpstr>' +
     xmlEscape(copy.workbook) +
     "</vt:lpstr></vt:variant>" +
-    '<vt:variant><vt:i4>2</vt:i4></vt:variant></vt:vector></HeadingPairs>' +
-    '<TitlesOfParts><vt:vector size="2" baseType="lpstr"><vt:lpstr>' +
+    '<vt:variant><vt:i4>3</vt:i4></vt:variant></vt:vector></HeadingPairs>' +
+    '<TitlesOfParts><vt:vector size="3" baseType="lpstr"><vt:lpstr>' +
     xmlEscape(copy.sheets[0]) +
     "</vt:lpstr><vt:lpstr>" +
     xmlEscape(copy.sheets[1]) +
+    "</vt:lpstr><vt:lpstr>" +
+    xmlEscape(copy.sheets[2]) +
     "</vt:lpstr></vt:vector></TitlesOfParts>" +
     "<Company></Company><LinksUpToDate>false</LinksUpToDate><SharedDoc>false</SharedDoc>" +
     "<HyperlinksChanged>false</HyperlinksChanged><AppVersion>16.0300</AppVersion></Properties>"
@@ -892,6 +996,7 @@ export function buildXlsxPackage(
   zip.file("xl/styles.xml", styleSheetXml(data));
   zip.file("xl/worksheets/sheet1.xml", overallSheetXml(data, date, options));
   zip.file("xl/worksheets/sheet2.xml", timelineSheetXml(data, date, options));
+  zip.file("xl/worksheets/sheet3.xml", progressHistorySheetXml(data, date, options));
   return zip.generateAsync({
     type: outputType,
     mimeType: XLSX_MIME,
@@ -957,6 +1062,8 @@ export function buildScopedTaskData(
         return taskIds.has(taskId);
       });
     }),
+    notes: [],
+    preferences: data.preferences,
     updatedAt: data.updatedAt
   };
 }

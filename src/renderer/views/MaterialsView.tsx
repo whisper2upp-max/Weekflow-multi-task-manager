@@ -5,9 +5,11 @@
    2857 deleteSelectedMaterials、2876 openMaterialLink。
    筛选栏由 components/MaterialsFilterBar 实现并挂载在 Header 区，本视图只消费 materialFilters。 */
 import { useMemo, useRef } from "react";
+import type { CSSProperties } from "react";
 import * as materialTools from "../../shared/materials";
 import * as utils from "../../shared/utils";
-import type { Material, MaterialFilters, WeekflowData } from "../../shared/types";
+import { UNGROUPED_MATERIAL_KEY } from "../../shared/types";
+import type { Group, Material, MaterialFilters, WeekflowData } from "../../shared/types";
 import { useDataStore } from "../store/dataStore";
 import { useUiStore } from "../store/uiStore";
 import * as exporters from "../lib/exporters";
@@ -20,7 +22,8 @@ function matchesFilters(
   material: Material,
   filters: MaterialFilters,
   data: WeekflowData,
-  now: Date
+  now: Date,
+  groupLayout = false
 ): boolean {
   const relations = materialTools.resolveRelations(material, data);
   if (
@@ -31,18 +34,18 @@ function matchesFilters(
   }
   if (filters.types.length && !filters.types.includes(material.type)) return false;
   if (
-    filters.taskIds.length &&
+    !groupLayout && filters.taskIds.length &&
     !filters.taskIds.some((id) => relations.taskIds.includes(id))
   ) {
     return false;
   }
   if (
-    filters.flowIds.length &&
+    !groupLayout && filters.flowIds.length &&
     !filters.flowIds.some((id) => relations.flowIds.includes(id))
   ) {
     return false;
   }
-  if (filters.groupIds.length) {
+  if (!groupLayout && filters.groupIds.length) {
     const groupMatch = filters.groupIds.some((id) =>
       id === "__ungrouped__"
         ? relations.groupIds.length === 0
@@ -51,7 +54,7 @@ function matchesFilters(
     if (!groupMatch) return false;
   }
   if (
-    filters.recentOnly &&
+    !groupLayout && filters.recentOnly &&
     !materialTools.openedInCurrentOrPreviousWeek(material, now)
   ) {
     return false;
@@ -65,15 +68,15 @@ export default function MaterialsView() {
   const materialFilters = useUiStore((s) => s.materialFilters);
   const selectedMaterialIds = useUiStore((s) => s.selectedMaterialIds);
   const downloadMenuRef = useRef<HTMLDetailsElement>(null);
+  const groupLayout = data?.preferences.documentLibrary.layout === "group";
 
   /* 等价 app.js:2758 getVisibleMaterials */
   const visible = useMemo(() => {
     if (!data) return [];
     const now = new Date();
-    return materialTools
-      .sortByGroup(data.materials, data)
-      .filter((material) => matchesFilters(material, materialFilters, data, now));
-  }, [data, materialFilters]);
+    const filtered = data.materials.filter((material) => matchesFilters(material, materialFilters, data, now, groupLayout));
+    return groupLayout ? materialTools.sortByRecentUsage(filtered, now) : materialTools.sortByGroup(filtered, data);
+  }, [data, materialFilters, groupLayout]);
 
   const frequentCount = useMemo(() => {
     if (!data) return 0;
@@ -139,6 +142,20 @@ export default function MaterialsView() {
 
   if (!data) return null;
   const recentOnly = materialFilters.recentOnly;
+  const groupPreferences = data.preferences.documentLibrary;
+  const groupMap = new Map(data.groups.map((group) => [group.id, group]));
+  const groupedMaterials = new Map<string, Material[]>();
+  groupPreferences.groupOrder.forEach((key) => groupedMaterials.set(key, []));
+  visible.forEach((material) => {
+    const groupIds = materialTools.resolveRelations(material, data).groupIds;
+    if (!groupIds.length) groupedMaterials.get(UNGROUPED_MATERIAL_KEY)?.push(material);
+    else groupIds.forEach((groupId) => groupedMaterials.get(groupId)?.push(material));
+  });
+  const groupMeta = (key: string): { group: Group | null; name: string; color: string } | null => {
+    if (key === UNGROUPED_MATERIAL_KEY) return { group: null, name: "未分组", color: "#9AA4B7" };
+    const group = groupMap.get(key);
+    return group ? { group, name: group.name, color: group.color } : null;
+  };
 
   return (
     <section
@@ -180,7 +197,7 @@ export default function MaterialsView() {
           >
             删除所选
           </button>
-          <div className="segmented material-scope-toggle" aria-label="资料显示范围">
+          <div className="segmented material-scope-toggle" aria-label="资料显示范围" hidden={groupLayout}>
             <button
               className={recentOnly ? "" : "is-active"}
               type="button"
@@ -242,7 +259,7 @@ export default function MaterialsView() {
         </div>
       </div>
 
-      <section className="dashboard-section materials-table-section" aria-label="资料清单">
+      <section className="dashboard-section materials-table-section" aria-label="资料清单" hidden={groupLayout}>
         <div className="table-wrap materials-table-wrap">
           <table className="materials-table">
             <thead>
@@ -315,6 +332,35 @@ export default function MaterialsView() {
               )}
             </tbody>
           </table>
+        </div>
+      </section>
+      <section className="materials-group-section" aria-label="资料分组清单" hidden={!groupLayout}>
+        <div
+          className="materials-group-board"
+          style={{ "--materials-group-columns": groupPreferences.columns } as CSSProperties}
+        >
+          {groupPreferences.groupOrder.map((key, groupIndex) => {
+            const meta = groupMeta(key);
+            if (!meta) return null;
+            const items = materialTools.sortByRecentUsage(groupedMaterials.get(key) || [], new Date());
+            return (
+              <article className="material-group-card" key={key} style={{ "--group-color": meta.color } as CSSProperties}>
+                <header className="material-group-card-head">
+                  <div className="material-group-card-title"><i className="material-group-marker" aria-hidden="true"></i><div><small>分组 {String(groupIndex + 1).padStart(2, "0")}</small><h2 data-user-content={meta.group ? "true" : undefined}>{meta.name}</h2></div></div>
+                  <span className="material-group-count">{items.length} 条资料</span>
+                </header>
+                <div className="material-group-list">
+                  {!items.length ? <p className="material-group-empty">暂无符合条件的资料</p> : items.map((material) => (
+                    <div className="material-group-document" key={material.id}>
+                      <input type="checkbox" value={material.id} aria-label={`选择资料 ${material.title}`} checked={selectedIdSet.has(material.id)} onChange={() => useUiStore.getState().toggleMaterialSelected(material.id)} />
+                      <button className="material-group-name" data-user-content="true" type="button" title={material.title} onClick={() => useUiStore.getState().openDialog({ type: "material", materialId: material.id })}>{material.title}</button>
+                      <button className="material-group-go" type="button" title={`打开 ${material.title}`} onClick={() => void handleOpenLink(material)}>前往</button>
+                    </div>
+                  ))}
+                </div>
+              </article>
+            );
+          })}
         </div>
       </section>
     </section>

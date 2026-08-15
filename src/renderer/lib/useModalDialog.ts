@@ -11,10 +11,16 @@ export function useModalDialog<T extends HTMLDialogElement = HTMLDialogElement>(
   const onClosedRef = useRef(onClosed);
   onClosedRef.current = onClosed;
 
+  /* 不传依赖数组：部分弹窗（Task 草稿转换）会先解析数据、下一次渲染才
+     挂载 <dialog>。若只在首次 render 执行，ref.current 当时为 null，后续既
+     不会绑定事件，也不会 showModal。每次提交后检查一次，cleanup 可避免重复监听。 */
   useEffect(() => {
     const node = ref.current;
     if (!node) return;
-    const handleCancel = (): void => {
+    const handleCancel = (event: Event): void => {
+      /* 原生 dialog 的 cancel 默认会立刻关闭；统一阻止默认行为，让调用方有机会
+         在未保存内容的确认框中拒绝关闭。确认后调用方会更新 UI state 并卸载弹窗。 */
+      event.preventDefault();
       if (onClosedRef.current) onClosedRef.current();
     };
     const handleClose = (): void => {
@@ -26,7 +32,7 @@ export function useModalDialog<T extends HTMLDialogElement = HTMLDialogElement>(
       node.removeEventListener("cancel", handleCancel);
       node.removeEventListener("close", handleClose);
     };
-  }, []);
+  });
 
   useEffect(() => {
     const node = ref.current;
@@ -42,7 +48,7 @@ export function useModalDialog<T extends HTMLDialogElement = HTMLDialogElement>(
     } else if (node.open) {
       node.close();
     }
-  }, [open]);
+  });
 
   return ref;
 }

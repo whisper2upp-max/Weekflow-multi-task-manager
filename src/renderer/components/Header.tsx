@@ -4,7 +4,7 @@
    语言切换点击处理（app.js:284-290：点当前语言忽略，否则 setLanguage 后整页 reload）。 */
 import * as stats from "../../shared/stats";
 import type { ViewName } from "../../shared/types";
-import { getLanguage, setLanguage } from "../lib/i18n";
+import { getLanguage, setLanguage, tConfirm } from "../lib/i18n";
 import { useDataStore } from "../store/dataStore";
 import { useUiStore } from "../store/uiStore";
 
@@ -12,7 +12,8 @@ const NAV_TABS: { view: ViewName; icon: string; label: string }[] = [
   { view: "home", icon: "⌂", label: "主页" },
   { view: "timeline", icon: "⌁", label: "时间轴看板" },
   { view: "dashboard", icon: "▦", label: "整体看板" },
-  { view: "materials", icon: "▤", label: "资料库" }
+  { view: "materials", icon: "▤", label: "资料库" },
+  { view: "notes", icon: "✎", label: "随手记" }
 ];
 
 export default function Header() {
@@ -22,10 +23,31 @@ export default function Header() {
   const data = useDataStore((state) => state.data);
   /* 语言在会话内恒定（切换即整页 reload），非响应式读取即可 */
   const language = getLanguage();
+  const noteDirty = useUiStore((state) => state.noteDirty);
+  const materialLayout = data?.preferences.documentLibrary.layout || "list";
 
   const summary = stats.summarize(data ? data.tasks : null, new Date());
   /* 等价 app.js:2950：dashboard / materials 视图隐藏汇总与新建操作 */
-  const simplifiedHeader = view === "dashboard" || view === "materials";
+  const simplifiedHeader = view === "dashboard" || view === "materials" || view === "notes";
+
+  const navigate = (nextView: ViewName): void => {
+    if (
+      view === "notes" &&
+      nextView !== "notes" &&
+      noteDirty &&
+      !tConfirm("当前笔记尚未保存，继续后修改会丢失。仍要继续吗？")
+    ) {
+      return;
+    }
+    if (view === "notes" && nextView !== "notes") useUiStore.getState().setNoteDirty(false);
+    switchView(nextView);
+  };
+
+  const switchLanguage = (nextLanguage: "zh-CN" | "en"): void => {
+    if (language === nextLanguage) return;
+    if (noteDirty && !tConfirm("当前笔记尚未保存，切换语言后修改会丢失。仍要继续吗？")) return;
+    setLanguage(nextLanguage);
+  };
 
   const openNewGroup = (): void => {
     openDialog({ type: "group" });
@@ -72,7 +94,7 @@ export default function Header() {
         data-action="show-home"
         onClick={(event) => {
           event.preventDefault();
-          switchView("home");
+          navigate("home");
         }}
       >
         <span className="brand-mark" aria-hidden="true">
@@ -99,7 +121,7 @@ export default function Header() {
               type="button"
               data-view={tab.view}
               aria-current={active ? "page" : "false"}
-              onClick={() => switchView(tab.view)}
+              onClick={() => navigate(tab.view)}
             >
               <span aria-hidden="true">{tab.icon}</span> {tab.label}
             </button>
@@ -115,7 +137,7 @@ export default function Header() {
           data-language="zh-CN"
           aria-pressed={language === "zh-CN"}
           onClick={() => {
-            if (language !== "zh-CN") setLanguage("zh-CN");
+            switchLanguage("zh-CN");
           }}
         >
           中文
@@ -126,11 +148,43 @@ export default function Header() {
           data-language="en"
           aria-pressed={language === "en"}
           onClick={() => {
-            if (language !== "en") setLanguage("en");
+            switchLanguage("en");
           }}
         >
           EN
         </button>
+      </div>
+
+      <div
+        id="materials-layout-controls"
+        className="materials-layout-controls"
+        aria-label="资料库布局"
+        hidden={view !== "materials"}
+      >
+        <span>布局</span>
+        <button
+          id="material-layout-settings-button"
+          className="material-layout-settings-button"
+          type="button"
+          hidden={materialLayout !== "group"}
+          onClick={() => openDialog({ type: "materialLayout" })}
+        >
+          <span aria-hidden="true">⌘</span><span className="material-layout-settings-label">调整布局</span>
+        </button>
+        <div className="segmented materials-layout-switch" role="group" aria-label="资料库布局切换">
+          <button
+            className={materialLayout === "list" ? "is-active" : undefined}
+            type="button"
+            aria-pressed={materialLayout === "list"}
+            onClick={() => void useDataStore.getState().setDocumentLibraryLayout("list")}
+          >列表</button>
+          <button
+            className={materialLayout === "group" ? "is-active" : undefined}
+            type="button"
+            aria-pressed={materialLayout === "group"}
+            onClick={() => void useDataStore.getState().setDocumentLibraryLayout("group")}
+          >分组</button>
+        </div>
       </div>
 
       <div id="header-summary" className="header-summary" aria-live="polite" hidden={simplifiedHeader}>

@@ -40,6 +40,9 @@ export type DialogState =
   | { type: "link"; taskId: string }
   | { type: "material"; materialId?: string }
   | { type: "progress"; taskId: string }
+  | { type: "materialLayout" }
+  | { type: "noteProgress"; noteId: string }
+  | { type: "taskDrafts"; noteId: string }
   | { type: "deleteGroup"; groupId: string }
   | {
       type: "excelImport";
@@ -93,6 +96,7 @@ export interface UiStoreState {
   toasts: ToastItem[];
   ddlReminder: DdlReminderState;
   selectedMaterialIds: string[];
+  noteDirty: boolean;
 
   /* 视图 */
   switchView(view: ViewName): void;
@@ -144,12 +148,13 @@ export interface UiStoreState {
   toggleMaterialSelected(id: string): void;
   setSelectedMaterialIds(ids: string[]): void;
   clearSelectedMaterials(): void;
+  setNoteDirty(dirty: boolean): void;
 
   /** dataStore.persist 成功后调用：剔除失效筛选 id / 选中 id（等价 app.js:731-778） */
   sanitize(valid: WeekflowData): void;
 }
 
-const VALID_VIEWS: ViewName[] = ["home", "timeline", "dashboard", "materials"];
+const VALID_VIEWS: ViewName[] = ["home", "timeline", "dashboard", "materials", "notes"];
 
 function defaultFilters(): TaskFilters {
   return {
@@ -207,6 +212,7 @@ export const useUiStore = create<UiStoreState>()((set, get) => ({
   toasts: [],
   ddlReminder: { visible: false, items: [] },
   selectedMaterialIds: [],
+  noteDirty: false,
 
   /* 等价 app.js:2920-2942：切回 timeline 时若为 day 模式重置为 week；
      切入 dashboard 时清空模块展开；每次落到 timeline 都让 TimelineView 滚动到当前周。 */
@@ -423,6 +429,10 @@ export const useUiStore = create<UiStoreState>()((set, get) => ({
 
   clearSelectedMaterials() {
     set({ selectedMaterialIds: [] });
+  },
+
+  setNoteDirty(dirty) {
+    set({ noteDirty: dirty });
   },
 
   /* 等价 app.js:731-778 sanitizeUiState */

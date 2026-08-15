@@ -1,6 +1,5 @@
 /* 更新日志弹窗：原生 <dialog> + useModalDialog。
-   桌面版首个发布（Weekflow Desktop v1.0，2026-08-14）：主条目说明移植定位、桌面架构与
-   数据安全/迁移，另附一条 Web 版历史简述；结构与类名沿用原弹窗（.release-entry 等）。
+   Desktop v1.1.0 对齐 Web v2.7，旧版条目继续保留并按新到旧排列。
    维护约定：后续只有新增功能才追加条目，移植与架构说明不再重复。
    英文模式按 isEnglish() 渲染英文 JSX（等价原版整篇 innerHTML 替换机制）。 */
 import { useUiStore } from "../../store/uiStore";
@@ -14,6 +13,35 @@ const EN_ENTRIES: ReadonlyArray<{
   lead: string;
   sections: ReadonlyArray<{ heading: string; items: readonly string[] }>;
 }> = [
+  {
+    title: "Weekflow Desktop v1.1.0",
+    date: "2026-08-15",
+    lead: "Feature alignment with Web v2.6 and v2.7: dual Document Library layouts, Quick Notes, rich-text progress history, and local Task draft conversion are now available in the Tauri desktop app.",
+    sections: [
+      {
+        heading: "Document Library Layouts",
+        items: [
+          "Added List / Group switching. Group layout organizes documents into fixed-height cards by Task Group, ranks them by recent opens, and keeps selection, deletion, editing, upload, and download workflows.",
+          "Arrange Layout supports one to four Groups per row and drag reordering. The selected layout, column count, and Group order are included in JSON backup and restore."
+        ]
+      },
+      {
+        heading: "Quick Notes and Task Drafts",
+        items: [
+          "Added a bilingual Quick Notes workspace with rich text, SharePoint links, and 20 preset text colors plus 20 preset highlight colors.",
+          "A note can append a new timestamped progress record to a selected Task or become one or more reviewable Task drafts. The local rule engine recognizes line breaks, numbered items, common Chinese/English dates, and weekly/monthly recurrence without using AI."
+        ]
+      },
+      {
+        heading: "Progress History and Excel",
+        items: [
+          "Each Task now supports multiple independently editable progress records. Existing single progress notes migrate automatically to data v4.",
+          "Task import/current-data workbooks and dashboard reports add a Progress History worksheet. The Task row keeps all progress records in one wrapped cell, newest first; the history worksheet lists one record per row.",
+          "Excel packages remain generated without locked default views and retain the Windows-safe workbook structure used by the previous desktop release."
+        ]
+      }
+    ]
+  },
   {
     title: "Weekflow Desktop v1.0",
     date: "2026-08-14",
@@ -95,6 +123,36 @@ export default function ChangelogDialog() {
         </article>
       ) : (
       <article className="document-content changelog-content">
+        <div className="release-entry" data-version="desktop-1.1.0">
+          <div className="release-heading">
+            <span>Weekflow Desktop v1.1.0</span>
+            <time dateTime="2026-08-15">2026-08-15</time>
+          </div>
+          <p className="release-lead">同步 Web v2.6 与 v2.7：Tauri 桌面版新增资料库双布局、随手记、富文本多条进度历史和纯本地 Task 草稿转换。</p>
+          <section>
+            <h3>资料库双布局</h3>
+            <ul>
+              <li>新增 List / Group 切换；Group 按 Task 分组显示固定高度资料栏，按近期打开次数排序，并保留勾选删除、编辑、上传和下载。</li>
+              <li>“调整布局”支持每行 1–4 个分组及拖动排序；布局模式、列数和顺序会随 JSON 备份恢复。</li>
+            </ul>
+          </section>
+          <section>
+            <h3>随手记与 Task 草稿</h3>
+            <ul>
+              <li>新增中英文随手记，支持富文本、SharePoint 链接、20 种预设字色和 20 种预设高亮色。</li>
+              <li>笔记可追加为某 Task 的新进度记录，或转换成一个或多个逐条确认的 Task 草稿；纯本地规则可识别换行、编号、常见中英文日期和每周/每月周期，不调用 AI。</li>
+            </ul>
+          </section>
+          <section>
+            <h3>进度历史、数据与 Excel</h3>
+            <ul>
+              <li>每个 Task 支持多条独立编辑、带时间戳的进度记录；旧单条进度自动迁移到 data v4。</li>
+              <li>Task 模板、当前数据和看板报告新增“进度历史”工作表；Task 主行按新到旧在同一格换行显示全部进度，历史表按一条记录一行列示。</li>
+              <li>Excel 继续采用不锁定默认视图、兼容 Windows Excel 的安全工作簿结构。</li>
+            </ul>
+          </section>
+        </div>
+
         <div className="release-entry" data-version="desktop-1.0">
           <div className="release-heading">
             <span>Weekflow Desktop v1.0</span>

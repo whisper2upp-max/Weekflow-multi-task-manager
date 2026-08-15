@@ -16,6 +16,7 @@ import HomeView from "./views/HomeView";
 import TimelineView from "./views/TimelineView";
 import DashboardView from "./views/DashboardView";
 import MaterialsView from "./views/MaterialsView";
+import NotesView from "./views/NotesView";
 import GroupDialog from "./components/dialogs/GroupDialog";
 import FlowDialog from "./components/dialogs/FlowDialog";
 import TaskDialog from "./components/dialogs/TaskDialog";
@@ -27,6 +28,9 @@ import ExcelImportDialog from "./components/dialogs/ExcelImportDialog";
 import MaterialImportDialog from "./components/dialogs/MaterialImportDialog";
 import UserGuideDialog from "./components/dialogs/UserGuideDialog";
 import ChangelogDialog from "./components/dialogs/ChangelogDialog";
+import MaterialLayoutDialog from "./components/dialogs/MaterialLayoutDialog";
+import NoteProgressDialog from "./components/dialogs/NoteProgressDialog";
+import TaskDraftsDialog from "./components/dialogs/TaskDraftsDialog";
 
 export default function App() {
   /* 等价 app.js:272 i18n.applyDocument()：首帧提交后整树翻译一次并启动 observer，
@@ -89,7 +93,11 @@ export default function App() {
       requestAnimationFrame(() => {
         const view = useUiStore.getState().view;
         const search = document.getElementById(
-          view === "materials" ? "material-filter-name" : "filter-search"
+          view === "materials"
+            ? "material-filter-name"
+            : view === "notes"
+              ? "note-search"
+              : "filter-search"
         );
         if (search instanceof HTMLInputElement) {
           search.focus();
@@ -136,6 +144,7 @@ export default function App() {
           <TimelineView />
           <DashboardView />
           <MaterialsView />
+          <NotesView />
         </main>
       </div>
       <GroupDialog />
@@ -149,6 +158,9 @@ export default function App() {
       <MaterialImportDialog />
       <UserGuideDialog />
       <ChangelogDialog />
+      <MaterialLayoutDialog />
+      <NoteProgressDialog />
+      <TaskDraftsDialog />
       {/* DDL 提醒渲染在 #toast-region 容器内（与原 DOM 一致），由 ToastRegion 负责挂载 */}
       <ToastRegion />
     </>
