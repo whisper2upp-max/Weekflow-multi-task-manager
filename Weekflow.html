@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Weekflow v2.6 中英双语本地 Task 管理工具，支持周/日双时间轴、分组、Flow、资料库双布局、双向联动、看板、备份和 Excel 批量导入导出。"
+      content="Weekflow v2.7 中英双语本地 Task 管理工具，支持周/日双时间轴、随手记、多条进度历史、Task 草稿转换、资料库、看板、备份和 Excel 批量导入导出。"
     />
-    <title>Weekflow v2.6 · Task management</title>
+    <title>Weekflow v2.7 · Task management</title>
     <link rel="stylesheet" href="./css/styles.css" />
   </head>
   <body>
@@ -35,6 +35,9 @@
           </button>
           <button class="nav-tab" type="button" data-view="materials">
             <span aria-hidden="true">▤</span> 资料库
+          </button>
+          <button class="nav-tab" type="button" data-view="notes">
+            <span aria-hidden="true">✎</span> 随手记
           </button>
         </nav>
 
@@ -268,7 +271,7 @@
         <section id="home-view" class="view-panel home-view" aria-labelledby="home-heading">
           <div class="home-hero">
             <div class="home-hero-copy">
-              <p class="eyebrow">Weekflow v2.6</p>
+              <p class="eyebrow">Weekflow v2.7</p>
               <h1 id="home-heading">把工作拆成清晰的下一步</h1>
               <p>
                 用分组建立工作版图，用 Flow 串起执行步骤，再用周时间轴看清每一个 DDL。
@@ -279,6 +282,7 @@
                 <span><b id="home-group-total">0</b> 分组</span>
                 <span><b id="home-flow-total">0</b> Flow</span>
                 <span><b id="home-material-total">0</b> 资料</span>
+                <span><b id="home-note-total">0</b> 笔记</span>
               </div>
             </div>
             <div class="home-flow-visual" aria-label="Weekflow 工作结构示意">
@@ -340,6 +344,15 @@
               </span>
               <span class="home-entry-arrow" aria-hidden="true">→</span>
             </button>
+            <button class="home-entry-card is-notes" type="button" data-view="notes">
+              <span class="home-entry-icon" aria-hidden="true">✎</span>
+              <span class="home-entry-copy">
+                <small>CAPTURE THE MOMENT</small>
+                <strong>随手记</strong>
+                <span>记录想法，并转换为进度记录或 Task 草稿</span>
+              </span>
+              <span class="home-entry-arrow" aria-hidden="true">→</span>
+            </button>
             <button class="home-entry-card is-guide" type="button" data-action="open-user-guide">
               <span class="home-entry-icon" aria-hidden="true">?</span>
               <span class="home-entry-copy">
@@ -354,7 +367,7 @@
               <span class="home-entry-copy">
                 <small>WHAT'S NEW</small>
                 <strong>更新日志</strong>
-                <span>查看 Weekflow v2.6 的发布内容</span>
+                <span>查看 Weekflow v2.7 的发布内容</span>
               </span>
               <span class="home-entry-arrow" aria-hidden="true">↗</span>
             </button>
@@ -677,6 +690,97 @@
             hidden
           />
         </section>
+
+        <section id="notes-view" class="view-panel notes-view" aria-labelledby="notes-heading" hidden>
+          <div class="view-toolbar notes-toolbar">
+            <div>
+              <h1 id="notes-heading">随手记</h1>
+              <p><span id="notes-count">0 条笔记</span> · 记录临时想法，再转为进度或 Task 草稿</p>
+            </div>
+            <button class="button button-primary" type="button" data-action="new-note">
+              <span aria-hidden="true">＋</span> 新建笔记
+            </button>
+          </div>
+          <div class="notes-workspace">
+            <aside class="notes-sidebar" aria-label="笔记列表">
+              <label class="notes-search" for="note-search">
+                <span aria-hidden="true">⌕</span>
+                <input id="note-search" type="search" autocomplete="off" placeholder="搜索标题或正文" />
+              </label>
+              <div id="note-list" class="note-list" role="list"></div>
+            </aside>
+
+            <section id="note-editor-panel" class="note-editor-panel" aria-live="polite">
+              <div id="note-empty-state" class="notes-empty-state">
+                <span class="empty-icon" aria-hidden="true">✎</span>
+                <h2>写下第一条随手记</h2>
+                <p>保存后可以把内容添加为 Task 进度记录，或转换成一个或多个 Task 草稿。</p>
+                <button class="button button-primary" type="button" data-action="new-note">新建笔记</button>
+              </div>
+
+              <div id="note-editor-shell" class="note-editor-shell" hidden>
+                <div class="note-title-row">
+                  <input id="note-title" maxlength="160" autocomplete="off" placeholder="笔记标题" aria-label="笔记标题" />
+                  <span id="note-save-state">尚未保存</span>
+                </div>
+                <div class="rich-text-toolbar" role="toolbar" aria-label="笔记文字格式">
+                  <button type="button" data-action="rich-command" data-command="bold" data-editor="note-editor" title="加粗"><b>B</b></button>
+                  <button type="button" data-action="rich-command" data-command="italic" data-editor="note-editor" title="斜体"><i>I</i></button>
+                  <div class="preset-color-picker" data-color-picker>
+                    <button
+                      class="preset-color-trigger"
+                      type="button"
+                      data-action="toggle-color-palette"
+                      data-editor="note-editor"
+                      data-color-mode="text"
+                      aria-expanded="false"
+                      aria-label="选择字色"
+                    >
+                      <span>字色</span><span class="selected-color-swatch" data-color-preview style="--swatch-color: #172033"></span><span aria-hidden="true">⌄</span>
+                    </button>
+                    <div class="preset-color-popover" data-color-palette data-editor="note-editor" data-color-mode="text" role="menu" hidden></div>
+                  </div>
+                  <div class="preset-color-picker" data-color-picker>
+                    <button
+                      class="preset-color-trigger"
+                      type="button"
+                      data-action="toggle-color-palette"
+                      data-editor="note-editor"
+                      data-color-mode="highlight"
+                      aria-expanded="false"
+                      aria-label="选择高亮颜色"
+                    >
+                      <span>高亮</span><span class="selected-color-swatch" data-color-preview style="--swatch-color: #FFF1A8"></span><span aria-hidden="true">⌄</span>
+                    </button>
+                    <div class="preset-color-popover" data-color-palette data-editor="note-editor" data-color-mode="highlight" role="menu" hidden></div>
+                  </div>
+                  <button type="button" data-action="rich-command" data-command="removeFormat" data-editor="note-editor">清除格式</button>
+                </div>
+                <div
+                  id="note-editor"
+                  class="rich-text-editor note-editor"
+                  contenteditable="true"
+                  role="textbox"
+                  aria-multiline="true"
+                  data-user-content
+                  data-placeholder="在这里记录工作想法、会议要点或 SharePoint 链接…"
+                ></div>
+                <div class="note-meta-row">
+                  <span id="note-updated-at">尚未保存</span>
+                  <span id="note-character-count">0 / 20000</span>
+                </div>
+                <div id="note-conversion-summary" class="note-conversion-summary" hidden></div>
+                <div class="note-actions">
+                  <button id="note-delete-button" class="button button-danger-quiet" type="button" data-action="delete-note">删除笔记</button>
+                  <span></span>
+                  <button class="button button-quiet" type="button" data-action="note-to-progress">添加到进度记录</button>
+                  <button class="button button-quiet" type="button" data-action="note-to-task-drafts">转换为 Task 草稿</button>
+                  <button id="note-save-button" class="button button-primary" type="button" data-action="save-note">保存笔记</button>
+                </div>
+              </div>
+            </section>
+          </div>
+        </section>
       </main>
     </div>
 
@@ -755,13 +859,16 @@
           <h3>主要功能</h3>
           <ul>
             <li><b>时间轴看板：</b>主界面 Task by Week 按自然周查看 Task DDL；双击任意周表头进入 Task by Day，只显示该周 DDL，并按周一至周日精确落到具体日期。日视图通过“返回 Task by Week”回到周时间轴。</li>
-            <li><b>Task 管理：</b>创建和编辑 Task，可记录进度、完成状态和相关资料；紧急程度、汇报对象和交付物为必填项，汇报对象与管理对象均按人员姓名录入。周期可选每周或每月，需指定周期开始和结束日期。</li>
+            <li><b>Task 管理：</b>创建和编辑 Task，可记录多条独立进度、完成状态和相关资料；紧急程度、汇报对象和交付物为必填项，汇报对象与管理对象均按人员姓名录入。每条进度记录保留自己的创建和最后编辑时间，并支持链接、加粗、斜体及两套 20 色字色/底色预设盘。周期可选每周或每月，需指定周期开始和结束日期。</li>
+            <li><b>随手记：</b>以标题和纯文本富格式正文保存临时想法，可搜索、编辑和双重确认删除；支持加粗、斜体、SharePoint/HTTP/HTTPS 链接，以及类似 Excel 的 20 色字色和 20 色底色预设盘。</li>
+            <li><b>笔记转换：</b>可把笔记一次性追加为指定 Task 的新进度记录，也可用本地中英文规则识别一个或多个 Task 草稿。转换不调用 AI 或网络；原笔记始终保留，候选可逐个复核、跳过或手动增加。</li>
+            <li><b>草稿识别规则：</b>支持 Task/任务/待办、Group/分组、Flow/流程、DDL/Deadline/截止日期、Urgency/Priority/紧急程度、Report To/汇报对象、Managed Person/管理对象和 Deliverable/交付物等标签。独立行的 1/2/3 或普通非空换行默认拆成不同 Task，字段行仍跟随上一 Task；行首“本周二 / 下周五 / 下下周三 / 周二”、8-25、8.25、8月25日及带年份变体会移出 Task 名称并直接预填 DDL。“每周三 / Every Wednesday”会预填每周周期和下周三 DDL，“每月 5 日 / Monthly on the 5th”会预填每月周期和下个月 5 日 DDL，周期结束仍需用户确认。其他模糊相对日期、近似名称或拼写只显示建议。</li>
             <li><b>周期 DDL：</b>周期 Task 仍只统计为一条 Task，但时间轴会按基准 DDL 的星期或日期显示多个 DDL；勾选本期完成会同时视同此前各期完成，下一周期自动恢复未勾选并保留之前的连续完成记录。</li>
             <li><b>Flow 工作流：</b>在分组和 Task 之间增加可选步骤层，支持拖动排序；新 Flow 默认继承所属分组颜色。</li>
             <li><b>DDL 提醒：</b>每次进入程序会在右下角播报未来 7 天内的未完成 Task，10 秒后自动关闭，悬浮时不影响页面操作。</li>
             <li><b>筛选与看板：</b>时间轴可按分组、Flow、状态、紧急程度、逾期或关键词组合筛选；筛选弹层会在切换菜单或点击空白处时关闭。整体看板常驻显示 Task 总数、已完成、未完成、当前逾期和完成率，并可按分组、Flow、管理对象或汇报对象切换查看详细进度。</li>
             <li><b>对象汇总与导出：</b>整体看板按人员姓名分别汇总每个管理对象和汇报对象的完成率、已完成、未完成及逾期数量，并一键导出该人员的 Task 状态。</li>
-            <li><b>Excel 批量录入：</b>20 列 Task 模板包含周期、周期起止和完成历史，可下载空白模板或按模板下载当前数据，上传后先校验预览，再选择补充导入或完整覆盖。</li>
+            <li><b>Excel 批量录入：</b>20 列 Task 主表包含周期、周期起止和完成历史；新版文件另含“进度历史”工作表，一行保存一条进度。可下载空白模板或按模板下载当前数据，上传后先校验预览，再选择补充导入或完整覆盖。</li>
             <li><b>资料库：</b>统一管理说明文档、交付物、控制表和文件夹，并提供 List 与 Group 两种布局。List 保留完整大列表和类型、分组、Flow、Task 筛选；Group 按 Task 分组显示固定高度资料栏，仅保留名称搜索和类型筛选。</li>
             <li><b>Group 布局：</b>默认每行显示四个分组，资料按本自然周与上个自然周的打开次数降序排列，同次数按名称排序；点击资料名称编辑，点击“前往”打开链接。可在“调整布局”中选择每行 1–4 个分组并拖动排列顺序。</li>
             <li><b>最近常用：</b>List 可筛出本自然周或上个自然周至少打开过一次的资料；Group 会自动把近期打开次数更多的资料排在前面。</li>
@@ -771,8 +878,8 @@
         <section>
           <h3>数据保存位置</h3>
           <p>数据保存在当前浏览器、当前页面来源的 <code>localStorage</code> 中，主数据键为：</p>
-          <pre>weekflow-v2.4:data:v3</pre>
-          <p>v2.6 为避免升级时迁移或清空既有数据，继续沿用 v2.4 兼容存储键。</p>
+          <pre>weekflow-v2.4:data:v4</pre>
+          <p>v2.7 继续沿用 v2.4 兼容命名空间，并把内部结构升级到 v4；旧单条进度会自动迁移为一条历史记录。</p>
           <p>清除浏览器网站数据、使用无痕窗口、更换浏览器或更换启动地址，都会影响可见数据。</p>
         </section>
         <section>
@@ -783,7 +890,7 @@
             <li>需要恢复时选择“从 JSON 恢复”，程序会先校验数据并请求确认。</li>
           </ol>
           <p>建议在批量修改、迁移浏览器或清理网站数据前先导出 JSON 备份。</p>
-          <p>JSON 备份同时保存资料库的 List / Group 模式、每行分组数和分组排列顺序，恢复后会继续沿用原布局偏好。</p>
+          <p>JSON 备份保存全部分组、Flow、Task、进度历史、资料（包括未关联 Task 的资料）、随手记、转换记录及资料库布局偏好。</p>
         </section>
         <section>
           <h3>Excel 批量导入</h3>
@@ -795,13 +902,14 @@
           </ol>
           <p>不存在的分组和 Flow 会自动创建；已有同名项会复用。Flow 颜色留空时默认继承分组颜色。</p>
           <p>周期可选不重复、每周或每月；周期 Task 必须填写起止日期。“周期完成记录”用于完整回导历史，手工新建时可留空。</p>
+          <p>旧模板的“进度记录”按一条历史导入；新版当前数据在主表同一单元格换行汇总全部记录，并在“进度历史”逐条保存。主表超出 Excel 32,767 字符限制时会提示截断，完整历史仍保留在明细表和 JSON 中。</p>
           <p>补充导入保留现有时间轴数据并新增 Task；完整覆盖会连续确认两次，以文件替换全部分组、Flow 和 Task。资料库条目不会删除，同名层级会尽量沿用原 ID 以保留关联。</p>
           <p>分组、Task name、DDL、紧急程度、汇报对象和交付物均为必填字段。</p>
         </section>
         <section>
           <h3>Excel 导出</h3>
-          <p>点击“导出看板报告”会生成包含“整体看板”和“时间表看板”的 <code>.xlsx</code> 文件。</p>
-          <p>文件包含全部 Task、分组和 Flow 统计、步骤序号、周期及起止日期、进度记录、DDL 周时间轴与完整链接；周标签会区分已完成、逾期和待完成，不受当前筛选条件影响。</p>
+          <p>点击“导出看板报告”会生成包含“整体看板”“时间表看板”和“进度历史”的 <code>.xlsx</code> 文件。</p>
+          <p>文件包含全部 Task、分组和 Flow 统计、步骤序号、周期及起止日期、全部进度记录、DDL 周时间轴与完整链接；进度历史按一行一条保存，周标签会区分已完成、逾期和待完成，不受当前筛选条件影响。</p>
           <p>看板报告用于阅读与汇报，不作为批量导入文件；需要再次上传时，请使用“按导入模板下载当前数据”。</p>
           <p>整体看板的“管理对象”和“汇报对象”模块支持按单个对象导出 Task 状态；文件只包含该对象的 Task，并按分组排序，带出 DDL、完成状态、紧急程度、进度记录、交付物及相关资料等基本信息。</p>
           <p>资料库的“下载”菜单包含空白模板和全量资料清单，“上传”用于导入 Excel。</p>
@@ -810,7 +918,7 @@
           <h3>开发团队</h3>
           <p>开发团队：Wesley Yan</p>
           <p>首个正式版本（v1.0）：2026年7月30日</p>
-          <p>最新版本（v2.6）更新时间：2026年8月14日</p>
+          <p>最新版本（v2.7）更新时间：2026年8月15日</p>
         </section>
       </article>
       <div class="modal-actions">
@@ -827,6 +935,38 @@
         <button class="icon-button" type="button" data-action="close-changelog" aria-label="关闭">×</button>
       </div>
       <article class="document-content changelog-content">
+        <div class="release-entry" data-version="2.7">
+          <div class="release-heading">
+            <span>v2.7 随手记与进度历史版</span>
+            <time datetime="2026-08-15">2026-08-15</time>
+          </div>
+          <p class="release-lead">新增随手记、本地 Task 草稿转换和可持续追加的多条 Task 进度历史。</p>
+          <section>
+            <h3>新增与调整</h3>
+            <ul>
+              <li>新增第四个业务页“随手记”，支持标题、富文本纯文字、链接、搜索、更新时间排序、未保存提醒和删除双重确认。</li>
+              <li>随手记与进度历史的字色、底色统一改为类似 Excel 的两套 20 色预设盘，不再要求用户通过任意取色器选择。</li>
+              <li>笔记可一次性追加为指定 Task 的新进度记录；原笔记保留，后续编辑互不自动同步。</li>
+              <li>新增无 AI、无网络的中英文规则解析，可识别一个或多个 Task 草稿；高置信字段与精确日期前缀会预填，模糊名称和未纳入精确规则的相对日期只提供建议。</li>
+              <li>独立行的 1/2/3 默认拆分为不同 Task；明确的每周星期或每月日期表达会预填周期、下一周期 DDL 和周期开始日，周期结束仍由用户确认。</li>
+              <li>普通非空换行也会拆成 Task 候选；行首本周/下周/下下周星期、裸写周几、月日及带年份日期会自动移出 Task 名称并预填 DDL，字段明细行仍跟随上一 Task。</li>
+              <li>Task 草稿转换支持原文分屏、候选总数/当前位置、上下一个、跳过、保存并继续，以及手动增加空白或选中文本候选；全部处理后才能完成转换。</li>
+              <li>Task 进度改为多条历史，每条独立记录创建与最后编辑时间、富文本、来源；默认显示最新记录，可新增、选择、编辑和双重确认删除。</li>
+              <li>JSON 数据升级为 v4，完整保存随手记、转换记录和进度历史；旧版单条进度自动迁移。</li>
+            </ul>
+          </section>
+          <section>
+            <h3>Excel 与稳定性</h3>
+            <ul>
+              <li>保留 20 列 Task 主表和旧单条进度兼容；当前数据、看板报告与人员报告新增“进度历史”工作表，一行一条列示。</li>
+              <li>主表进度列按最新在前换行显示全部记录，超出 Excel 32,767 字符上限时提示截断，完整明细仍保留。</li>
+              <li>三个报告工作表均不冻结视图，并通过 Windows-safe OOXML 工作表关系、属性、AutoFilter、无宏/无外链/无连接校验。</li>
+              <li>继续保护 Task 完成、分组/Flow 展开折叠和资料复选的滚动位置，避免历史版本的跳回顶部问题。</li>
+              <li>英文版五个主导航入口保持单行，并在完整/精简顶部操作区之间切换时保持位置和尺寸稳定。</li>
+            </ul>
+          </section>
+        </div>
+
         <div class="release-entry" data-version="2.6">
           <div class="release-heading">
             <span>v2.6 资料库双布局版</span>
@@ -1170,7 +1310,17 @@
       </form>
     </dialog>
 
-    <dialog id="task-dialog" class="modal modal-large">
+    <dialog id="task-dialog" class="modal modal-large task-dialog">
+      <aside id="task-draft-source-pane" class="task-draft-source-pane" hidden>
+        <div class="task-draft-source-head">
+          <div>
+            <p class="eyebrow">Source note</p>
+            <h3 id="task-draft-source-title" data-user-content>原始笔记</h3>
+          </div>
+          <span>可选择并复制原文</span>
+        </div>
+        <div id="task-draft-source-content" class="task-draft-source-content" data-user-content></div>
+      </aside>
       <form id="task-form" method="dialog" novalidate>
         <div class="modal-head">
           <div>
@@ -1179,6 +1329,19 @@
           </div>
           <button class="icon-button" type="button" data-action="close-task-dialog" aria-label="关闭">×</button>
         </div>
+
+        <section id="task-draft-conversion-bar" class="task-draft-conversion-bar" hidden>
+          <div>
+            <strong id="task-draft-position">识别到 1 个潜在 Task，正在编辑第 1 个</strong>
+            <span id="task-draft-status-summary">1 个待处理</span>
+          </div>
+          <div class="task-draft-nav-actions">
+            <button type="button" data-action="task-draft-previous">← 上一个</button>
+            <button type="button" data-action="task-draft-next">下一个 →</button>
+            <button type="button" data-action="task-draft-add">＋ 增加 Task 草稿</button>
+          </div>
+        </section>
+        <div id="task-draft-recognition" class="task-draft-recognition" hidden></div>
 
         <input id="task-id" type="hidden" />
         <div class="form-grid">
@@ -1296,7 +1459,9 @@
             删除 Task
           </button>
           <span></span>
-          <button class="button button-quiet" type="button" data-action="close-task-dialog">取消</button>
+          <button id="task-draft-skip-button" class="button button-quiet" type="button" data-action="task-draft-skip" hidden>跳过此项</button>
+          <button id="task-draft-complete-button" class="button button-quiet" type="button" data-action="task-draft-complete" hidden disabled>完成转换</button>
+          <button id="task-dialog-cancel-button" class="button button-quiet" type="button" data-action="close-task-dialog">取消</button>
           <button id="task-save-button" class="button button-primary" type="submit">保存 Task</button>
         </div>
       </form>
@@ -1486,7 +1651,7 @@
       </form>
     </dialog>
 
-    <dialog id="progress-dialog" class="modal">
+    <dialog id="progress-dialog" class="modal modal-large progress-dialog">
       <form id="progress-form" method="dialog" novalidate>
         <div class="modal-head">
           <div>
@@ -1496,23 +1661,99 @@
           <button class="icon-button" type="button" data-action="close-progress-dialog" aria-label="关闭">×</button>
         </div>
         <p id="progress-dialog-task" class="modal-context"></p>
-        <label class="form-field progress-note-field">
-          <span>进度内容</span>
-          <textarea
-            id="progress-note"
-            rows="10"
-            maxlength="4000"
-            placeholder="例如：已完成需求确认和接口联调，当前等待业务方验收。&#10;&#10;可按日期分段记录，也可以作为持续更新的项目备注。"
-            aria-describedby="progress-dialog-updated progress-character-count"
-          ></textarea>
-        </label>
-        <div class="progress-meta-row">
-          <span id="progress-dialog-updated">尚未记录进度</span>
-          <span id="progress-character-count">0 / 4000</span>
+        <div class="progress-history-layout">
+          <aside class="progress-history-sidebar">
+            <button class="button button-quiet button-small" type="button" data-action="new-progress-entry">＋ 新建记录</button>
+            <div id="progress-entry-list" class="progress-entry-list" role="list"></div>
+          </aside>
+          <section class="progress-entry-editor">
+            <div class="rich-text-toolbar" role="toolbar" aria-label="进度记录文字格式">
+              <button type="button" data-action="rich-command" data-command="bold" data-editor="progress-note" title="加粗"><b>B</b></button>
+              <button type="button" data-action="rich-command" data-command="italic" data-editor="progress-note" title="斜体"><i>I</i></button>
+              <div class="preset-color-picker" data-color-picker>
+                <button
+                  class="preset-color-trigger"
+                  type="button"
+                  data-action="toggle-color-palette"
+                  data-editor="progress-note"
+                  data-color-mode="text"
+                  aria-expanded="false"
+                  aria-label="选择字色"
+                >
+                  <span>字色</span><span class="selected-color-swatch" data-color-preview style="--swatch-color: #172033"></span><span aria-hidden="true">⌄</span>
+                </button>
+                <div class="preset-color-popover" data-color-palette data-editor="progress-note" data-color-mode="text" role="menu" hidden></div>
+              </div>
+              <div class="preset-color-picker" data-color-picker>
+                <button
+                  class="preset-color-trigger"
+                  type="button"
+                  data-action="toggle-color-palette"
+                  data-editor="progress-note"
+                  data-color-mode="highlight"
+                  aria-expanded="false"
+                  aria-label="选择高亮颜色"
+                >
+                  <span>高亮</span><span class="selected-color-swatch" data-color-preview style="--swatch-color: #FFF1A8"></span><span aria-hidden="true">⌄</span>
+                </button>
+                <div class="preset-color-popover" data-color-palette data-editor="progress-note" data-color-mode="highlight" role="menu" hidden></div>
+              </div>
+              <button type="button" data-action="rich-command" data-command="removeFormat" data-editor="progress-note">清除格式</button>
+            </div>
+            <div
+              id="progress-note"
+              class="rich-text-editor progress-note-field"
+              contenteditable="true"
+              role="textbox"
+              aria-multiline="true"
+              data-user-content
+              data-placeholder="例如：已完成需求确认和接口联调，当前等待业务方验收。"
+              aria-describedby="progress-dialog-updated progress-character-count"
+            ></div>
+            <div class="progress-meta-row">
+              <span id="progress-dialog-updated">尚未记录进度</span>
+              <span id="progress-character-count">0 / 12000</span>
+            </div>
+          </section>
         </div>
-        <div class="modal-actions">
+        <div class="modal-actions split-actions">
+          <button id="progress-delete-button" class="button button-danger-quiet" type="button" data-action="delete-progress-entry" hidden>删除本条</button>
+          <span></span>
           <button class="button button-quiet" type="button" data-action="close-progress-dialog">取消</button>
           <button id="progress-save-button" class="button button-primary" type="submit">保存进度</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="note-progress-dialog" class="modal">
+      <form id="note-progress-form" method="dialog" novalidate>
+        <div class="modal-head">
+          <div>
+            <p class="eyebrow">Progress record</p>
+            <h2>添加到 Task 进度记录</h2>
+          </div>
+          <button class="icon-button" type="button" data-action="close-note-progress" aria-label="关闭">×</button>
+        </div>
+        <p id="note-progress-context" class="modal-context"></p>
+        <div class="form-grid">
+          <label class="form-field">
+            <span>分组 <em>*</em></span>
+            <select id="note-progress-group" required></select>
+          </label>
+          <label class="form-field">
+            <span>Flow（可选筛选）</span>
+            <select id="note-progress-flow"></select>
+          </label>
+          <label class="form-field form-field-wide">
+            <span>Task <em>*</em></span>
+            <select id="note-progress-task" required></select>
+            <small id="note-progress-task-help"></small>
+          </label>
+        </div>
+        <div id="note-progress-preview" class="note-progress-preview" data-user-content></div>
+        <div class="modal-actions">
+          <button class="button button-quiet" type="button" data-action="close-note-progress">取消</button>
+          <button class="button button-primary" type="submit">确认新增记录</button>
         </div>
       </form>
     </dialog>
@@ -1558,6 +1799,8 @@
     <script src="./js/i18n.js"></script>
     <script src="./js/xlsx-safe.js"></script>
     <script src="./js/utils.js"></script>
+    <script src="./js/rich-text.js"></script>
+    <script src="./js/task-draft-parser.js"></script>
     <script src="./js/date-utils.js"></script>
     <script src="./js/stats.js"></script>
     <script src="./js/materials.js"></script>

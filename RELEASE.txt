@@ -1,5 +1,20 @@
-Weekflow v2.6
-Release date: 2026-08-14
+Weekflow v2.7
+Release date: 2026-08-15
+
+Quick Notes and progress-history release: 2026-08-15
+- Adds the fourth business page, Quick Notes, with titled rich-text-only notes, search, updated-time sorting, unsaved-change protection, SharePoint/HTTP/HTTPS links, and double-confirm deletion.
+- Uses Excel-like 20-color preset palettes for text and highlight formatting in both Quick Notes and Task progress history; arbitrary color inputs are no longer shown.
+- Converts a saved Note into a new timestamped Task progress entry while preserving the original Note and keeping both copies independent.
+- Converts Notes into one or more Task drafts with deterministic bilingual local rules only; no AI or network access is required.
+- Splits numbered 1/2/3 lines into separate candidates and recognizes explicit weekly weekday or monthly day-of-month wording as recurring Tasks, prefilling the next matching period's DDL/start date while leaving the end date for confirmation.
+- Splits ordinary non-empty lines into candidates while preserving labeled detail lines, and recognizes leading this/next/two-weeks-ahead Chinese weekdays, bare current-week weekdays, month-day values, and year variants as high-confidence DDL prefixes.
+- Provides split source-note review, candidate count/current position, Previous/Next/Skip/Save & Continue, manual + Add Task Draft, and completion only after all candidates are saved or skipped.
+- Replaces the single progress box with multi-entry history. Each record has its own created/updated timestamps, rich formatting, source, edit selection, and double-confirm deletion; latest opens first.
+- Upgrades JSON data to v4 with Notes, conversions, and Task progressEntries; v3 progressNote content migrates into one legacy history entry.
+- Keeps the 20-column Task main import format and adds Progress History to current-data, dashboard, and person workbooks. The main progress cell shows every record newest-first with line breaks and a 32,767-character safety marker.
+- Keeps all report worksheets unfrozen and validates consistent three-sheet OOXML, no macro/external-link/connection parts, standard AutoFilter metadata, and Windows-safe workbook properties.
+- Retains Task/Group/Flow timeline viewport anchoring and in-place Document Library checkbox selection to prevent earlier jump-to-top regressions.
+- Keeps all five English navigation tabs single-line and position-stable across Home, Timeline, Overall Dashboard, Document Library, and Quick Notes.
 
 Document Library dual-layout release: 2026-08-14
 - List preserves the existing full document table, filters, editing, selection, upload, and download behavior.
@@ -23,8 +38,8 @@ Bilingual interface release: 2026-08-12
 This is the clean release build.
 - No sample groups, Flows, Tasks, or documents are bundled.
 - The restore-sample-data action and sample-data generator are not included.
-- The release uses an isolated weekflow-v2.4:* browser storage namespace.
-- Existing Weekflow v2.3/v2.2/v2.1/v2.0/v1.1/v1.0 browser data is migrated to data v3 and left intact for rollback.
+- The release uses an isolated weekflow-v2.4:* browser storage namespace with the primary key `weekflow-v2.4:data:v4`.
+- Existing v3 progress data and Weekflow v2.3/v2.2/v2.1/v2.0/v1.1/v1.0 browser data are migrated safely and left intact for rollback.
 - User data is stored locally in the browser.
 - Blank Task and Document Library Excel templates are included.
 - The main timeline is named Task by Week and retains the existing week-window, current-week, all-range, filtering, Group, Flow, and Task controls.
@@ -56,7 +71,7 @@ This is the clean release build.
 - Document search and filters live in a dedicated bar above the table; document names edit in place and URLs open directly.
 - The document editor uses a compact two-row details area so Group, Flow, and Task relations keep most of the dialog space.
 - Document table headers, type, Flow, Group, and notes use the same 12px primary size as document names; URLs and related Tasks stay compact.
-- The in-app changelog shows the full v2.6, v2.5, v2.4, v2.3, v2.2, v2.1, v2.0, v1.1, and v1.0 history in descending version order.
+- The in-app changelog shows the full v2.7, v2.6, v2.5, v2.4, v2.3, v2.2, v2.1, v2.0, v1.1, and v1.0 history in descending version order.
 - The user guide identifies Weekflow as a Multi-task management cockpit and records the Wesley Yan development attribution plus first/latest release dates.
 - Urgency, report-to, and deliverable are required for new or edited Tasks.
 - Start with: open Weekflow.html directly, or run npm run serve and visit /Weekflow.html

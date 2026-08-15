@@ -148,7 +148,7 @@ def main():
         page = context.new_page()
         page.goto(BASE_URL)
         page.wait_for_load_state("networkidle")
-        page.evaluate("payload => localStorage.setItem('weekflow-v2.4:data:v3', JSON.stringify(payload))", data)
+        page.evaluate("payload => localStorage.setItem('weekflow-v2.4:data:v4', JSON.stringify(payload))", data)
         page.evaluate("localStorage.setItem('weekflow-v2.4:language', 'en')")
         page.reload()
         page.wait_for_load_state("networkidle")

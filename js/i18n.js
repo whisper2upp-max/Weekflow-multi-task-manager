@@ -20,6 +20,36 @@
     "时间轴看板": "Timeline",
     "整体看板": "Overall Dashboard",
     "资料库": "Document Library",
+    "随手记": "Quick Notes",
+    "笔记": "Notes",
+    "记录想法，并转换为进度记录或 Task 草稿": "Capture ideas and convert them into progress records or Task drafts",
+    "记录临时想法，再转为进度或 Task 草稿": "Capture quick thoughts, then convert them into progress or Task drafts",
+    "· 记录临时想法，再转为进度或 Task 草稿": "· Capture quick thoughts, then convert them into progress or Task drafts",
+    "新建笔记": "New Note",
+    "笔记列表": "Note list",
+    "搜索标题或正文": "Search titles or content",
+    "写下第一条随手记": "Write Your First Quick Note",
+    "保存后可以把内容添加为 Task 进度记录，或转换成一个或多个 Task 草稿。": "After saving, append the note to a Task's progress history or convert it into one or more Task drafts.",
+    "笔记标题": "Note title",
+    "尚未保存": "Not saved",
+    "笔记文字格式": "Note text formatting",
+    "加粗": "Bold",
+    "斜体": "Italic",
+    "文字颜色": "Text color",
+    "字色": "Text",
+    "底色高亮": "Highlight color",
+    "高亮": "Highlight",
+    "选择字色": "Choose text color",
+    "选择高亮颜色": "Choose highlight color",
+    "清除格式": "Clear formatting",
+    "在这里记录工作想法、会议要点或 SharePoint 链接…": "Capture work ideas, meeting notes, or SharePoint links here…",
+    "删除笔记": "Delete Note",
+    "添加到进度记录": "Add to Progress History",
+    "转换为 Task 草稿": "Convert to Task Drafts",
+    "保存笔记": "Save Note",
+    "当前笔记尚未保存，切换语言会丢失这些修改。仍要继续吗？": "This note has unsaved changes. Switch language and discard them?",
+    "Task 草稿转换尚未完成，切换语言会退出当前转换。仍要继续吗？": "Task draft conversion is not complete. Switch language and exit the conversion?",
+    "当前笔记尚未保存，离开后修改会丢失。仍要继续吗？": "This note has unsaved changes. Leave and discard them?",
     "布局": "Layout",
     "列表": "List",
     "资料库布局": "Document Library Layout",
@@ -71,6 +101,7 @@
     "了解主要功能、数据保存与导出方法": "Learn the key features, data storage, and export workflows",
     "更新日志": "Changelog",
     "查看 Weekflow v2.6 的发布内容": "Review the Weekflow v2.6 release history",
+    "查看 Weekflow v2.7 的发布内容": "Review the Weekflow v2.7 release history",
     "周一至周日 · 表头显示周五 · 双击周表头查看每天": "Monday to Sunday · Headers show Friday · Double-click a week to view each day",
     "本周": "This Week",
     "今天": "Today",
@@ -194,7 +225,22 @@
     "跳过重复资料": "Skip Duplicate Documents",
     "保留原资料，只导入地址不重复的新内容。": "Keep existing documents and import only new URLs.",
     "导入不会创建 Task、Flow 或分组；无法匹配或存在重名歧义时会阻止导入。补充导入会新增或按选择处理重复地址，全部覆盖会先清空资料库。": "Import does not create Tasks, Flows, or Groups. Missing or ambiguous matches block import. Supplement import adds documents and applies the selected duplicate rule; overwrite clears the library first.",
-    "编辑进度记录": "Edit Progress Note",
+    "编辑进度记录": "Manage Progress History",
+    "＋ 新建记录": "+ New Record",
+    "进度记录文字格式": "Progress record text formatting",
+    "删除本条": "Delete This Record",
+    "添加到 Task 进度记录": "Add to Task Progress History",
+    "Flow（可选筛选）": "Flow (optional filter)",
+    "确认新增记录": "Add Record",
+    "原始笔记": "Source Note",
+    "可选择并复制原文": "Select and copy the source text",
+    "识别到 1 个潜在 Task，正在编辑第 1 个": "Detected 1 potential Task · Editing 1",
+    "1 个待处理": "1 pending",
+    "← 上一个": "← Previous",
+    "下一个 →": "Next →",
+    "＋ 增加 Task 草稿": "+ Add Task Draft",
+    "跳过此项": "Skip This Draft",
+    "完成转换": "Complete Conversion",
     "进度内容": "Progress Details",
     "尚未记录进度": "No progress recorded",
     "保存进度": "Save Progress",
@@ -284,8 +330,9 @@
     "Task 已创建": "Task created",
     "Task 已删除": "Task deleted",
     "Task 不存在，无法保存进度记录。": "The Task no longer exists, so the progress note cannot be saved.",
-    "进度记录已保存": "Progress note saved",
-    "进度记录已清空": "Progress note cleared",
+    "进度记录已保存": "Progress record saved",
+    "进度记录已清空": "Progress record cleared",
+    "进度记录已删除": "Progress record deleted",
     "Task 不存在，无法保存资料。": "The Task no longer exists, so related documents cannot be saved.",
     "相关资料已保存并同步到资料库": "Related documents saved and synced to the Document Library",
     "资料已更新并同步到时间轴": "Document updated and synced to the timeline",
@@ -384,6 +431,7 @@
     "开发团队：Wesley Yan": "Development team: Wesley Yan",
     "首个正式版本（v1.0）：2026年7月30日": "First release (v1.0): July 30, 2026",
     "最新版本（v2.6）更新时间：2026年8月14日": "Latest v2.6 update: August 14, 2026",
+    "最新版本（v2.7）更新时间：2026年8月15日": "Latest v2.7 update: August 15, 2026",
     "Weekflow 更新日志": "Weekflow Changelog",
     "新增与调整": "New and Updated",
     "新增": "New",
@@ -495,6 +543,14 @@
     if (!clean) return raw;
     if (EN_TEXT[clean]) return leading + EN_TEXT[clean] + trailing;
     var patterns = [
+      [/^确认删除笔记「(.+)」？已转换的 Task 和进度记录不会删除。$/, "Delete note “$1”? Converted Tasks and progress records will remain."],
+      [/^请再次确认删除这条笔记。删除后无法恢复。$/, "Confirm again: this note cannot be recovered after deletion."],
+      [/^当前笔记尚未保存，继续后修改会丢失。仍要继续吗？$/, "This note has unsaved changes. Continue and discard them?"],
+      [/^当前进度记录尚未保存，继续后修改会丢失。仍要继续吗？$/, "This progress record has unsaved changes. Continue and discard them?"],
+      [/^确认删除当前这条进度记录？$/, "Delete this progress record?"],
+      [/^请再次确认。删除后无法恢复。$/, "Confirm again: deletion cannot be undone."],
+      [/^退出后，已保存的 (\d+) 个 Task 会保留，其余草稿不会创建。确认退出？$/, "Exit conversion? The $1 saved Tasks will remain; unresolved drafts will not be created."],
+      [/^Task 草稿转换尚未完成，确认退出？$/, "Task draft conversion is not complete. Exit anyway?"],
       [/^(\d+) 条可见 Task$/, "$1 visible Tasks"],
       [/^共 (\d+) 条资料$/, "$1 documents"],
       [/^已选 (\d+) 条$/, "$1 selected"],
@@ -657,6 +713,7 @@
       [/([\d-]+) · 明天/g, "$1 · Tomorrow"],
       [/([\d-]+) · 今天/g, "$1 · Today"],
       [/统计全部 (\d+) 条 Task（不受时间轴筛选影响）/g, "All $1 Tasks included (timeline filters do not apply)"],
+      [/(\d+) 条笔记/g, "$1 notes"],
       [/进度（(\d+)）/g, "Progress ($1)"], [/资料（(\d+)）/g, "Documents ($1)"],
       [/✓ 已完成/g, "✓ Completed"], [/⇩ 导出 Task 状态/g, "⇩ Export Task Status"],
       [/导出$/g, "Export"], [/编辑$/g, "Edit"], [/紧急$/g, "Urgency"],
@@ -704,7 +761,9 @@
       "向后 4 周": "Forward 4 weeks",
       "Weekflow 首页": "Weekflow Home"
       ,"Weekflow v2.6 中英双语本地 Task 管理工具，支持周/日双时间轴、分组、Flow、资料库双布局、双向联动、看板、备份和 Excel 批量导入导出。": "Weekflow v2.6 bilingual local Task manager with weekly/daily timelines, Groups, Flows, a dual-layout Document Library, dashboards, backup, and Excel import/export."
+      ,"Weekflow v2.7 中英双语本地 Task 管理工具，支持周/日双时间轴、随手记、多条进度历史、Task 草稿转换、资料库、看板、备份和 Excel 批量导入导出。": "Weekflow v2.7 bilingual local Task manager with weekly/daily timelines, Quick Notes, multi-entry progress history, Task draft conversion, a Document Library, dashboards, backup, and Excel import/export."
       ,"例如：已完成需求确认和接口联调，当前等待业务方验收。\n\n可按日期分段记录，也可以作为持续更新的项目备注。": "Example: Requirements and integration are complete; business acceptance is pending.\n\nUse dated entries or maintain this as a continuously updated project note."
+      ,"例如：已完成需求确认和接口联调，当前等待业务方验收。": "Example: Requirements and integration are complete; business acceptance is pending."
     };
     return attributes[clean] || translateCompositeText(value);
   }
@@ -716,7 +775,8 @@
       node.parentElement.closest(
         ".task-title, .task-node-label, .group-name, .flow-name, .material-name-button, " +
           ".material-url-button, .material-note-cell, .person-table-name, " +
-          ".group-card-copy strong, .task-dialog-user-value, [data-user-content]"
+          ".group-card-copy strong, .task-dialog-user-value, .note-list-item, " +
+          ".progress-entry-item, .rich-text-editor, [data-user-content]"
       )
     ) {
       return;
@@ -727,7 +787,7 @@
 
   function translateElement(element) {
     if (!element || element.nodeType !== 1) return;
-    ["aria-label", "title", "placeholder", "content"].forEach(function (name) {
+    ["aria-label", "title", "placeholder", "content", "data-placeholder"].forEach(function (name) {
       if (!element.hasAttribute(name)) return;
       var value = element.getAttribute(name);
       var translated = translateAttribute(name, value);
@@ -787,7 +847,7 @@
     if (language !== "en" || !rootNode) return;
     if (rootNode.nodeType === 1) translateElement(rootNode);
     if (!rootNode.querySelectorAll) return;
-    rootNode.querySelectorAll("[aria-label], [title], [placeholder], meta[content]").forEach(
+    rootNode.querySelectorAll("[aria-label], [title], [placeholder], [data-placeholder], meta[content]").forEach(
       translateElement
     );
   }
@@ -822,26 +882,30 @@
       '<p class="guide-intro">Weekflow is a Multi-task management cockpit for tracking multiple workstreams and organizing all related documents in one place.</p>',
       '<section><h3>Key Features</h3><ul>',
       '<li><b>Timeline:</b> Task by Week shows deadlines by natural week. Double-click a week header to open Task by Day for Monday through Sunday.</li>',
-      '<li><b>Task Management:</b> Create and edit Tasks with progress notes, completion status, people fields, Deliverables, related documents, and optional weekly or monthly recurrence.</li>',
+      '<li><b>Task Management:</b> Create and edit Tasks with multi-entry progress history, completion status, people fields, Deliverables, related documents, and optional weekly or monthly recurrence. Every progress entry keeps its own created and last-edited time and supports links plus Excel-like 20-color text and highlight palettes.</li>',
+      '<li><b>Quick Notes:</b> Capture titled rich-text-only Notes with bold, italic, SharePoint/HTTP/HTTPS links, Excel-like 20-color text and highlight palettes, search, updated-time sorting, unsaved-change protection, and double-confirm deletion.</li>',
+      '<li><b>Note Conversion:</b> Append a Note as a new Task progress entry or convert it into one or more Task drafts with deterministic bilingual local rules. No AI or network access is used; the source Note remains and every candidate can be reviewed, skipped, or manually added.</li>',
+      '<li><b>Draft Recognition Rules:</b> Common labels include Task / Todo / Action Item, Group, Flow / Workflow, DDL / Deadline / Due Date, Urgency / Priority, Report To, Managed Person, and Deliverable; corresponding Chinese aliases are recognized as well. Numbered 1/2/3 lines and ordinary non-empty unlabeled lines become separate candidates, while labeled detail lines remain attached to the preceding Task. Leading Chinese current/next/two-weeks-ahead weekdays, bare current-week weekdays, month-day forms, and year variants prefill DDL and are removed from Task names. Every Wednesday prefills Weekly recurrence and next Wednesday; Monthly on the 5th prefills Monthly recurrence and the 5th of next month. Equivalent Chinese recurring phrases are also recognized. Recurrence End still requires user confirmation; other fuzzy relative dates and names remain suggestions.</li>',
       '<li><b>Recurring Deadlines:</b> One recurring Task remains one stored Task while rendering every deadline. Completing the current period also completes all earlier periods.</li>',
       '<li><b>Flow Workflow:</b> Use the optional ordered Flow layer between a Group and its Tasks; new Flows inherit their Group color by default.</li>',
       '<li><b>Reminder:</b> A non-blocking bottom-right reminder lists incomplete Tasks due within seven days and closes after ten seconds.</li>',
       '<li><b>Filters and Dashboard:</b> Combine Group, Flow, status, urgency, overdue, and keyword filters. View summaries by Group, Flow, Managed Person, or Report To.</li>',
-      '<li><b>Excel:</b> Download a blank 20-column template or current re-importable data, validate uploads, and choose supplement import or complete replacement.</li>',
+      '<li><b>Excel:</b> Download a blank 20-column Task main sheet or current re-importable data with a one-row-per-entry Progress History worksheet, validate uploads, and choose supplement import or complete replacement.</li>',
       '<li><b>Document Library:</b> Manage Documentation, Deliverables, Control Sheets, and Folders in List or Group layout. List keeps the full table and filters; Group shows fixed-height cards by Task Group with name search and Type filtering.</li>',
       '<li><b>Group Layout:</b> Show four Groups per row by default. Documents sort by open count in the current and previous natural week, then by name. Select a document name to edit or <b>Go to</b> to open its link. <b>Arrange Layout</b> supports one to four Groups per row and drag reordering.</li>',
       '<li><b>Recently Used:</b> List filters documents opened in the current or previous natural week; Group automatically ranks documents with more recent opens first.</li>',
       '</ul></section>',
-      '<section><h3>Data Storage Location</h3><p>Business data is stored in <code>localStorage</code> for the current browser and page origin under:</p><pre>weekflow-v2.4:data:v3</pre><p>v2.6 keeps this v2.4-compatible namespace so upgrading does not migrate or clear existing data. Clearing site data, using a private window, changing browsers, or changing the launch origin affects which data is visible.</p></section>',
-      '<section><h3>Data Backup and Restore</h3><ol><li>Open the <b>•••</b> data menu.</li><li>Select <b>Export JSON Backup</b> and save the file securely.</li><li>To restore, select <b>Restore from JSON</b>; Weekflow validates the data and asks for confirmation.</li></ol><p>Export a JSON backup before bulk changes, browser migration, or clearing site data.</p><p>JSON backup also stores the Document Library List / Group mode, Groups per row, and Group order, so restore retains the layout preference.</p></section>',
-      '<section><h3>Excel Bulk Import</h3><ol><li>Open <b>•••</b> and download a blank Task template or current data in import format.</li><li>Edit the <b>Task Import</b> worksheet; each row represents one Task.</li><li>Upload the workbook and review errors and preview data.</li><li>Choose <b>Supplement Import</b> or <b>Complete Replacement</b>.</li></ol><p>Group, Task Name, Deadline, Urgency, Report To, and Deliverable are required. Missing Groups and Flows are created; matching names are reused. Recurring Tasks require start and end dates.</p></section>',
-      '<section><h3>Excel Export</h3><p><b>Export Dashboard Report</b> creates an Overall Dashboard and Timeline Dashboard workbook containing every Task, hierarchy summary, recurrence fields, progress notes, deadlines, and related links. It is a presentation report, not an import workbook.</p><p>For re-import, select <b>Download Current Data in Import Format</b>. The Overall Dashboard also exports one-person Task status reports. The Document Library Download menu provides its blank template and complete library.</p></section>',
-      '<section><h3>Development Team</h3><p>Developer: Wesley Yan</p><p>First release (v1.0): July 30, 2026</p><p>Latest release (v2.6): August 14, 2026</p></section>'
+      '<section><h3>Data Storage Location</h3><p>Business data is stored in <code>localStorage</code> for the current browser and page origin under:</p><pre>weekflow-v2.4:data:v4</pre><p>v2.7 keeps the v2.4-compatible namespace and upgrades the internal structure to v4. Existing single progress notes migrate into one history entry. Clearing site data, using a private window, changing browsers, or changing the launch origin affects which data is visible.</p></section>',
+      '<section><h3>Data Backup and Restore</h3><ol><li>Open the <b>•••</b> data menu.</li><li>Select <b>Export JSON Backup</b> and save the file securely.</li><li>To restore, select <b>Restore from JSON</b>; Weekflow validates the data and asks for confirmation.</li></ol><p>Export a JSON backup before bulk changes, browser migration, or clearing site data.</p><p>JSON backup stores Groups, Flows, Tasks, complete progress history, all Documents including unlinked items, Quick Notes, conversion records, and Document Library layout preferences.</p></section>',
+      '<section><h3>Excel Bulk Import</h3><ol><li>Open <b>•••</b> and download a blank Task template or current data in import format.</li><li>Edit <b>Task Import</b>; each row represents one Task. Edit <b>Progress History</b> for one progress entry per row.</li><li>Upload the workbook and review errors and preview data.</li><li>Choose <b>Supplement Import</b> or <b>Complete Replacement</b>.</li></ol><p>Group, Task Name, Deadline, Urgency, Report To, and Deliverable are required. Missing Groups and Flows are created; matching names are reused. Recurring Tasks require start and end dates. Legacy one-cell Progress Notes remain importable.</p></section>',
+      '<section><h3>Excel Export</h3><p><b>Export Dashboard Report</b> creates Overall Dashboard, Timeline Dashboard, and Progress History worksheets containing every Task, hierarchy summary, recurrence fields, all progress entries, deadlines, and related links. It is a presentation report, not an import workbook.</p><p>For re-import, select <b>Download Current Data in Import Format</b>. The Overall Dashboard also exports three-sheet one-person Task status reports. All report sheets are unfrozen and use Windows-safe OOXML. The Document Library Download menu provides its blank template and complete library.</p></section>',
+      '<section><h3>Development Team</h3><p>Developer: Wesley Yan</p><p>First release (v1.0): July 30, 2026</p><p>Latest release (v2.7): August 15, 2026</p></section>'
     ].join("");
   }
 
   function englishChangelogHtml() {
     var entries = [
+      ["v2.7 Quick Notes and Progress History", "2026-08-15", "Added Quick Notes, deterministic local Task-draft conversion, and reusable multi-entry Task progress history.", ["Added titled rich-text-only Notes with links, search, latest-updated sorting, unsaved-change protection, and double-confirm deletion.", "Replaced arbitrary text/highlight color controls in Notes and progress history with two Excel-like 20-color preset palettes.", "Added one-time Note-to-progress conversion and sequential multi-candidate Task-draft review with source split view, skip, save-and-continue, and manual Add Task Draft.", "Used bilingual deterministic rules without AI/network access: numbered and ordinary non-empty lines split into candidates while labeled detail lines stay attached; precise Chinese weekday/month-day/year prefixes prefill DDL and are removed from Task names; explicit recurring phrases prefill recurrence plus next-period DDL/start.", "Upgraded JSON to v4 with Notes and progressEntries while migrating legacy progressNote content into one history entry.", "Added one-row-per-entry Progress History to re-importable data, dashboard reports, and person reports; kept main-cell newline aggregation and Excel's 32,767-character limit.", "Stabilized all five English navigation tabs across page switches and retained unfrozen Windows-safe three-sheet OOXML plus all timeline/document scroll-position safeguards."]],
       ["v2.6 Document Library Dual Layout", "2026-08-14", "Added a Group layout for browsing documents by Task Group while preserving the existing List layout and data workflows.", ["Added List / Group switching and fixed-height Group cards in a four-column default grid with independent scrolling.", "Sorted documents by current/previous natural-week open count and then by name; document names edit and Go to opens links.", "Added Arrange Layout to the left of the layout switch, with one-to-four columns and drag or button reordering.", "Stored layout mode, column count, and Group order in JSON preferences, retained the unified language-switch position, stable checkbox scrolling, unchanged Excel schemas, and Windows-safe OOXML packaging."]],
       ["v2.5 Bilingual Release", "2026-08-12", "Complete bilingual language layer and language-matched repository documentation.", ["Added the Chinese / English switch beside Document Library and made English the branch default.", "UI, dialogs, guides, reminders, templates, re-importable data, reports, workbook metadata, and filenames follow the selected language.", "Added separate Chinese and English README pages with matching screenshots and mutual language links.", "Kept the v2.4 data model and storage namespace unchanged, retained Windows-safe XLSX packaging, and preserved timeline and Document Library scroll-position protections."]],
       ["v2.4 Week / Day Timeline", "2026-08-10", "Added a daily drill-down while preserving the weekly timeline and data model.", ["Renamed the main timeline Task by Week and added Task by Day by double-clicking a week header.", "Task by Day shows only deadline occurrences in the selected week, from Monday through Sunday.", "Both views preserve the operated Task row after completion and preserve Group/Flow rows after collapse or expand.", "Migrated earlier browser data into the isolated v2.4 storage namespace without changing Excel formats."]],
@@ -882,7 +946,7 @@
       subtree: true,
       characterData: true,
       attributes: true,
-      attributeFilter: ["aria-label", "title", "placeholder", "content"]
+      attributeFilter: ["aria-label", "title", "placeholder", "content", "data-placeholder"]
     });
   }
 

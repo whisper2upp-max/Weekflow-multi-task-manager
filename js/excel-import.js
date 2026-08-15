@@ -21,15 +21,23 @@
       : typeof require === "function"
         ? require("./i18n.js")
         : null;
-  var api = factory(xlsx, dates, xlsxSafe, i18n);
+  var richText =
+    root.App && root.App.richText
+      ? root.App.richText
+      : typeof require === "function"
+        ? require("./rich-text.js")
+        : null;
+  var api = factory(xlsx, dates, xlsxSafe, i18n, richText);
   if (typeof module === "object" && module.exports) module.exports = api;
   root.App = root.App || {};
   root.App.excelImport = api;
-})(typeof self !== "undefined" ? self : globalThis, function (XLSX, dates, xlsxSafe, i18n) {
+})(typeof self !== "undefined" ? self : globalThis, function (XLSX, dates, xlsxSafe, i18n, richText) {
   "use strict";
 
   var SHEET_NAME = "Task导入";
+  var PROGRESS_SHEET_NAME = "进度历史";
   var MAX_ROWS = 1000;
+  var MAX_PROGRESS_ROWS = 10000;
   var COLUMNS = [
     ["groupName", "分组*", true],
     ["groupColor", "分组颜色", false],
@@ -73,7 +81,7 @@
     ["汇报对象*", "是", "填写人员姓名；会与既有同名人员统一，便于筛选", "Wesley Yan"],
     ["管理对象", "否", "填写人员姓名；会与既有同名人员统一，便于筛选", "Amy Chen"],
     ["交付物*", "是", "简要描述交付成果，最多 500 个字符", "发布确认单"],
-    ["进度记录", "否", "可填写当前进度或备注，最多 4000 个字符", "已完成联调"],
+    ["进度记录", "否", "显示全部进度记录（最新在前、同一单元格换行）；完整明细见“进度历史”工作表。旧模板单条内容仍可导入", "[2026-08-15 10:00] 已完成联调"],
     ["说明文档链接", "否", "格式：标题|https://...；多个链接用换行或中文分号分隔", "操作说明|https://example.com/guide"],
     ["交付物链接", "否", "格式：标题|https://...；多个链接用换行或中文分号分隔", "交付文件|https://example.com/delivery"]
   ];
@@ -106,9 +114,36 @@
     ["Report To*", "Yes", "Enter a person's name; matching names are standardized for filtering", "Wesley Yan"],
     ["Managed Person", "No", "Enter a person's name; matching names are standardized for filtering", "Amy Chen"],
     ["Deliverable*", "Yes", "Describe the expected output, up to 500 characters", "Release approval record"],
-    ["Progress Note", "No", "Current progress or notes, up to 4,000 characters", "Integration testing completed"],
+    ["Progress Note", "No", "All progress entries, newest first and separated by line breaks. Full details are in Progress History; one legacy entry remains importable", "[2026-08-15 10:00] Integration testing completed"],
     ["Documentation Links", "No", "Format: title|https://...; separate links with new lines or semicolons", "User Guide|https://example.com/guide"],
     ["Deliverable Links", "No", "Format: title|https://...; separate links with new lines or semicolons", "Delivery File|https://example.com/delivery"]
+  ];
+
+  var PROGRESS_COLUMNS = [
+    ["taskRow", "Task 行号"],
+    ["groupName", "分组"],
+    ["flowName", "Flow"],
+    ["taskName", "Task name"],
+    ["ddl", "DDL"],
+    ["entryId", "记录 ID"],
+    ["contentText", "进度内容"],
+    ["createdAt", "创建时间"],
+    ["updatedAt", "最后编辑时间"],
+    ["sourceType", "来源"],
+    ["sourceNoteId", "来源笔记 ID"]
+  ];
+  var EN_PROGRESS_COLUMNS = [
+    ["taskRow", "Task Row"],
+    ["groupName", "Group"],
+    ["flowName", "Flow"],
+    ["taskName", "Task Name"],
+    ["ddl", "DDL"],
+    ["entryId", "Entry ID"],
+    ["contentText", "Progress Content"],
+    ["createdAt", "Created At"],
+    ["updatedAt", "Last Edited At"],
+    ["sourceType", "Source"],
+    ["sourceNoteId", "Source Note ID"]
   ];
 
   function english(options) {
@@ -490,7 +525,7 @@
         reportTo: reportTo,
         managedObject: cleanText(raw.managedObject, 160),
         deliverable: deliverable,
-        progressNote: cleanMultiline(raw.progressNote, 4000),
+        progressNote: cleanMultiline(raw.progressNote, 32767),
         documentLinks: documents.links,
         deliverableLinks: deliverables.links
       }
@@ -514,6 +549,175 @@
       matrix.push(row);
     }
     return matrix;
+  }
+
+  function progressHeaderAliases() {
+    var aliases = {};
+    PROGRESS_COLUMNS.concat(EN_PROGRESS_COLUMNS).forEach(function (column) {
+      aliases[normalizeHeader(column[1])] = column[0];
+    });
+    [
+      ["Task row number", "taskRow"],
+      ["Task", "taskName"],
+      ["Progress", "contentText"],
+      ["Progress Entry", "contentText"],
+      ["Updated At", "updatedAt"],
+      ["Source Note", "sourceNoteId"],
+      ["任务行号", "taskRow"],
+      ["进度记录", "contentText"],
+      ["更新时间", "updatedAt"]
+    ].forEach(function (alias) {
+      aliases[normalizeHeader(alias[0])] = alias[1];
+    });
+    return aliases;
+  }
+
+  function findProgressHeaderRow(matrix) {
+    var aliases = progressHeaderAliases();
+    for (var rowIndex = 0; rowIndex < Math.min(matrix.length, 12); rowIndex += 1) {
+      var found = new Set();
+      matrix[rowIndex].forEach(function (cell) {
+        var key = aliases[normalizeHeader(cell)];
+        if (key) found.add(key);
+      });
+      if (found.has("taskName") && found.has("contentText")) return rowIndex;
+    }
+    return -1;
+  }
+
+  function parseTimestamp(value) {
+    if (value instanceof Date && !Number.isNaN(value.getTime())) return value.toISOString();
+    if (typeof value === "number" && Number.isFinite(value) && XLSX && XLSX.SSF) {
+      var code = XLSX.SSF.parse_date_code(value);
+      if (code) {
+        return new Date(
+          Date.UTC(code.y, code.m - 1, code.d, code.H || 0, code.M || 0, Math.round(code.S || 0))
+        ).toISOString();
+      }
+    }
+    var text = cleanText(value, 80);
+    if (!text) return "";
+    var parsed = new Date(text);
+    return Number.isNaN(parsed.getTime()) ? "" : parsed.toISOString();
+  }
+
+  function progressIdentity(groupName, flowName, taskName, ddl) {
+    return [groupName, flowName, taskName, ddl]
+      .map(function (value) {
+        return normalizeImportIdentity(value);
+      })
+      .join("::");
+  }
+
+  function normalizeImportIdentity(value) {
+    return cleanText(value, 200).toLocaleLowerCase();
+  }
+
+  function attachProgressHistory(workbook, normalizedRows) {
+    var historySheetName = workbook.Sheets[PROGRESS_SHEET_NAME]
+      ? PROGRESS_SHEET_NAME
+      : workbook.Sheets["Progress History"]
+        ? "Progress History"
+        : "";
+    if (!historySheetName) return [];
+    var matrix = sheetToMatrix(workbook.Sheets[historySheetName]);
+    var headerRowIndex = findProgressHeaderRow(matrix);
+    if (headerRowIndex < 0) {
+      return ["“" + historySheetName + "”工作表缺少可识别的进度历史表头。"];
+    }
+    var aliases = progressHeaderAliases();
+    var columnIndexes = {};
+    matrix[headerRowIndex].forEach(function (header, index) {
+      var key = aliases[normalizeHeader(header)];
+      if (key && columnIndexes[key] === undefined) columnIndexes[key] = index;
+    });
+    var sourceRows = matrix
+      .slice(headerRowIndex + 1)
+      .map(function (row, index) {
+        return { row: row, sourceRow: headerRowIndex + index + 2 };
+      })
+      .filter(function (item) {
+        return item.row.some(function (cell) {
+          return cleanText(cell, 20) !== "";
+        });
+      });
+    if (sourceRows.length > MAX_PROGRESS_ROWS) {
+      return ["进度历史单次最多导入 " + MAX_PROGRESS_ROWS + " 条记录，请拆分文件。"];
+    }
+
+    var rowBySource = new Map();
+    var rowsByIdentity = new Map();
+    normalizedRows.forEach(function (row) {
+      row.value.progressEntries = [];
+      rowBySource.set(row.sourceRow, row);
+      var key = progressIdentity(
+        row.value.groupName,
+        row.value.flowName,
+        row.value.taskName,
+        row.value.ddl
+      );
+      if (!rowsByIdentity.has(key)) rowsByIdentity.set(key, []);
+      rowsByIdentity.get(key).push(row);
+    });
+
+    var errors = [];
+    sourceRows.forEach(function (item) {
+      var raw = {};
+      PROGRESS_COLUMNS.forEach(function (column) {
+        var columnIndex = columnIndexes[column[0]];
+        raw[column[0]] = columnIndex === undefined ? "" : item.row[columnIndex];
+      });
+      var taskRow = Number(cleanText(raw.taskRow, 20));
+      var identity = progressIdentity(raw.groupName, raw.flowName, raw.taskName, parseDate(raw.ddl));
+      var target = Number.isInteger(taskRow) ? rowBySource.get(taskRow) : null;
+      if (target) {
+        var targetIdentity = progressIdentity(
+          target.value.groupName,
+          target.value.flowName,
+          target.value.taskName,
+          target.value.ddl
+        );
+        if (identity.replace(/:/g, "") && identity !== targetIdentity) target = null;
+      }
+      if (!target) {
+        var candidates = rowsByIdentity.get(identity) || [];
+        target = candidates.length === 1 ? candidates[0] : null;
+      }
+      var contentText = cleanMultiline(raw.contentText, richText.MAX_PROGRESS_TEXT);
+      if (!target) {
+        errors.push("进度历史第 " + item.sourceRow + " 行无法匹配 Task，请检查 Task 行号、分组、Flow、名称和 DDL。");
+        return;
+      }
+      if (!contentText) {
+        errors.push("进度历史第 " + item.sourceRow + " 行缺少进度内容。");
+        return;
+      }
+      var createdAt = parseTimestamp(raw.createdAt);
+      var updatedAt = parseTimestamp(raw.updatedAt);
+      if (raw.createdAt && !createdAt) {
+        errors.push("进度历史第 " + item.sourceRow + " 行的创建时间无效。");
+        return;
+      }
+      if (raw.updatedAt && !updatedAt) {
+        errors.push("进度历史第 " + item.sourceRow + " 行的最后编辑时间无效。");
+        return;
+      }
+      var stamp = updatedAt || createdAt || new Date().toISOString();
+      var sourceType = cleanText(raw.sourceType, 30);
+      if (!["manual", "quick-note", "excel-import", "legacy"].includes(sourceType)) {
+        sourceType = "excel-import";
+      }
+      target.value.progressEntries.push({
+        id: cleanText(raw.entryId, 120),
+        contentHtml: richText.fromPlainText(contentText),
+        contentText: contentText,
+        sourceType: sourceType,
+        sourceNoteId: cleanText(raw.sourceNoteId, 160) || null,
+        createdAt: createdAt || stamp,
+        updatedAt: stamp
+      });
+    });
+    return errors;
   }
 
   function parseWorkbook(arrayBuffer) {
@@ -589,6 +793,7 @@
           errors.push("第 " + row.sourceRow + " 行：" + message);
         });
       });
+      errors = errors.concat(attachProgressHistory(workbook, normalizedRows));
       return {
         rows: normalizedRows.map(function (row) {
           return row.value;
@@ -697,7 +902,34 @@
       .join("\n");
   }
 
-  function buildExportRows(data) {
+  function progressEntriesForExport(task) {
+    var entries = richText.sortProgressEntries(task && task.progressEntries);
+    if (!entries.length && task && task.progressNote) {
+      entries = [
+        {
+          id: "",
+          contentText: task.progressNote,
+          sourceType: "legacy",
+          sourceNoteId: null,
+          createdAt: task.progressUpdatedAt || task.updatedAt || task.createdAt || "",
+          updatedAt: task.progressUpdatedAt || task.updatedAt || task.createdAt || ""
+        }
+      ];
+    }
+    return entries;
+  }
+
+  function progressAggregate(task, options) {
+    return richText.progressCellText(
+      task,
+      32767,
+      english(options)
+        ? "\n… Complete history is available in the Progress History worksheet."
+        : "\n……完整内容请查看“进度历史”工作表。"
+    );
+  }
+
+  function buildExportRows(data, options) {
     var groupMap = new Map(
       (Array.isArray(data && data.groups) ? data.groups : []).map(function (group) {
         return [group.id, group];
@@ -730,11 +962,48 @@
         task.reportTo || "",
         task.managedObject || "",
         task.deliverable || "",
-        task.progressNote || "",
+        progressAggregate(task, options),
         exportLinkText(materials, task.id, "document"),
         exportLinkText(materials, task.id, "deliverable")
       ];
     });
+  }
+
+  function buildProgressHistoryRows(data) {
+    var groupMap = new Map(
+      (Array.isArray(data && data.groups) ? data.groups : []).map(function (group) {
+        return [group.id, group];
+      })
+    );
+    var flowMap = new Map(
+      (Array.isArray(data && data.flows) ? data.flows : []).map(function (flow) {
+        return [flow.id, flow];
+      })
+    );
+    var rows = [];
+    orderedTasks(data).forEach(function (task, taskIndex) {
+      var group = groupMap.get(task.groupId);
+      var flow = task.flowId ? flowMap.get(task.flowId) : null;
+      progressEntriesForExport(task).forEach(function (entry) {
+        rows.push([
+          taskIndex + 5,
+          group ? group.name : "",
+          flow ? flow.name : "",
+          task.name || "",
+          task.ddl || "",
+          entry.id || "",
+          String(entry.contentText || richText.plainText(entry.contentHtml || "")).slice(
+            0,
+            richText.MAX_PROGRESS_TEXT
+          ),
+          entry.createdAt || "",
+          entry.updatedAt || entry.createdAt || "",
+          entry.sourceType || "manual",
+          entry.sourceNoteId || ""
+        ]);
+      });
+    });
+    return rows;
   }
 
   function buildWorkbook(data, options) {
@@ -744,7 +1013,7 @@
     var headers = activeColumns.map(function (column) {
       return column[1];
     });
-    var rows = buildExportRows(data);
+    var rows = buildExportRows(data, options);
     if (english(options)) {
       rows = rows.map(function (row) {
         var copy = row.slice();
@@ -782,6 +1051,37 @@
     };
     taskSheet["!freeze"] = { xSplit: 0, ySplit: 4 };
 
+    var progressHeaders = (english(options) ? EN_PROGRESS_COLUMNS : PROGRESS_COLUMNS).map(
+      function (column) {
+        return column[1];
+      }
+    );
+    var progressRows = isTemplate ? [] : buildProgressHistoryRows(data);
+    var progressSheet = XLSX.utils.aoa_to_sheet(
+      [
+        [english(options) ? "Weekflow Progress History" : "Weekflow 进度历史"],
+        [english(options)
+          ? "One row per progress entry. Task Row refers to the row number in Task Import; identity fields provide a safe fallback."
+          : "每条进度记录单独一行。Task 行号对应“Task导入”工作表行号；分组、Flow、Task 和 DDL 用于辅助匹配。"],
+        [english(options)
+          ? "Do not merge multiple entries here. The Progress Note column in Task Import is an aggregate preview for compatibility."
+          : "请勿在此合并多条记录。“Task导入”里的进度记录列仅作为兼容旧模板的汇总预览。"],
+        progressHeaders
+      ].concat(progressRows)
+    );
+    progressSheet["!merges"] = [
+      { s: { r: 0, c: 0 }, e: { r: 0, c: PROGRESS_COLUMNS.length - 1 } },
+      { s: { r: 1, c: 0 }, e: { r: 1, c: PROGRESS_COLUMNS.length - 1 } },
+      { s: { r: 2, c: 0 }, e: { r: 2, c: PROGRESS_COLUMNS.length - 1 } }
+    ];
+    progressSheet["!cols"] = [
+      { wch: 11 }, { wch: 20 }, { wch: 20 }, { wch: 30 }, { wch: 14 },
+      { wch: 24 }, { wch: 70 }, { wch: 25 }, { wch: 25 }, { wch: 16 }, { wch: 24 }
+    ];
+    progressSheet["!autofilter"] = {
+      ref: "A4:" + XLSX.utils.encode_col(PROGRESS_COLUMNS.length - 1) + Math.max(4, progressRows.length + 4)
+    };
+
     var guideRows = english(options)
       ? [
           ["Weekflow Excel Import Guide"],
@@ -789,6 +1089,7 @@
           ["2. Group, Task Name, DDL, Urgency, Report To, and Deliverable are required."],
           ["3. In Weekflow, choose ••• → Upload Excel for Bulk Import and review validation results."],
           ["4. Choose Supplement Import or Complete Replacement; replacement requires two confirmations."],
+          ["5. Progress History stores one entry per row. Legacy files with only Progress Note remain supported."],
           ["Field", "Required", "Instructions", "Example (reference only)"]
         ].concat(EN_GUIDE_ROWS)
       : [
@@ -797,6 +1098,7 @@
           ["2. 分组、Task name、DDL、紧急程度、汇报对象和交付物为必填。"],
           ["3. 在 Weekflow 中选择“••• → 上传 Excel 批量导入”，先查看校验预览。"],
           ["4. 选择补充导入或完整覆盖；完整覆盖会连续确认两次。"],
+          ["5. “进度历史”工作表按一行一条保存多次记录；只有“进度记录”列的旧文件仍可导入。"],
           ["字段", "必填", "填写规则", "格式示例（仅供参考）"]
         ].concat(GUIDE_ROWS);
     var guideSheet = XLSX.utils.aoa_to_sheet(guideRows);
@@ -805,20 +1107,22 @@
       { s: { r: 1, c: 0 }, e: { r: 1, c: 3 } },
       { s: { r: 2, c: 0 }, e: { r: 2, c: 3 } },
       { s: { r: 3, c: 0 }, e: { r: 3, c: 3 } },
-      { s: { r: 4, c: 0 }, e: { r: 4, c: 3 } }
+      { s: { r: 4, c: 0 }, e: { r: 4, c: 3 } },
+      { s: { r: 5, c: 0 }, e: { r: 5, c: 3 } }
     ];
     guideSheet["!cols"] = [{ wch: 20 }, { wch: 10 }, { wch: 58 }, { wch: 42 }];
-    guideSheet["!autofilter"] = { ref: "A6:D" + guideRows.length };
-    guideSheet["!freeze"] = { xSplit: 0, ySplit: 6 };
+    guideSheet["!autofilter"] = { ref: "A7:D" + guideRows.length };
+    guideSheet["!freeze"] = { xSplit: 0, ySplit: 7 };
 
     var workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, taskSheet, english(options) ? "Task Import" : SHEET_NAME);
+    XLSX.utils.book_append_sheet(workbook, progressSheet, english(options) ? "Progress History" : PROGRESS_SHEET_NAME);
     XLSX.utils.book_append_sheet(workbook, guideSheet, english(options) ? "Instructions" : "填写说明");
     workbook.Props = {
       Title: english(options)
         ? isTemplate ? "Weekflow Task Import Template" : "Weekflow Current Task Data"
         : isTemplate ? "Weekflow Task 导入模板" : "Weekflow Task 当前数据",
-      Subject: "Weekflow v2.6 re-importable Task data",
+      Subject: "Weekflow v2.7 re-importable Task data",
       Author: "Wesley Yan",
       Comments: english(options)
         ? isTemplate ? "Blank Task import template." : "Matches the Weekflow Task import template and can be imported again."
@@ -863,6 +1167,7 @@
 
   return {
     SHEET_NAME: SHEET_NAME,
+    PROGRESS_SHEET_NAME: PROGRESS_SHEET_NAME,
     MAX_ROWS: MAX_ROWS,
     COLUMNS: COLUMNS.map(function (column) {
       return { key: column[0], header: column[1], required: column[2] };
@@ -871,6 +1176,7 @@
     parseLinks: parseLinks,
     parseWorkbook: parseWorkbook,
     buildExportRows: buildExportRows,
+    buildProgressHistoryRows: buildProgressHistoryRows,
     buildWorkbook: buildWorkbook,
     buildXlsxPackage: buildXlsxPackage,
     exportWorkbook: exportWorkbook,
