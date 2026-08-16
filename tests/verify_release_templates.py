@@ -33,4 +33,4 @@ def verify_package(path, sheetnames):
 
 verify_package(TASK_TEMPLATE, ["Task导入", "进度历史", "填写说明"])
 verify_package(DOCUMENT_TEMPLATE, ["资料库导入"])
-print("Bundled v3.0 templates passed openpyxl/OOXML verification")
+print("Bundled v3.1 templates passed openpyxl/OOXML verification")

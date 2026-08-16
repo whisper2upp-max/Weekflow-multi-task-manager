@@ -1,5 +1,14 @@
-Weekflow v3.0
-Release date: 2026-08-15
+Weekflow v3.1
+Release date: 2026-08-16
+
+AI-assisted Notes and rich-text sizing release: 2026-08-16
+- Adds optional multi-provider AI Settings, current-Note rewriting, and AI-first Task-draft parsing.
+- Keeps deterministic bilingual local parsing fully available without an API Key or network connection and automatically falls back to it after AI failures or timeouts.
+- Keeps every AI result inside the existing sequential Task-draft review form; AI never saves a Task directly, and unsafe cross-Group Flow or impossible date values are rejected.
+- Prevents late AI rewrite responses from overwriting another Note or newer edits, and isolates provider-specific request fields for compatible API calls.
+- Stores the API Key only in the current browser origin's separate AI setting and excludes it from business-data JSON backups.
+- Adds five preset font sizes (12/14/16/18/22) to Quick Notes and Task progress history while preserving forward, reverse, whole-line, and multi-line selections.
+- Keeps the v3.0 business data structure, Task and Document Excel schemas, report mechanisms, Windows-safe OOXML path, and scroll-position safeguards unchanged.
 
 Quick Notes and progress-history release: 2026-08-15
 - Adds the fourth business page, Quick Notes, with titled rich-text-only notes, search, updated-time sorting, unsaved-change protection, SharePoint/HTTP/HTTPS links, and double-confirm deletion.
@@ -72,7 +81,7 @@ This is the clean release build.
 - Document search and filters live in a dedicated bar above the table; document names edit in place and URLs open directly.
 - The document editor uses a compact two-row details area so Group, Flow, and Task relations keep most of the dialog space.
 - Document table headers, type, Flow, Group, and notes use the same 12px primary size as document names; URLs and related Tasks stay compact.
-- The in-app changelog shows the full v3.0, v2.6, v2.5, v2.4, v2.3, v2.2, v2.1, v2.0, v1.1, and v1.0 history in descending version order.
+- The in-app changelog shows the full v3.1, v3.0, v2.6, v2.5, v2.4, v2.3, v2.2, v2.1, v2.0, v1.1, and v1.0 history in descending version order.
 - The user guide identifies Weekflow as a Multi-task management cockpit and records the Wesley Yan development attribution plus first/latest release dates.
 - Urgency, report-to, and deliverable are required for new or edited Tasks.
 - Start with: open Weekflow.html directly, or run npm run serve and visit /Weekflow.html

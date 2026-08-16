@@ -314,8 +314,8 @@
     );
     workbook.Props = {
       Title: english(options)
-        ? isTemplate ? "Weekflow Document Import Template" : "Weekflow v3.0 Document Library"
-        : isTemplate ? "Weekflow 资料库导入模板" : "Weekflow v3.0 资料库",
+        ? isTemplate ? "Weekflow Document Import Template" : "Weekflow v3.1 Document Library"
+        : isTemplate ? "Weekflow 资料库导入模板" : "Weekflow v3.1 资料库",
       Subject: english(options) ? "Weekflow document library" : "Weekflow 资料库",
       Author: "Wesley Yan"
     };

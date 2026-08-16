@@ -1,13 +1,19 @@
 # Weekflow Changelog
 
-## Unreleased — AI-assisted Notes and preset font sizes
+## v3.1 AI-assisted Notes and Rich-text Sizing — 2026-08-16
 
-- Added optional multi-provider AI setup, Note rewriting, and AI-first Task-draft parsing with deterministic local fallback.
+Added optional multi-provider AI assistance to Quick Notes and Task-draft conversion, plus preset font sizing for Quick Notes and Task progress history.
+
+### AI assistance and rich-text editing
+
+- Added optional multi-provider AI setup, current-Note rewriting, and AI-first Task-draft parsing with deterministic bilingual local fallback.
+- Kept AI optional: local Task-draft rules continue to work without an API Key or network connection, and every AI-prefilled draft remains in the existing review form for user confirmation.
 - Added 12/14/16/18/22 font-size presets to Quick Notes and Task progress history while preserving reverse selections and saved formatting.
-- Fixed AI rewriting stale saved content instead of current unsaved editor content.
+- Fixed AI rewriting stale saved content instead of the current unsaved editor content.
 - Prevented late AI rewrite responses from overwriting another Note or newer edits.
-- Removed DeepSeek-only request parameters from non-DeepSeek providers and added request timeout handling.
-- Prevented cross-Group Flow matches, rejected impossible AI-generated dates, and completed English localization for AI controls.
+- Removed DeepSeek-only request parameters from non-DeepSeek providers and added request timeout and abort handling.
+- Prevented cross-Group Flow matches, rejected impossible AI-generated dates, and completed English localization for AI controls and runtime errors.
+- Stored the API Key only in the current browser origin's separate AI setting; it is excluded from business-data JSON backups.
 
 ## v3.0 Quick Notes and Progress History — 2026-08-15
 

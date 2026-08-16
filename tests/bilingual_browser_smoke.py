@@ -110,11 +110,14 @@ with sync_playwright() as playwright:
     page.locator('[data-action="open-user-guide"]').click()
     guide = page.locator("#user-guide-dialog")
     assert guide.get_by_text("Group Layout:", exact=False).is_visible()
-    assert guide.get_by_text("Latest release (v3.0): August 15, 2026", exact=True).is_visible()
+    assert guide.get_by_text("Latest release (v3.1): August 16, 2026", exact=True).is_visible()
     page.locator('[data-action="close-user-guide"]').first.click()
     page.locator('[data-action="open-changelog"]').click()
     changelog = page.locator("#changelog-dialog")
     assert changelog.locator(".release-heading").first.get_by_text(
+        "v3.1 AI-assisted Notes and Rich-text Sizing", exact=True
+    ).is_visible()
+    assert changelog.get_by_text(
         "v3.0 Quick Notes and Progress History", exact=True
     ).is_visible()
     page.locator('[data-action="close-changelog"]').first.click()
