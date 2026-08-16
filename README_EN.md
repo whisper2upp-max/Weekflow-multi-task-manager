@@ -34,10 +34,11 @@ Both English and Chinese import headers and supported field values remain accept
 
 ### Home and Navigation
 
-![Weekflow Home](readme-images-en/home.png)
+![Weekflow v3.1 Home with the AI Settings entry](readme-images-en/home.png)
 
 - Home displays Task, Group, Flow, document, note, and completion-rate totals.
 - Direct entries open Task by Week, Overall Dashboard, Document Library, Quick Notes, User Guide, and Changelog.
+- The top-level **AI Settings** entry configures the provider, model, and API Key. Local Task-draft parsing remains fully available without AI.
 - A non-blocking bottom-right reminder lists incomplete Tasks due within seven days and closes automatically after ten seconds.
 - `Command/Ctrl + K` opens timeline search from Home or focuses document-name search in the Document Library.
 
@@ -74,7 +75,9 @@ Both English and Chinese import headers and supported field values remain accept
 - The fourth business page, **Quick Notes**, provides a titled rich-text-only writing area and a left list sorted by latest update. Search covers title and body, and unsaved-change prompts protect navigation, note switching, language switching, and page closing.
 - Formatting supports bold, italic, five preset font sizes (12/14/16/18/22), pasted SharePoint/HTTP/HTTPS links, and Excel-like 20-color preset palettes for text and highlights. Arbitrary color pickers, images, attachments, and tables are intentionally excluded.
 
-![Quick Notes editor](readme-images-en/quick-notes.png)
+![AI Rewrite comparison in the Quick Notes editor](readme-images-en/quick-notes.png)
+
+- The screenshot shows **AI Conversion** enabled, an AI Rewrite result, and the restorable **Original Before Rewrite** panel. Users still review and save every AI result themselves.
 
 - **Add to Progress History** selects Group → optional Flow → Task and appends a new timestamped progress entry. The original note remains, and later edits do not synchronize either copy.
 

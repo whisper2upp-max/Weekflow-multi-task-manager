@@ -1,3 +1,4 @@
+import argparse
 import copy
 import json
 import re
@@ -11,6 +12,15 @@ ROOT = Path(__file__).resolve().parents[1]
 BASE_URL = "http://127.0.0.1:8765/Weekflow.html"
 ZH_OUTPUT = ROOT / "readme配图"
 EN_OUTPUT = ROOT / "readme-images-en"
+AI_SETTINGS_KEY = "weekflow:ai-settings:v1"
+AI_SCREENSHOT_SETTINGS = {
+    "enabled": True,
+    "noteAiEnabled": True,
+    "provider": "custom",
+    "apiKey": "readme-screenshot-placeholder",
+    "baseUrl": "https://mock-ai.invalid/v1",
+    "model": "weekflow-readme-demo",
+}
 
 GROUP_TRANSLATIONS = {
     "服务研发": "Service Development",
@@ -401,6 +411,10 @@ def seed_current_app(page, sample, language):
         "language => localStorage.setItem('weekflow-v2.4:language', language)",
         "en" if language == "en" else "zh-CN",
     )
+    page.evaluate(
+        "([key, value]) => localStorage.setItem(key, JSON.stringify(value))",
+        [AI_SETTINGS_KEY, AI_SCREENSHOT_SETTINGS],
+    )
     page.reload()
     page.wait_for_load_state("networkidle")
     close_reminder(page)
@@ -408,10 +422,27 @@ def seed_current_app(page, sample, language):
     return progress_task["id"]
 
 
+def capture_ai_readme_surfaces(page, language):
+    home_path = ZH_OUTPUT / "主页.png" if language == "zh" else EN_OUTPUT / "home.png"
+    notes_path = ZH_OUTPUT / "笔记编辑.png" if language == "zh" else EN_OUTPUT / "quick-notes.png"
+
+    page.locator('[data-view="home"]').first.click()
+    capture(page, home_path, 1435, 618)
+
+    page.locator('[data-view="notes"]').first.click()
+    page.locator('[data-note-id="note-next-week"]').click()
+    page.locator('[data-action="note-ai-rewrite"]').click()
+    page.locator("#note-ai-original-panel").wait_for(state="visible")
+    page.wait_for_function(
+        "document.querySelector('[data-action=\"note-ai-rewrite\"]')?.disabled === false"
+    )
+    page.evaluate("window.scrollTo(0, 0)")
+    capture(page, notes_path, 1435, 737)
+
+
 def capture_core(page, language, progress_task_id):
     labels = (
         {
-            "home": ZH_OUTPUT / "主页.png",
             "timeline": ZH_OUTPUT / "时间轴看板.png",
             "task": ZH_OUTPUT / "新建task.png",
             "flow": ZH_OUTPUT / "编辑Flow.png",
@@ -421,7 +452,6 @@ def capture_core(page, language, progress_task_id):
         }
         if language == "zh"
         else {
-            "home": EN_OUTPUT / "home.png",
             "timeline": EN_OUTPUT / "task-by-week.png",
             "task": EN_OUTPUT / "create-task.png",
             "flow": EN_OUTPUT / "edit-flow.png",
@@ -430,8 +460,7 @@ def capture_core(page, language, progress_task_id):
             "report": EN_OUTPUT / "dashboard-report-to.png",
         }
     )
-    page.locator('[data-view="home"]').first.click()
-    capture(page, labels["home"], 1435, 618)
+    capture_ai_readme_surfaces(page, language)
 
     page.locator('[data-view="timeline"]').first.click()
     page.wait_for_timeout(450)
@@ -478,9 +507,6 @@ def capture_core(page, language, progress_task_id):
 
 def capture_english_features(page, progress_task_id):
     page.locator('[data-view="notes"]').first.click()
-    page.locator('[data-note-id="note-next-week"]').click()
-    capture(page, EN_OUTPUT / "quick-notes.png", 1435, 737)
-
     page.locator('[data-note-id="note-progress"]').click()
     page.locator('[data-action="note-to-progress"]').click()
     page.locator("#note-progress-dialog[open]").wait_for(state="visible")
@@ -513,6 +539,13 @@ def capture_english_features(page, progress_task_id):
 
 
 def main():
+    parser = argparse.ArgumentParser(description="Capture bilingual Weekflow README screenshots.")
+    parser.add_argument(
+        "--ai-readme-only",
+        action="store_true",
+        help="Capture only the Home and AI-enabled Quick Notes screenshots.",
+    )
+    args = parser.parse_args()
     ZH_OUTPUT.mkdir(exist_ok=True)
     EN_OUTPUT.mkdir(exist_ok=True)
     with sync_playwright() as playwright:
@@ -532,13 +565,32 @@ def main():
             )
             page = context.new_page()
             errors = []
+            rewrite_text = (
+                "Wednesday next week — submit and review the analysis report.\n"
+                "Friday next week — hold the report-out meeting and prepare the meeting materials."
+                if language == "en"
+                else "下周三，提交分析报告并完成复核。\n下周五，召开汇报会议并提前准备会议材料。"
+            )
+
+            def handle_ai(route, _request, response_text=rewrite_text):
+                route.fulfill(
+                    status=200,
+                    content_type="application/json",
+                    body=json.dumps({"choices": [{"message": {"content": response_text}}]}),
+                )
+
+            page.route("**/chat/completions", handle_ai)
             page.on(
                 "console",
                 lambda message: errors.append(message.text) if message.type == "error" else None,
             )
             page.on("pageerror", lambda error: errors.append(str(error)))
+            page.on("dialog", lambda dialog: dialog.accept())
             progress_task_id = seed_current_app(page, sample, language)
-            capture_core(page, language, progress_task_id)
+            if args.ai_readme_only:
+                capture_ai_readme_surfaces(page, language)
+            else:
+                capture_core(page, language, progress_task_id)
             if language == "en":
                 han = visible_han_text(page)
                 if han:
