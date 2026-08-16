@@ -72,7 +72,7 @@ Both English and Chinese import headers and supported field values remain accept
 ### Quick Notes and Task Draft Conversion
 
 - The fourth business page, **Quick Notes**, provides a titled rich-text-only writing area and a left list sorted by latest update. Search covers title and body, and unsaved-change prompts protect navigation, note switching, language switching, and page closing.
-- Formatting supports bold, italic, pasted SharePoint/HTTP/HTTPS links, and Excel-like 20-color preset palettes for text and highlights. Arbitrary color pickers, images, attachments, and tables are intentionally excluded.
+- Formatting supports bold, italic, five preset font sizes (12/14/16/18/22), pasted SharePoint/HTTP/HTTPS links, and Excel-like 20-color preset palettes for text and highlights. Arbitrary color pickers, images, attachments, and tables are intentionally excluded.
 
 ![Quick Notes editor](readme-images-en/quick-notes.png)
 
@@ -80,7 +80,8 @@ Both English and Chinese import headers and supported field values remain accept
 
 ![Add a Quick Note to Task progress history](readme-images-en/note-to-progress.png)
 
-- **Convert to Task Drafts** uses deterministic bilingual local rules only—no AI and no network request. Separate lines beginning with `1 / 2 / 3`, `1. / 2. / 3.`, or Chinese numerals become separate Task candidates by default. Explicit labels and full dates may be prefilled.
+- **Convert to Task Drafts** uses deterministic bilingual local rules by default. After a provider, model, and API Key are configured in **AI Settings** and **AI Conversion** is enabled, semantic splitting and field extraction use AI first; failures and timeouts automatically fall back to local rules. Separate lines beginning with `1 / 2 / 3`, `1. / 2. / 3.`, or Chinese numerals become separate Task candidates by default. Explicit labels and full dates may be prefilled.
+- **AI Rewrite** sends the editor's current content for structured rewriting. If the user changes or switches Notes while the request is pending, the late response is discarded instead of overwriting newer content. The API Key stays in the current browser origin's local AI settings and is excluded from business-data JSON backups; clear the connection after use on a shared device.
 - Common English labels include `Task / Todo / Action Item`, `Group`, `Flow / Workflow`, `DDL / Deadline / Due Date`, `Urgency / Priority`, `Report To`, `Managed Person`, and `Deliverable`; the corresponding Chinese aliases are recognized as well. `Every Wednesday...` or `每周三……` prefills Weekly recurrence with next Wednesday as both DDL and Recurrence Start. `Monthly on the 5th...` or `每月 5 日……` prefills Monthly recurrence with the 5th of next month. The user still confirms Recurrence End before saving.
 - Each non-empty unlabeled line becomes a separate Task candidate by default; field lines such as `DDL:`, `Group:`, and `Flow:` remain attached to the preceding Task. Leading Chinese date expressions such as this/next/the-week-after-next weekday, a bare weekday (current week), `8-25 / 8.25 / 8/25 / August 25`-style numeric Chinese forms, and variants with a two- or four-digit year are removed from the Task name and prefilled as high-confidence DDL values. A yearless month/day uses the current year unless it has already passed, in which case it uses the next year.
 - Relative expressions outside those precise prefix rules, plus fuzzy names such as `Servce Development` or `Lcy`, remain suggestions rather than silent form values.
