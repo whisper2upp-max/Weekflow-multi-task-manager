@@ -10,6 +10,7 @@
   var MAX_NOTE_TEXT = 20000;
   var MAX_PROGRESS_TEXT = 12000;
   var MAX_HTML = 80000;
+  var FONT_SIZE_PRESETS = [12, 14, 16, 18, 22];
   var BLOCK_TAGS = new Set(["P", "DIV", "LI", "UL", "OL"]);
   var ALLOWED_TAGS = new Set([
     "P",
@@ -67,6 +68,13 @@
     ).toUpperCase();
   }
 
+  function normalizeFontSize(value) {
+    var source = String(value || "").trim().toLowerCase();
+    var legacy = { "1": 10, "2": 12, "3": 14, "4": 16, "5": 18, "6": 20, "7": 22 };
+    var number = legacy[source] || Number(source.replace(/px$/, ""));
+    return FONT_SIZE_PRESETS.includes(number) ? number + "px" : "";
+  }
+
   function validHttpUrl(value) {
     try {
       var parsed = new URL(String(value || "").trim());
@@ -84,6 +92,11 @@
       if (separator < 0) return;
       var property = declaration.slice(0, separator).trim().toLowerCase();
       var raw = declaration.slice(separator + 1).trim();
+      if (property === "font-size") {
+        var fontSize = normalizeFontSize(raw);
+        if (fontSize) styles.push("font-size: " + fontSize);
+        return;
+      }
       if (property !== "color" && property !== "background-color") return;
       var color = normalizeColor(raw);
       if (color) styles.push(property + ": " + color);
@@ -172,6 +185,7 @@
         }
         var style = safeStyle(node.getAttribute("style"));
         var fontColor = node.tagName === "FONT" ? normalizeColor(node.getAttribute("color")) : "";
+        var fontSize = node.tagName === "FONT" ? normalizeFontSize(node.getAttribute("size")) : "";
         Array.prototype.slice.call(node.attributes).forEach(function (attribute) {
           node.removeAttribute(attribute.name);
         });
@@ -187,6 +201,9 @@
           }
         }
         if (fontColor) style = "color: " + fontColor + (style ? "; " + style : "");
+        if (fontSize && !/(^|;)\s*font-size\s*:/.test(style)) {
+          style = (style ? style + "; " : "") + "font-size: " + fontSize;
+        }
         if (style) node.setAttribute("style", style);
         clean(node);
       });
@@ -346,6 +363,7 @@
     MAX_HTML: MAX_HTML,
     escapeHtml: escapeHtml,
     normalizeColor: normalizeColor,
+    normalizeFontSize: normalizeFontSize,
     validHttpUrl: validHttpUrl,
     plainText: plainText,
     normalizePlainText: normalizePlainText,

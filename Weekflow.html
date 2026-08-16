@@ -69,6 +69,9 @@
         </div>
 
         <div id="header-actions" class="header-actions">
+          <button class="button button-quiet" type="button" data-action="open-ai-settings">
+            <span aria-hidden="true">✦</span> AI 设置
+          </button>
           <button class="button button-quiet" type="button" data-action="new-group">
             <span aria-hidden="true">＋</span> 新建分组
           </button>
@@ -726,6 +729,14 @@
                 <div class="rich-text-toolbar" role="toolbar" aria-label="笔记文字格式">
                   <button type="button" data-action="rich-command" data-command="bold" data-editor="note-editor" title="加粗"><b>B</b></button>
                   <button type="button" data-action="rich-command" data-command="italic" data-editor="note-editor" title="斜体"><i>I</i></button>
+                  <select class="font-size-select" data-font-size data-editor="note-editor" aria-label="选择字号" title="字号">
+                    <option value="">字号</option>
+                    <option value="12">12</option>
+                    <option value="14">14</option>
+                    <option value="16">16</option>
+                    <option value="18">18</option>
+                    <option value="22">22</option>
+                  </select>
                   <div class="preset-color-picker" data-color-picker>
                     <button
                       class="preset-color-trigger"
@@ -756,15 +767,27 @@
                   </div>
                   <button type="button" data-action="rich-command" data-command="removeFormat" data-editor="note-editor">清除格式</button>
                 </div>
-                <div
-                  id="note-editor"
-                  class="rich-text-editor note-editor"
-                  contenteditable="true"
-                  role="textbox"
-                  aria-multiline="true"
-                  data-user-content
-                  data-placeholder="在这里记录工作想法、会议要点或 SharePoint 链接…"
-                ></div>
+                <div class="note-editor-comparison">
+                  <div
+                    id="note-editor"
+                    class="rich-text-editor note-editor"
+                    contenteditable="true"
+                    role="textbox"
+                    aria-multiline="true"
+                    data-user-content
+                    data-placeholder="在这里记录工作想法、会议要点或 SharePoint 链接…"
+                  ></div>
+                  <aside id="note-ai-original-panel" class="note-ai-original-panel" hidden>
+                    <div class="note-ai-original-head">
+                      <strong>改写前原文</strong>
+                      <span class="note-ai-original-actions">
+                        <button class="button button-quiet button-small" type="button" data-action="restore-ai-original">恢复原文</button>
+                        <button class="icon-button" type="button" data-action="close-ai-original" aria-label="关闭原文预览">×</button>
+                      </span>
+                    </div>
+                    <div id="note-ai-original-content" class="note-ai-original-content" data-user-content></div>
+                  </aside>
+                </div>
                 <div class="note-meta-row">
                   <span id="note-updated-at">尚未保存</span>
                   <span id="note-character-count">0 / 20000</span>
@@ -774,7 +797,12 @@
                   <button id="note-delete-button" class="button button-danger-quiet" type="button" data-action="delete-note">删除笔记</button>
                   <span></span>
                   <button class="button button-quiet" type="button" data-action="note-to-progress">添加到进度记录</button>
+                  <button id="note-ai-rewrite-button" class="button button-quiet" type="button" data-action="note-ai-rewrite">AI 改写</button>
                   <button class="button button-quiet" type="button" data-action="note-to-task-drafts">转换为 Task 草稿</button>
+                  <label class="ai-note-toggle" for="note-ai-enabled" title="开启后，转换为 Task 草稿优先使用 AI 语义拆分；笔记改写按钮可用">
+                    <input id="note-ai-enabled" type="checkbox" />
+                    <span>AI 转换</span>
+                  </label>
                   <button id="note-save-button" class="button button-primary" type="button" data-action="save-note">保存笔记</button>
                 </div>
               </div>
@@ -859,9 +887,10 @@
           <h3>主要功能</h3>
           <ul>
             <li><b>时间轴看板：</b>主界面 Task by Week 按自然周查看 Task DDL；双击任意周表头进入 Task by Day，只显示该周 DDL，并按周一至周日精确落到具体日期。日视图通过“返回 Task by Week”回到周时间轴。</li>
-            <li><b>Task 管理：</b>创建和编辑 Task，可记录多条独立进度、完成状态和相关资料；紧急程度、汇报对象和交付物为必填项，汇报对象与管理对象均按人员姓名录入。每条进度记录保留自己的创建和最后编辑时间，并支持链接、加粗、斜体及两套 20 色字色/底色预设盘。周期可选每周或每月，需指定周期开始和结束日期。</li>
-            <li><b>随手记：</b>以标题和纯文本富格式正文保存临时想法，可搜索、编辑和双重确认删除；支持加粗、斜体、SharePoint/HTTP/HTTPS 链接，以及类似 Excel 的 20 色字色和 20 色底色预设盘。</li>
-            <li><b>笔记转换：</b>可把笔记一次性追加为指定 Task 的新进度记录，也可用本地中英文规则识别一个或多个 Task 草稿。转换不调用 AI 或网络；原笔记始终保留，候选可逐个复核、跳过或手动增加。</li>
+            <li><b>Task 管理：</b>创建和编辑 Task，可记录多条独立进度、完成状态和相关资料；紧急程度、汇报对象和交付物为必填项，汇报对象与管理对象均按人员姓名录入。每条进度记录保留自己的创建和最后编辑时间，并支持链接、加粗、斜体、五档字号及两套 20 色字色/底色预设盘。周期可选每周或每月，需指定周期开始和结束日期。</li>
+            <li><b>随手记：</b>以标题和纯文本富格式正文保存临时想法，可搜索、编辑和双重确认删除；支持加粗、斜体、12/14/16/18/22 五档字号、SharePoint/HTTP/HTTPS 链接，以及类似 Excel 的 20 色字色和 20 色底色预设盘。</li>
+            <li><b>笔记转换：</b>可把笔记一次性追加为指定 Task 的新进度记录，也可识别一个或多个 Task 草稿。默认使用本地中英文规则；配置并启用 AI 后优先使用 AI 语义解析，失败或超时自动回退本地规则。原笔记始终保留，候选可逐个复核、跳过或手动增加。</li>
+            <li><b>AI 辅助：</b>在 AI 设置中选择服务商、模型并填写 API Key，可开启笔记改写和 AI Task 草稿解析。改写始终读取编辑框当前内容；等待期间切换或继续编辑不会被迟到结果覆盖。API Key 不进入业务 JSON 备份，共享设备使用后应清除连接。</li>
             <li><b>草稿识别规则：</b>支持 Task/任务/待办、Group/分组、Flow/流程、DDL/Deadline/截止日期、Urgency/Priority/紧急程度、Report To/汇报对象、Managed Person/管理对象和 Deliverable/交付物等标签。独立行的 1/2/3 或普通非空换行默认拆成不同 Task，字段行仍跟随上一 Task；行首“本周二 / 下周五 / 下下周三 / 周二”、8-25、8.25、8月25日及带年份变体会移出 Task 名称并直接预填 DDL。“每周三 / Every Wednesday”会预填每周周期和下周三 DDL，“每月 5 日 / Monthly on the 5th”会预填每月周期和下个月 5 日 DDL，周期结束仍需用户确认。其他模糊相对日期、近似名称或拼写只显示建议。</li>
             <li><b>周期 DDL：</b>周期 Task 仍只统计为一条 Task，但时间轴会按基准 DDL 的星期或日期显示多个 DDL；勾选本期完成会同时视同此前各期完成，下一周期自动恢复未勾选并保留之前的连续完成记录。</li>
             <li><b>Flow 工作流：</b>在分组和 Task 之间增加可选步骤层，支持拖动排序；新 Flow 默认继承所属分组颜色。</li>
@@ -1652,6 +1681,64 @@
       </form>
     </dialog>
 
+    <dialog id="ai-settings-dialog" class="modal ai-settings-dialog">
+      <form id="ai-settings-form" method="dialog" novalidate>
+        <div class="modal-head">
+          <div>
+            <p class="eyebrow">AI assistant</p>
+            <h2>AI 接入设置</h2>
+          </div>
+          <button class="icon-button" type="button" data-action="close-ai-settings" aria-label="关闭">×</button>
+        </div>
+        <div class="ai-settings-body">
+          <p class="modal-context">选择服务商并填入 API Key，连接一次后会自动记住；手动清除后才会移除。</p>
+          <div class="ai-settings-toggle-row">
+            <span class="ai-settings-toggle-label">接入 AI</span>
+            <label class="ai-check-line">
+              <input id="ai-enabled" type="checkbox" />
+              <span>启用 AI 能力（Task 草稿解析 / 笔记改写）</span>
+            </label>
+          </div>
+          <div class="ai-settings-grid">
+            <label class="form-field" for="ai-provider">
+              <span>服务商</span>
+              <select id="ai-provider">
+                <option value="deepseek">DeepSeek</option>
+                <option value="bailian">阿里云百炼 / DashScope</option>
+                <option value="kimi">Kimi / Moonshot</option>
+                <option value="glm">智谱 GLM / Z.ai</option>
+                <option value="minimax">MiniMax</option>
+                <option value="custom">自定义 / OpenAI 兼容</option>
+              </select>
+            </label>
+            <label class="form-field" for="ai-model">
+              <span>模型</span>
+              <select id="ai-model">
+                <option value="">请选择模型</option>
+              </select>
+              <input id="ai-model-custom" class="ai-model-custom" type="text" autocomplete="off" placeholder="输入自定义模型名称" hidden />
+            </label>
+            <label class="form-field" for="ai-api-key">
+              <span>API Key</span>
+              <input id="ai-api-key" type="password" autocomplete="off" placeholder="sk-..." />
+            </label>
+            <label class="form-field" for="ai-base-url">
+              <span>API Base URL</span>
+              <input id="ai-base-url" type="url" autocomplete="off" placeholder="https://api.example.com/v1" />
+            </label>
+          </div>
+          <div id="ai-settings-status" class="ai-settings-status" aria-live="polite"></div>
+        </div>
+        <div class="modal-actions ai-modal-actions">
+          <button class="button button-danger-quiet" type="button" data-action="clear-ai-settings">清除连接</button>
+          <span></span>
+          <button class="button button-quiet" type="button" data-action="test-ai-connection">测试连接</button>
+          <button class="button button-quiet" type="button" data-action="close-ai-settings">取消</button>
+          <button class="button button-primary" type="submit">保存设置</button>
+        </div>
+      </form>
+    </dialog>
+
     <dialog id="progress-dialog" class="modal modal-large progress-dialog">
       <form id="progress-form" method="dialog" novalidate>
         <div class="modal-head">
@@ -1671,6 +1758,14 @@
             <div class="rich-text-toolbar" role="toolbar" aria-label="进度记录文字格式">
               <button type="button" data-action="rich-command" data-command="bold" data-editor="progress-note" title="加粗"><b>B</b></button>
               <button type="button" data-action="rich-command" data-command="italic" data-editor="progress-note" title="斜体"><i>I</i></button>
+              <select class="font-size-select" data-font-size data-editor="progress-note" aria-label="选择字号" title="字号">
+                <option value="">字号</option>
+                <option value="12">12</option>
+                <option value="14">14</option>
+                <option value="16">16</option>
+                <option value="18">18</option>
+                <option value="22">22</option>
+              </select>
               <div class="preset-color-picker" data-color-picker>
                 <button
                   class="preset-color-trigger"
@@ -1810,6 +1905,7 @@
     <script src="./js/excel-export.js"></script>
     <script src="./js/excel-import.js"></script>
     <script src="./js/material-excel.js"></script>
+    <script src="./js/ai-provider.js"></script>
     <script src="./js/app.js"></script>
   </body>
 </html>

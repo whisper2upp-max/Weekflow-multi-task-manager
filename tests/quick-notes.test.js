@@ -60,6 +60,15 @@ function arrayBuffer(buffer) {
   return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
 }
 
+test("rich-text font sizes are limited to the five editor presets", () => {
+  assert.equal(richText.normalizeFontSize("12px"), "12px");
+  assert.equal(richText.normalizeFontSize("14"), "14px");
+  assert.equal(richText.normalizeFontSize("18px"), "18px");
+  assert.equal(richText.normalizeFontSize("22"), "22px");
+  assert.equal(richText.normalizeFontSize("13px"), "");
+  assert.equal(richText.normalizeFontSize("96px"), "");
+});
+
 test("v2.6 single progress text migrates to one v3.0 history entry", () => {
   const old = baseData();
   old.version = 3;

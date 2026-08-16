@@ -15,6 +15,8 @@
   var automation = App.automation;
   var richText = App.richText;
   var taskDraftParser = App.taskDraftParser;
+  var aiProvider = App.aiProvider;
+  var RICH_TEXT_FONT_SIZES = [12, 14, 16, 18, 22];
 
   var urgencyLabels = i18n.urgencyLabels();
   var statusLabels = i18n.statusLabels();
@@ -119,7 +121,12 @@
     pendingMaterialImport: null,
     isImportingMaterials: false,
     ddlReminderTimer: null,
-    recurrenceRefreshTimer: null
+    recurrenceRefreshTimer: null,
+    aiConverting: false,
+    aiRewriting: false,
+    aiTesting: false,
+    aiOriginalHtml: null,
+    aiRewriteOperation: null
   };
 
   var dom = {};
@@ -357,6 +364,19 @@
       "ddl-reminder",
       "ddl-reminder-summary",
       "ddl-reminder-list",
+      "ai-settings-dialog",
+      "ai-settings-form",
+      "ai-enabled",
+      "ai-provider",
+      "ai-api-key",
+      "ai-base-url",
+      "ai-model",
+      "ai-model-custom",
+      "ai-settings-status",
+      "note-ai-enabled",
+      "note-ai-rewrite-button",
+      "note-ai-original-panel",
+      "note-ai-original-content",
       "toast-region"
     ].forEach(function (id) {
       dom[id] = document.getElementById(id);
@@ -365,6 +385,7 @@
 
   function initialize() {
     cacheDom();
+    updateAiUi();
     renderPresetColorPalettes();
     bindEvents();
     syncLanguageAssets();
@@ -493,6 +514,15 @@
     dom["note-editor"].addEventListener("mouseup", rememberRichTextSelection);
     dom["note-editor"].addEventListener("keyup", rememberRichTextSelection);
     dom["task-dialog"].addEventListener("cancel", handleTaskDialogCancel);
+    dom["ai-settings-form"].addEventListener("submit", saveAiSettings);
+    dom["ai-provider"].addEventListener("change", handleAiProviderChange);
+    dom["ai-model"].addEventListener("change", handleAiModelChange);
+    dom["note-ai-enabled"].addEventListener("change", handleNoteAiToggle);
+    queryAll("[data-font-size]").forEach(function (control) {
+      control.addEventListener("change", function () {
+        applyPresetFontSize(control);
+      });
+    });
     dom["progress-dialog"].addEventListener("cancel", handleProgressDialogCancel);
     dom["excel-file-input"].addEventListener("change", importExcelFile);
     queryAll('input[name="excel-import-mode"]').forEach(function (input) {
@@ -687,6 +717,10 @@
       "close-changelog": function () {
         dom["changelog-dialog"].close();
       },
+      "open-ai-settings": openAiSettingsDialog,
+      "close-ai-settings": closeAiSettingsDialog,
+      "test-ai-connection": testAiConnection,
+      "clear-ai-settings": clearAiSettings,
       "new-group": openNewGroup,
       "new-flow": function () {
         openNewFlow();
@@ -704,6 +738,9 @@
       "close-note-progress": function () {
         dom["note-progress-dialog"].close();
       },
+      "note-ai-rewrite": aiRewriteCurrentNote,
+      "close-ai-original": closeAiOriginalPanel,
+      "restore-ai-original": restoreAiOriginal,
       "note-to-task-drafts": startNoteTaskConversion,
       "rich-command": function () {
         executeRichTextCommand(
@@ -3668,6 +3705,27 @@
     editor.focus();
   }
 
+  function normalizeExecutedFontSize(editor, pixelSize) {
+    queryAll('font[size="7"]', editor).forEach(function (font) {
+      var span = document.createElement("span");
+      span.style.fontSize = pixelSize + "px";
+      var color = font.getAttribute("color");
+      if (color) span.style.color = color;
+      while (font.firstChild) span.appendChild(font.firstChild);
+      font.replaceWith(span);
+    });
+  }
+
+  function applyPresetFontSize(control) {
+    var editor = dom[control.dataset.editor];
+    var size = Number(control.value);
+    if (!editor || !RICH_TEXT_FONT_SIZES.includes(size)) return;
+    executeRichTextCommand("fontSize", String(size), editor);
+    control.value = "";
+    closePresetColorPalettes();
+    editor.focus();
+  }
+
   function selectionRangeInsideEditor(editor, selection) {
     if (!editor || !selection || !selection.rangeCount) return null;
     var range = selection.getRangeAt(0);
@@ -3722,7 +3780,14 @@
     restoreRichTextSelection(editor);
     var applied = false;
     try {
-      applied = document.execCommand(command, false, value || null);
+      if (command === "fontSize") {
+        var fontSize = Number(value);
+        if (!RICH_TEXT_FONT_SIZES.includes(fontSize)) return;
+        applied = document.execCommand("fontSize", false, "7");
+        if (applied) normalizeExecutedFontSize(editor, fontSize);
+      } else {
+        applied = document.execCommand(command, false, value || null);
+      }
       if (!applied && command === "hiliteColor") {
         applied = document.execCommand("backColor", false, value || "#FFF1A8");
       }
@@ -3902,6 +3967,8 @@
     ui.selectedNoteId = null;
     ui.noteIsNew = true;
     ui.noteDirty = false;
+    ui.aiOriginalHtml = null;
+    hideAiOriginalPanel();
     renderNoteList();
     renderSelectedNote();
     setTimeout(function () { dom["note-title"].focus(); }, 0);
@@ -3914,6 +3981,8 @@
     ui.selectedNoteId = noteId;
     ui.noteIsNew = false;
     ui.noteDirty = false;
+    ui.aiOriginalHtml = null;
+    hideAiOriginalPanel();
     renderNoteList();
     renderSelectedNote();
   }
@@ -3979,6 +4048,8 @@
     ui.selectedNoteId = null;
     ui.noteDirty = false;
     ui.noteIsNew = false;
+    ui.aiOriginalHtml = null;
+    hideAiOriginalPanel();
     persistAndRender(i18n.isEnglish() ? "Note deleted" : "笔记已删除");
   }
 
@@ -4090,6 +4161,298 @@
     }
   }
 
+  function populateAiModelOptions(selectedModel) {
+    var provider = aiProvider.getProvider(dom["ai-provider"].value);
+    var select = utils.clear(dom["ai-model"]);
+    var placeholder = utils.el("option", "", i18n.isEnglish() ? "Select a model" : "请选择模型");
+    placeholder.value = "";
+    select.appendChild(placeholder);
+    (provider.models || []).forEach(function (model) {
+      var option = utils.el("option", "", model);
+      option.value = model;
+      select.appendChild(option);
+    });
+    var customOption = utils.el("option", "", i18n.isEnglish() ? "Custom model…" : "自定义模型…");
+    customOption.value = "__custom__";
+    select.appendChild(customOption);
+    var value = selectedModel || "";
+    var known = (provider.models || []).indexOf(value) >= 0;
+    if (known) {
+      select.value = value;
+      dom["ai-model-custom"].hidden = true;
+      dom["ai-model-custom"].value = "";
+    } else if (value) {
+      select.value = "__custom__";
+      dom["ai-model-custom"].hidden = false;
+      dom["ai-model-custom"].value = value;
+    } else {
+      select.value = "";
+      dom["ai-model-custom"].hidden = true;
+      dom["ai-model-custom"].value = "";
+    }
+  }
+
+  function openAiSettingsDialog() {
+    var settings = aiProvider.getSettings();
+    dom["ai-enabled"].checked = settings.enabled;
+    dom["ai-provider"].value = settings.provider;
+    dom["ai-api-key"].value = settings.apiKey;
+    dom["ai-base-url"].value = settings.baseUrl;
+    populateAiModelOptions(settings.model);
+    updateAiSettingsStatus();
+    dom["ai-settings-dialog"].showModal();
+  }
+
+  function closeAiSettingsDialog() {
+    dom["ai-settings-dialog"].close();
+  }
+
+  function handleAiProviderChange() {
+    var provider = aiProvider.getProvider(dom["ai-provider"].value);
+    dom["ai-base-url"].value = provider.baseUrl || "";
+    populateAiModelOptions(provider.models && provider.models.length ? provider.models[0] : "");
+    updateAiSettingsStatus();
+  }
+
+  function handleAiModelChange() {
+    if (dom["ai-model"].value === "__custom__") {
+      dom["ai-model-custom"].hidden = false;
+      dom["ai-model-custom"].focus();
+    } else {
+      dom["ai-model-custom"].hidden = true;
+      dom["ai-model-custom"].value = "";
+    }
+  }
+
+  function collectAiSettingsFromForm() {
+    return {
+      enabled: dom["ai-enabled"].checked,
+      noteAiEnabled: aiProvider.getSettings().noteAiEnabled,
+      provider: dom["ai-provider"].value,
+      apiKey: dom["ai-api-key"].value.trim(),
+      baseUrl: dom["ai-base-url"].value.trim(),
+      model: dom["ai-model"].value === "__custom__" || dom["ai-model"].value === ""
+        ? dom["ai-model-custom"].value.trim()
+        : dom["ai-model"].value.trim()
+    };
+  }
+
+  function updateAiSettingsStatus(message, type) {
+    if (!dom["ai-settings-status"]) return;
+    if (!message) {
+      var settings = aiProvider.getSettings();
+      dom["ai-settings-status"].textContent = aiProvider.isConfigured(settings)
+        ? (settings.enabled
+            ? (i18n.isEnglish() ? "Connected and enabled: " : "已接入并启用 ") + settings.provider + " / " + settings.model
+            : (i18n.isEnglish() ? "Connection saved, AI not enabled" : "已保存连接，但当前未启用 AI"))
+        : (i18n.isEnglish() ? "AI not connected" : "尚未接入 AI");
+      dom["ai-settings-status"].className = "ai-settings-status" + (settings.enabled ? " is-ok" : "");
+      return;
+    }
+    dom["ai-settings-status"].textContent = message;
+    dom["ai-settings-status"].className = "ai-settings-status" + (type === "error" ? " is-error" : type === "ok" ? " is-ok" : "");
+  }
+
+  function aiErrorMessage(error) {
+    var code = error && error.code;
+    if (code === "AI_TIMEOUT") {
+      return i18n.isEnglish()
+        ? "The AI request timed out. Check the network and try again."
+        : "AI 请求超时，请检查网络后重试。";
+    }
+    if (code === "AI_INVALID_RESPONSE") {
+      return i18n.isEnglish()
+        ? "The AI service returned an unreadable response."
+        : "AI 服务返回了无法识别的内容。";
+    }
+    var message = String(error && error.message || (i18n.isEnglish() ? "Unknown error" : "未知错误"));
+    if (i18n.isEnglish()) {
+      var englishMessages = {
+        "请先完成 AI 接入配置。": "Complete AI setup first.",
+        "AI 返回内容为空（输出长度受限，请重试或更换模型）。": "The AI response was empty because the output limit was reached. Try again or choose another model.",
+        "AI 返回内容为空。": "The AI response was empty.",
+        "AI 返回不是有效 JSON。": "The AI response was not valid JSON.",
+        "AI 未识别到 Task。": "AI did not detect any Tasks.",
+        "AI 未识别到 Task": "AI did not detect any Tasks.",
+        "未知错误": "Unknown error"
+      };
+      return englishMessages[message] || message;
+    }
+    return message;
+  }
+
+  function saveAiSettings(event) {
+    if (event) event.preventDefault();
+    var settings = collectAiSettingsFromForm();
+    if (settings.enabled && !settings.apiKey) {
+      toast(i18n.isEnglish() ? "Enter an API Key to enable AI." : "启用 AI 需要先填写 API Key。", "error");
+      return;
+    }
+    if (settings.enabled && !settings.baseUrl) {
+      toast(i18n.isEnglish() ? "Enter an API Base URL." : "请填写 API Base URL。", "error");
+      return;
+    }
+    if (settings.enabled && !settings.model) {
+      toast(i18n.isEnglish() ? "Enter a model name." : "请填写模型名称。", "error");
+      return;
+    }
+    var saved = aiProvider.saveSettings(settings);
+    updateAiUi();
+    updateAiSettingsStatus(i18n.isEnglish() ? "Settings saved." : "已保存设置。", "ok");
+    toast(i18n.isEnglish() ? "AI settings saved" : "AI 设置已保存");
+    dom["ai-settings-dialog"].close();
+  }
+
+  function testAiConnection() {
+    if (ui.aiTesting) return;
+    var settings = collectAiSettingsFromForm();
+    if (!settings.apiKey || !settings.baseUrl || !settings.model) {
+      toast(i18n.isEnglish() ? "Complete API Key, Base URL and model first." : "请先填写 API Key、Base URL 和模型。", "error");
+      return;
+    }
+    ui.aiTesting = true;
+    updateAiSettingsStatus(i18n.isEnglish() ? "Testing connection..." : "正在测试连接…");
+    aiProvider.testConnection(settings).then(function (result) {
+      settings.enabled = true;
+      dom["ai-enabled"].checked = true;
+      aiProvider.saveSettings(settings);
+      updateAiUi();
+      updateAiSettingsStatus((i18n.isEnglish() ? "Connection successful: " : "连接成功：") + result.message, "ok");
+      toast(i18n.isEnglish() ? "AI connection successful" : "AI 连接成功");
+    }).catch(function (error) {
+      var message = aiErrorMessage(error);
+      updateAiSettingsStatus((i18n.isEnglish() ? "Connection failed: " : "连接失败：") + message, "error");
+      toast((i18n.isEnglish() ? "AI connection failed: " : "AI 连接失败：") + message, "error", 7000);
+    }).then(function () {
+      ui.aiTesting = false;
+    });
+  }
+
+  function clearAiSettings() {
+    if (!confirmAction(i18n.isEnglish() ? "Clear the AI connection? The saved API Key will be removed from this device." : "确认清除 AI 连接？已保存的 API Key 会从本机移除。")) return;
+    aiProvider.clearSettings();
+    var settings = aiProvider.getSettings();
+    dom["ai-enabled"].checked = settings.enabled;
+    dom["ai-provider"].value = settings.provider;
+    dom["ai-api-key"].value = "";
+    dom["ai-base-url"].value = settings.baseUrl;
+    populateAiModelOptions(settings.model);
+    updateAiUi();
+    updateAiSettingsStatus(i18n.isEnglish() ? "AI connection cleared." : "已清除 AI 连接。", "ok");
+    toast(i18n.isEnglish() ? "AI connection cleared" : "AI 连接已清除");
+  }
+
+  function handleNoteAiToggle() {
+    var settings = aiProvider.getSettings();
+    settings.noteAiEnabled = dom["note-ai-enabled"].checked;
+    aiProvider.saveSettings(settings);
+    updateAiUi();
+    toast(
+      dom["note-ai-enabled"].checked
+        ? i18n.isEnglish() ? "AI conversion enabled in Notes" : "已开启随手记 AI 转换"
+        : i18n.isEnglish() ? "AI conversion disabled in Notes" : "已关闭随手记 AI 转换"
+    );
+  }
+
+  function updateAiUi() {
+    var settings = aiProvider.getSettings();
+    var enabled = aiProvider.isEnabled(settings);
+    dom["note-ai-enabled"].checked = Boolean(settings.noteAiEnabled);
+    dom["note-ai-enabled"].disabled = !enabled;
+    dom["note-ai-rewrite-button"].disabled = !(enabled && settings.noteAiEnabled);
+  }
+
+  function closeAiOriginalPanel() {
+    if (dom["note-ai-original-panel"]) dom["note-ai-original-panel"].hidden = true;
+    if (dom["note-ai-original-content"]) dom["note-ai-original-content"].innerHTML = "";
+    if (dom["note-editor-shell"]) dom["note-editor-shell"].classList.remove("is-comparing");
+  }
+
+  function hideAiOriginalPanel() {
+    closeAiOriginalPanel();
+  }
+
+  function restoreAiOriginal() {
+    if (!ui.aiOriginalHtml) {
+      toast(i18n.isEnglish() ? "No original content to restore." : "当前没有可恢复的原文。", "warning");
+      return;
+    }
+    dom["note-editor"].innerHTML = ui.aiOriginalHtml;
+    markNoteDirty();
+    ui.aiOriginalHtml = null;
+    closeAiOriginalPanel();
+    toast(i18n.isEnglish() ? "Original note restored." : "已恢复为改写前原文。");
+  }
+
+  function aiRewriteCurrentNote() {
+    var originalHtml = richText.sanitizeHtml(
+      dom["note-editor"].innerHTML,
+      richText.MAX_NOTE_TEXT
+    );
+    var contentText = richText.plainText(originalHtml);
+    if (!contentText || !contentText.trim()) {
+      toast(i18n.isEnglish() ? "The note is empty." : "笔记内容为空，无法改写。", "warning");
+      return;
+    }
+    var settings = aiProvider.getSettings();
+    if (!aiProvider.isEnabled(settings)) {
+      toast(i18n.isEnglish() ? "Configure and enable AI first." : "请先在 AI 设置中接入并启用 AI。", "warning");
+      return;
+    }
+    if (!settings.noteAiEnabled) {
+      toast(i18n.isEnglish() ? "Enable AI conversion in Notes first." : "请在随手记界面开启 AI 转换。", "warning");
+      return;
+    }
+    if (ui.aiRewriting) return;
+    if (!confirmAction(i18n.isEnglish() ? "AI will rewrite this note without changing its meaning. Continue?" : "AI 将改写当前笔记内容，原意不变，但表达会被结构化。是否继续？")) return;
+    var operation = {
+      id: utils.uid("ai-rewrite"),
+      noteId: ui.selectedNoteId || "",
+      noteIsNew: ui.noteIsNew,
+      originalHtml: originalHtml
+    };
+    ui.aiRewriteOperation = operation;
+    ui.aiRewriting = true;
+    dom["note-ai-rewrite-button"].disabled = true;
+    dom["note-ai-rewrite-button"].textContent = i18n.isEnglish() ? "Rewriting..." : "AI 改写中…";
+    aiProvider.rewriteNote(contentText).then(function (result) {
+      var currentHtml = richText.sanitizeHtml(
+        dom["note-editor"].innerHTML,
+        richText.MAX_NOTE_TEXT
+      );
+      if (
+        ui.aiRewriteOperation !== operation ||
+        (ui.selectedNoteId || "") !== operation.noteId ||
+        ui.noteIsNew !== operation.noteIsNew ||
+        currentHtml !== operation.originalHtml
+      ) {
+        toast(
+          i18n.isEnglish()
+            ? "The note changed while AI was rewriting it, so this result was not applied."
+            : "AI 改写期间笔记内容或当前笔记已变化，本次结果未应用。",
+          "warning",
+          6000
+        );
+        return;
+      }
+      ui.aiOriginalHtml = originalHtml;
+      dom["note-ai-original-content"].innerHTML = originalHtml;
+      dom["note-ai-original-panel"].hidden = false;
+      dom["note-editor-shell"].classList.add("is-comparing");
+      dom["note-editor"].innerHTML = richText.fromPlainText(result);
+      markNoteDirty();
+      toast(i18n.isEnglish() ? "AI rewrite completed. Review and save." : "AI 改写完成，请检查后保存。");
+    }).catch(function (error) {
+      toast((i18n.isEnglish() ? "AI rewrite failed: " : "AI 改写失败：") + aiErrorMessage(error), "error", 7000);
+    }).then(function () {
+      if (ui.aiRewriteOperation === operation) ui.aiRewriteOperation = null;
+      ui.aiRewriting = false;
+      var current = aiProvider.getSettings();
+      dom["note-ai-rewrite-button"].disabled = !(aiProvider.isEnabled(current) && current.noteAiEnabled);
+      dom["note-ai-rewrite-button"].textContent = i18n.isEnglish() ? "AI Rewrite" : "AI 改写";
+    });
+  }
+
   function taskDraftParserContext() {
     return {
       groups: data.groups,
@@ -4122,11 +4485,46 @@
       toast(i18n.isEnglish() ? "Create a Group before converting the note." : "请先创建分组，再转换 Task 草稿。", "warning");
       return;
     }
-    var parsed = taskDraftParser.parse(note.contentText, taskDraftParserContext());
+    var settings = aiProvider.getSettings();
+    if (aiProvider.isEnabled(settings) && settings.noteAiEnabled) {
+      if (ui.aiConverting) return;
+      ui.aiConverting = true;
+      toast(i18n.isEnglish() ? "AI is parsing Task drafts..." : "AI 正在解析 Task 草稿…", "info");
+      var aiContext = taskDraftParserContext();
+      aiContext.settings = settings;
+      var localCandidates = taskDraftParser.parse(note.contentText, taskDraftParserContext()).map(prepareTaskDraftCandidate);
+      aiProvider.parseTasks(note.contentText, aiContext).then(function (candidates) {
+        if (!candidates.length) throw new Error("AI 未识别到 Task");
+        openTaskDraftConversion(note, candidates.map(prepareTaskDraftCandidate));
+        toast(i18n.isEnglish() ? "AI Task draft parsing completed" : "AI Task 草稿解析完成");
+      }, function (error) {
+        toast((i18n.isEnglish() ? "AI parsing failed, using local rules: " : "AI 解析失败，已改用本地规则解析：") + aiErrorMessage(error), "warning", 6000);
+        openTaskDraftConversion(note, localCandidates);
+      }).then(function () {
+        ui.aiConverting = false;
+      });
+      return;
+    }
+    openTaskDraftConversion(
+      note,
+      taskDraftParser.parse(note.contentText, taskDraftParserContext()).map(prepareTaskDraftCandidate)
+    );
+  }
+
+  function openTaskDraftConversion(note, candidates) {
+    if (!Array.isArray(candidates) || !candidates.length) {
+      toast(
+        i18n.isEnglish()
+          ? "No Task drafts were detected. Add clearer Task details and try again."
+          : "未识别到 Task 草稿，请补充更明确的任务内容后重试。",
+        "warning"
+      );
+      return false;
+    }
     ui.taskDraftConversion = {
       noteId: note.id,
       currentIndex: 0,
-      candidates: parsed.map(prepareTaskDraftCandidate),
+      candidates: candidates,
       createdTaskIds: [],
       startedAt: new Date().toISOString()
     };
@@ -4141,6 +4539,7 @@
     dom["task-dialog-cancel-button"].textContent = i18n.isEnglish() ? "Exit Conversion" : "退出转换";
     loadTaskDraftCandidate(0);
     dom["task-dialog"].showModal();
+    return true;
   }
 
   function currentTaskDraftCandidate() {

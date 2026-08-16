@@ -141,7 +141,16 @@ with sync_playwright() as playwright:
     note_html = page.locator("#note-editor").inner_html().lower().replace(" ", "")
     assert "color:#2563eb" in note_html or 'color="#2563eb"' in note_html, note_html
 
+    select_all_backwards_and_release_outside(page, "#note-editor")
+    page.locator('[data-font-size][data-editor="note-editor"]').select_option("18")
+    note_html = page.locator("#note-editor").inner_html().lower().replace(" ", "")
+    assert "font-size:18px" in note_html, note_html
+
     page.get_by_role("button", name="Save Note", exact=True).click()
+    saved_note_html = page.evaluate(
+        "() => JSON.parse(localStorage.getItem('weekflow-v2.4:data:v4')).notes[0].contentHtml"
+    ).lower().replace(" ", "")
+    assert "font-size:18px" in saved_note_html, saved_note_html
 
     page.get_by_role("button", name="Timeline", exact=True).click()
     page.locator('[data-task-id="t1"] .progress-button').dblclick()
@@ -167,6 +176,19 @@ with sync_playwright() as playwright:
         "background-color:#fff1a8" in progress_html
         or "background-color:rgb(255,241,168)" in progress_html
     ), progress_html
+
+    select_all_backwards_and_release_outside(page, "#progress-note")
+    page.locator('[data-font-size][data-editor="progress-note"]').select_option("22")
+    progress_html = page.locator("#progress-note").inner_html().lower().replace(" ", "")
+    assert "font-size:22px" in progress_html, progress_html
+    page.get_by_role("button", name="Save Progress", exact=True).click()
+    saved_progress_html = page.evaluate(
+        """() => {
+          const task = JSON.parse(localStorage.getItem('weekflow-v2.4:data:v4')).tasks.find(item => item.id === 't1');
+          return task.progressEntries[0].contentHtml;
+        }"""
+    ).lower().replace(" ", "")
+    assert "font-size:22px" in saved_progress_html, saved_progress_html
 
     assert not errors, errors
     browser.close()
