@@ -2,9 +2,11 @@
 
 # Weekflow v3.0 · Task management
 
-Weekflow 是一个桌面端优先、无需后端的本地 Task 管理程序。它以自然周总览和单周日粒度下钻组织时间，通过“分组 → 可选 Flow → 有序 Task”组织工作，并提供随手记、多条进度历史、整体看板、List / Group 双布局资料库、Excel 批量录入与本地备份。
+Weekflow 是一个桌面端优先、无需后端的本地 Task 管理程序。它以自然周总览和单周日粒度下钻组织时间，通过“分组 → 可选 Flow → 有序 Task”组织工作，并提供随手记、多条进度历史、可选 AI 改写与 Task 草稿解析、整体看板、List / Group 双布局资料库、Excel 批量录入与本地备份。
 
 程序由原生 HTML、CSS 和 JavaScript 构建，不需要安装前端依赖。本正式版从空白数据启动，不包含示例分组、Flow、Task、资料或恢复示例数据入口。
+
+AI 功能完全可选：未配置 API Key 时，笔记转 Task 继续使用本地中英文规则；启用 AI 后，可对当前笔记进行改写，并优先用语义解析生成待复核的 Task 草稿。AI 不会绕过现有 Task 表单直接保存内容，API Key 也不会写入业务 JSON 备份。
 
 ## 快速启动
 
@@ -75,7 +77,7 @@ http://localhost:8080/Weekflow.html
 
 ![编辑 Flow 与步骤排序](readme配图/编辑Flow.png)
 
-### 随手记与 Task 草稿
+### 随手记、AI 辅助与 Task 草稿
 
 - 第四个业务页“随手记”提供标题、纯文本富格式编辑区和按最后更新时间倒序排列的笔记列表，支持标题/正文搜索、修改标题、删除双重确认和未保存修改提醒。
 - 编辑器支持加粗、斜体、12/14/16/18/22 五档字号、SharePoint/HTTP/HTTPS 链接，以及类似 Excel 的 20 色字色和 20 色底色预设盘；不引入任意取色器、图片、附件或表格。
@@ -279,7 +281,7 @@ Weekflow_资料库_YYYYMMDD_HHmm.xlsx
 
 - 开发团队：Wesley Yan
 - 首个正式版本（v1.0）：2026年7月30日
-- 最新版本（v3.0）更新时间：2026年8月15日
+- 最新版本（v3.0）更新时间：2026年8月16日
 
 ## 程序文件
 
@@ -295,10 +297,12 @@ Weekflow v3.0/
 ├── css/styles.css
 ├── js/
 │   ├── app.js
+│   ├── ai-provider.js
 │   ├── automation.js
 │   ├── date-utils.js
 │   ├── excel-export.js
 │   ├── excel-import.js
+│   ├── i18n.js
 │   ├── material-excel.js
 │   ├── materials.js
 │   ├── rich-text.js

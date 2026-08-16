@@ -80,8 +80,18 @@ test("v3.0 version and release documentation stay aligned", () => {
   assert.match(html, /<title>Weekflow v3\.0/);
   assert.match(readme, /^# Weekflow v3\.0/m);
   assert.match(readmeEn, /^# Weekflow v3\.0/m);
-  assert.match(changelog, /^## v3\.0 Quick Notes and Progress History — 2026-08-15/m);
-  assert.match(release, /^Weekflow v3\.0\nRelease date: 2026-08-15/);
+  assert.match(
+    changelog,
+    /^## v3\.0 Quick Notes, Progress History, and AI Assistance — 2026-08-16/m
+  );
+  assert.doesNotMatch(changelog, /^## Unreleased/m);
+  assert.match(release, /^Weekflow v3\.0\nRelease date: 2026-08-16/);
+  assert.match(html, /v3\.0 随手记、进度历史与 AI 辅助版/);
+  assert.match(html, /只预填到现有 Task 草稿复核界面/);
+  assert.match(readme, /### 随手记、AI 辅助与 Task 草稿/);
+  assert.match(readmeEn, /### Quick Notes, AI Assistance, and Task Draft Conversion/);
+  assert.match(readme, /API Key 也不会写入业务 JSON 备份/);
+  assert.match(readmeEn, /API Keys are excluded from business-data JSON backups/);
 });
 
 test("English current-Task workbook has English sheets and can be imported", async () => {

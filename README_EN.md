@@ -2,9 +2,9 @@
 
 # Weekflow v3.0 · Bilingual Task Management
 
-Weekflow is a desktop-first, backend-free Multi-task management cockpit for tracking several workstreams and organizing all Task-related documents in one place. It combines weekly and daily deadline timelines, `Group → optional Flow → ordered Task` workflows, Quick Notes, multi-entry progress history, an Overall Dashboard, a dual-layout Document Library, Excel bulk import/export, and local JSON backup.
+Weekflow is a desktop-first, backend-free Multi-task management cockpit for tracking several workstreams and organizing all Task-related documents in one place. It combines weekly and daily deadline timelines, `Group → optional Flow → ordered Task` workflows, Quick Notes, multi-entry progress history, optional AI rewriting and Task-draft parsing, an Overall Dashboard, a dual-layout Document Library, Excel bulk import/export, and local JSON backup.
 
-The Chinese / English switch changes presentation and download language only; it never rewrites user-entered content. Weekflow v3.0 adds Quick Notes and multi-entry progress history while preserving recurrence, linking, filtering, and scroll-position safeguards.
+The Chinese / English switch changes presentation and download language only; it never rewrites user-entered content. Weekflow v3.0 adds Quick Notes, multi-entry progress history, and optional AI assistance while preserving recurrence, linking, filtering, and scroll-position safeguards. Without an API Key, Note-to-Task conversion continues to use deterministic bilingual local rules; with AI enabled, results remain editable drafts and are never saved as Tasks without user review. API Keys are excluded from business-data JSON backups.
 
 ## Quick Start
 
@@ -69,7 +69,7 @@ Both English and Chinese import headers and supported field values remain accept
 
 ![Edit a Flow and reorder steps](readme-images-en/edit-flow.png)
 
-### Quick Notes and Task Draft Conversion
+### Quick Notes, AI Assistance, and Task Draft Conversion
 
 - The fourth business page, **Quick Notes**, provides a titled rich-text-only writing area and a left list sorted by latest update. Search covers title and body, and unsaved-change prompts protect navigation, note switching, language switching, and page closing.
 - Formatting supports bold, italic, five preset font sizes (12/14/16/18/22), pasted SharePoint/HTTP/HTTPS links, and Excel-like 20-color preset palettes for text and highlights. Arbitrary color pickers, images, attachments, and tables are intentionally excluded.
@@ -220,6 +220,7 @@ The entire folder is required; do not move only `Weekflow.html`. It depends on `
 Weekflow/
 ├── Weekflow.html
 ├── css/styles.css
+├── js/ai-provider.js
 ├── js/i18n.js
 ├── js/app.js
 ├── js/automation.js
@@ -246,7 +247,7 @@ Weekflow/
 
 - Developer: Wesley Yan
 - First release (v1.0): July 30, 2026
-- Latest release (v3.0): August 15, 2026
+- Latest release (v3.0): August 16, 2026
 - Bilingual interface release: August 12, 2026
 
 ## Security and Limits
