@@ -1,8 +1,8 @@
 # Weekflow Changelog
 
-## v3.0 Quick Notes, Progress History, and AI Assistance — 2026-08-16
+## v3.1 AI-assisted Notes and Rich-text Sizing — 2026-08-16
 
-Added a fourth business page for reusable Quick Notes, multi-entry Task progress history, deterministic local Task-draft conversion, and optional multi-provider AI assistance.
+Added optional multi-provider AI assistance to Quick Notes and Task-draft conversion, plus preset font sizing for Quick Notes and Task progress history.
 
 ### AI assistance and rich-text editing
 
@@ -14,6 +14,10 @@ Added a fourth business page for reusable Quick Notes, multi-entry Task progress
 - Removed DeepSeek-only request parameters from non-DeepSeek providers and added request timeout and abort handling.
 - Prevented cross-Group Flow matches, rejected impossible AI-generated dates, and completed English localization for AI controls and runtime errors.
 - Stored the API Key only in the current browser origin's separate AI setting; it is excluded from business-data JSON backups.
+
+## v3.0 Quick Notes and Progress History — 2026-08-15
+
+Added a fourth business page for reusable Quick Notes, deterministic local Task-draft conversion, and multi-entry Task progress history.
 
 ### Added and changed
 

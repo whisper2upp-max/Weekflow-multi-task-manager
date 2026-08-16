@@ -40,7 +40,7 @@ async function writeTemplate(filename, bytes) {
       template: true
     })
   );
-  console.log("Weekflow v3.0 release templates regenerated");
+  console.log("Weekflow v3.1 release templates regenerated");
 })().catch((error) => {
   console.error(error);
   process.exitCode = 1;

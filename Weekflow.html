@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Weekflow v3.0 中英双语本地 Task 管理工具，支持周/日双时间轴、随手记、多条进度历史、可选 AI 改写与 Task 草稿解析、资料库、看板、备份和 Excel 批量导入导出。"
+      content="Weekflow v3.1 中英双语本地 Task 管理工具，支持周/日双时间轴、随手记、多条进度历史、可选 AI 改写与 Task 草稿解析、资料库、看板、备份和 Excel 批量导入导出。"
     />
-    <title>Weekflow v3.0 · Task management</title>
+    <title>Weekflow v3.1 · Task management</title>
     <link rel="stylesheet" href="./css/styles.css" />
   </head>
   <body>
@@ -274,7 +274,7 @@
         <section id="home-view" class="view-panel home-view" aria-labelledby="home-heading">
           <div class="home-hero">
             <div class="home-hero-copy">
-              <p class="eyebrow">Weekflow v3.0</p>
+              <p class="eyebrow">Weekflow v3.1</p>
               <h1 id="home-heading">把工作拆成清晰的下一步</h1>
               <p>
                 用分组建立工作版图，用 Flow 串起执行步骤，再用周时间轴看清每一个 DDL。
@@ -370,7 +370,7 @@
               <span class="home-entry-copy">
                 <small>WHAT'S NEW</small>
                 <strong>更新日志</strong>
-                <span>查看 Weekflow v3.0 的发布内容</span>
+                <span>查看 Weekflow v3.1 的发布内容</span>
               </span>
               <span class="home-entry-arrow" aria-hidden="true">↗</span>
             </button>
@@ -908,7 +908,7 @@
           <h3>数据保存位置</h3>
           <p>数据保存在当前浏览器、当前页面来源的 <code>localStorage</code> 中，主数据键为：</p>
           <pre>weekflow-v2.4:data:v4</pre>
-          <p>v3.0 继续沿用 v2.4 兼容命名空间，并把内部结构升级到 v4；旧单条进度会自动迁移为一条历史记录。</p>
+          <p>v3.1 继续沿用 v2.4 兼容命名空间；内部结构自 v3.0 起为 v4，旧单条进度会自动迁移为一条历史记录。</p>
           <p>清除浏览器网站数据、使用无痕窗口、更换浏览器或更换启动地址，都会影响可见数据。</p>
         </section>
         <section>
@@ -947,7 +947,7 @@
           <h3>开发团队</h3>
           <p>开发团队：Wesley Yan</p>
           <p>首个正式版本（v1.0）：2026年7月30日</p>
-          <p>最新版本（v3.0）更新时间：2026年8月16日</p>
+          <p>最新版本（v3.1）更新时间：2026年8月16日</p>
         </section>
       </article>
       <div class="modal-actions">
@@ -964,21 +964,43 @@
         <button class="icon-button" type="button" data-action="close-changelog" aria-label="关闭">×</button>
       </div>
       <article class="document-content changelog-content">
-        <div class="release-entry" data-version="3.0">
+        <div class="release-entry" data-version="3.1">
           <div class="release-heading">
-            <span>v3.0 随手记、进度历史与 AI 辅助版</span>
+            <span>v3.1 AI 辅助与富文本字号版</span>
             <time datetime="2026-08-16">2026-08-16</time>
           </div>
-          <p class="release-lead">新增随手记、多条 Task 进度历史、本地 Task 草稿转换和可选的多服务商 AI 辅助。</p>
+          <p class="release-lead">为随手记增加可选的多服务商 AI 改写与 Task 草稿解析，并为随手记和进度历史补充五档字号。</p>
+          <section>
+            <h3>新增与调整</h3>
+            <ul>
+              <li>新增可选的多服务商 AI 设置、笔记改写和 AI 优先 Task 草稿解析；未配置 API Key 或关闭 AI 时继续使用 v3.0 的本地中英文规则。</li>
+              <li>AI 转换失败或超时会自动回退本地规则；AI 结果只预填到逐条复核界面，不直接保存 Task，并会阻止跨分组 Flow、无效日期等不安全值进入表单。</li>
+              <li>AI 改写始终提交编辑区当前内容；请求期间切换笔记或继续编辑时，迟到结果会被丢弃。</li>
+              <li>隔离不同服务商的请求参数，非 DeepSeek 服务不再收到 DeepSeek 专属字段，并增加请求超时和中止处理。</li>
+              <li>随手记与 Task 进度历史新增 12/14/16/18/22 五档字号；正向、反向、整行和多行选择均可继续应用加粗、斜体、字色、底色和字号。</li>
+            </ul>
+          </section>
+          <section>
+            <h3>数据与兼容性</h3>
+            <ul>
+              <li>API Key 独立保存在当前浏览器来源的 AI 设置中，不进入业务 JSON 备份；共享设备使用后可清除连接。</li>
+              <li>未改变业务数据结构、Task/资料 Excel 模板、上传下载格式或报告机制；Windows-safe OOXML 处理路径保持不变。</li>
+              <li>继续保护 Task 完成、分组/Flow 展开折叠和资料复选的滚动位置，避免历史版本的跳回顶部问题。</li>
+            </ul>
+          </section>
+        </div>
+
+        <div class="release-entry" data-version="3.0">
+          <div class="release-heading">
+            <span>v3.0 随手记与进度历史版</span>
+            <time datetime="2026-08-15">2026-08-15</time>
+          </div>
+          <p class="release-lead">新增随手记、本地 Task 草稿转换和可持续追加的多条 Task 进度历史。</p>
           <section>
             <h3>新增与调整</h3>
             <ul>
               <li>新增第四个业务页“随手记”，支持标题、富文本纯文字、链接、搜索、更新时间排序、未保存提醒和删除双重确认。</li>
               <li>随手记与进度历史的字色、底色统一改为类似 Excel 的两套 20 色预设盘，不再要求用户通过任意取色器选择。</li>
-              <li>随手记与 Task 进度历史新增 12/14/16/18/22 五档字号；正向、反向、整行和多行选择均可继续应用加粗、斜体、字色、底色和字号。</li>
-              <li>新增可选的多服务商 AI 设置、笔记改写和 AI 优先 Task 草稿解析；未配置 API Key 或关闭 AI 时继续使用原有本地中英文规则。</li>
-              <li>AI 转换失败或超时会自动回退本地规则；AI 结果只预填到逐条复核界面，不直接保存 Task，并会阻止跨分组 Flow、无效日期等不安全值进入表单。</li>
-              <li>AI 改写始终提交编辑区当前内容；请求期间切换笔记或继续编辑时，迟到结果会被丢弃。API Key 独立保存在当前浏览器来源的 AI 设置中，不进入业务 JSON 备份。</li>
               <li>笔记可一次性追加为指定 Task 的新进度记录；原笔记保留，后续编辑互不自动同步。</li>
               <li>保留无需 AI 和网络的中英文本地规则解析，可识别一个或多个 Task 草稿；高置信字段与精确日期前缀会预填，模糊名称和未纳入精确规则的相对日期只提供建议。</li>
               <li>独立行的 1/2/3 默认拆分为不同 Task；明确的每周星期或每月日期表达会预填周期、下一周期 DDL 和周期开始日，周期结束仍由用户确认。</li>
