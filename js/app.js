@@ -101,6 +101,13 @@
     noteIsNew: false,
     noteTableAnchorCell: null,
     noteTableFocusCell: null,
+    noteTablePointerAnchorCell: null,
+    noteTableDragSelecting: false,
+    noteTableDragSelectionJustFinished: false,
+    noteTableSuppressRangeSync: false,
+    noteTableRangeSyncTimer: null,
+    noteTableHoveredTable: null,
+    noteTableHandleHideTimer: null,
     editingMaterialId: null,
     selectedMaterialIds: [],
     materialFilters: {
@@ -229,9 +236,12 @@
       "note-save-state",
       "note-editor",
       "note-table-menu",
+      "note-table-create-submenu",
+      "note-table-edit-submenu",
       "note-table-size-grid",
       "note-table-size-label",
       "note-table-edit-help",
+      "note-table-select-handle",
       "note-updated-at",
       "note-character-count",
       "note-conversion-summary",
@@ -525,9 +535,19 @@
     });
     dom["note-editor"].addEventListener("paste", handleRichTextPaste);
     dom["note-editor"].addEventListener("copy", handleNoteTableCopy);
+    dom["note-editor"].addEventListener("mousedown", handleNoteEditorTableMouseDown);
+    dom["note-editor"].addEventListener("mousemove", handleNoteEditorTableMouseMove);
+    dom["note-editor"].addEventListener("mouseup", handleNoteEditorTableMouseUp);
     dom["note-editor"].addEventListener("click", handleNoteEditorTableClick);
     dom["note-editor"].addEventListener("mouseup", rememberRichTextSelection);
     dom["note-editor"].addEventListener("keyup", rememberRichTextSelection);
+    dom["note-editor"].addEventListener("mouseleave", scheduleNoteTableHandleHide);
+    dom["note-editor"].addEventListener("scroll", refreshNoteTableSelectHandle);
+    dom["note-table-select-handle"].addEventListener("mouseenter", cancelNoteTableHandleHide);
+    dom["note-table-select-handle"].addEventListener("mouseleave", scheduleNoteTableHandleHide);
+    dom["note-table-menu"].addEventListener("mouseover", handleNoteTableSubmenuIntent);
+    dom["note-table-menu"].addEventListener("focusin", handleNoteTableSubmenuIntent);
+    window.addEventListener("resize", refreshNoteTableSelectHandle);
     dom["task-dialog"].addEventListener("cancel", handleTaskDialogCancel);
     dom["ai-settings-form"].addEventListener("submit", saveAiSettings);
     dom["ai-provider"].addEventListener("change", handleAiProviderChange);
@@ -783,12 +803,16 @@
       "toggle-note-table-menu": function () {
         toggleNoteTableMenu(actionNode);
       },
+      "open-note-table-submenu": function () {
+        openNoteTableSubmenu(actionNode.dataset.tableSubmenuTarget, actionNode);
+      },
       "insert-note-table": function () {
         insertNoteTable(Number(actionNode.dataset.rows), Number(actionNode.dataset.columns));
       },
       "edit-note-table": function () {
         editNoteTable(actionNode.dataset.tableOperation);
       },
+      "select-whole-note-table": selectWholeHoveredNoteTable,
       "new-material": function () {
         openMaterialDialog();
       },
@@ -3784,7 +3808,23 @@
     var range = selectionRangeInsideEditor(editor, selection);
     if (!range) return;
     ui.richTextSelection = { editorId: editor.id, range: range };
-    if (editor === dom["note-editor"] && !event.skipTableSync) syncNoteTableSelectionFromRange();
+    if (
+      editor === dom["note-editor"] &&
+      !event.skipTableSync &&
+      !ui.noteTableSuppressRangeSync &&
+      !(event.type === "keyup" && event.key === "Shift" && noteTableRegion())
+    ) {
+      syncNoteTableSelectionFromRange();
+    }
+  }
+
+  function suppressNoteTableRangeSyncForGesture() {
+    ui.noteTableSuppressRangeSync = true;
+    if (ui.noteTableRangeSyncTimer) window.clearTimeout(ui.noteTableRangeSyncTimer);
+    ui.noteTableRangeSyncTimer = window.setTimeout(function () {
+      ui.noteTableSuppressRangeSync = false;
+      ui.noteTableRangeSyncTimer = null;
+    }, 0);
   }
 
   function preserveRichTextSelectionBeforeToolbarAction(event) {
@@ -3894,9 +3934,54 @@
       if (tool === exceptTool) return;
       var menu = query(".note-table-menu", tool);
       var trigger = query('[data-action="toggle-note-table-menu"]', tool);
-      if (menu) menu.hidden = true;
+      if (menu) {
+        menu.hidden = true;
+        closeNoteTableSubmenus(menu);
+      }
       if (trigger) trigger.setAttribute("aria-expanded", "false");
     });
+  }
+
+  function closeNoteTableSubmenus(menu, exceptName) {
+    if (!menu) return;
+    queryAll("[data-table-submenu-target]", menu).forEach(function (trigger) {
+      var name = trigger.dataset.tableSubmenuTarget;
+      var panel = dom[name === "create" ? "note-table-create-submenu" : "note-table-edit-submenu"];
+      if (name === exceptName) return;
+      trigger.setAttribute("aria-expanded", "false");
+      if (panel) {
+        panel.hidden = true;
+        panel.classList.remove("is-open-left");
+      }
+    });
+  }
+
+  function positionNoteTableSubmenu(panel) {
+    if (!panel || panel.hidden) return;
+    panel.classList.remove("is-open-left");
+    var bounds = panel.getBoundingClientRect();
+    if (bounds.right > window.innerWidth - 12) panel.classList.add("is-open-left");
+  }
+
+  function openNoteTableSubmenu(name, trigger) {
+    if (name !== "create" && name !== "edit") return;
+    var menu = dom["note-table-menu"];
+    var panel = dom[name === "create" ? "note-table-create-submenu" : "note-table-edit-submenu"];
+    trigger = trigger || query('[data-table-submenu-target="' + name + '"]', menu);
+    if (!menu || menu.hidden || !panel || !trigger) return;
+    closeNoteTableSubmenus(menu, name);
+    queryAll("[data-table-submenu-target]", menu).forEach(function (item) {
+      item.setAttribute("aria-expanded", String(item === trigger));
+    });
+    panel.hidden = false;
+    positionNoteTableSubmenu(panel);
+    if (name === "edit") updateNoteTableEditControls();
+  }
+
+  function handleNoteTableSubmenuIntent(event) {
+    var trigger = event.target.closest("[data-table-submenu-target]");
+    if (!trigger || !dom["note-table-menu"].contains(trigger)) return;
+    openNoteTableSubmenu(trigger.dataset.tableSubmenuTarget, trigger);
   }
 
   function toggleNoteTableMenu(trigger) {
@@ -3909,8 +3994,10 @@
     menu.hidden = !opening;
     trigger.setAttribute("aria-expanded", String(opening));
     if (opening) {
-      syncNoteTableSelectionFromRange();
+      if (!noteTableRegion()) syncNoteTableSelectionFromRange();
       updateNoteTableEditControls();
+    } else {
+      closeNoteTableSubmenus(menu);
     }
   }
 
@@ -4005,25 +4092,58 @@
     queryAll(".is-table-active, .is-table-selected", dom["note-editor"]).forEach(function (cell) {
       cell.classList.remove("is-table-active", "is-table-selected");
     });
+    queryAll("table.has-table-selection", dom["note-editor"]).forEach(function (table) {
+      table.classList.remove("has-table-selection");
+    });
     var region = noteTableRegion();
     if (!region) {
       updateNoteTableEditControls();
+      updateNoteTableHandleSelectionState();
       return;
     }
+    region.table.classList.add("has-table-selection");
     region.cells.forEach(function (cell) {
       cell.classList.add("is-table-selected");
     });
     if (ui.noteTableFocusCell) ui.noteTableFocusCell.classList.add("is-table-active");
     updateNoteTableEditControls();
+    updateNoteTableHandleSelectionState();
   }
 
   function clearNoteTableSelection() {
     ui.noteTableAnchorCell = null;
     ui.noteTableFocusCell = null;
+    ui.noteTablePointerAnchorCell = null;
+    ui.noteTableDragSelecting = false;
     queryAll(".is-table-active, .is-table-selected", dom["note-editor"]).forEach(function (cell) {
       cell.classList.remove("is-table-active", "is-table-selected");
     });
+    queryAll("table.has-table-selection", dom["note-editor"]).forEach(function (table) {
+      table.classList.remove("has-table-selection");
+    });
     updateNoteTableEditControls();
+    updateNoteTableHandleSelectionState();
+  }
+
+  function noteTableRegionIsWholeTable(region) {
+    return Boolean(
+      region &&
+      region.minRow === 0 &&
+      region.minColumn === 0 &&
+      region.maxRow === region.model.grid.length - 1 &&
+      region.maxColumn === region.model.width - 1 &&
+      region.cells.length === region.model.infoByCell.size
+    );
+  }
+
+  function updateNoteTableHandleSelectionState() {
+    var handle = dom["note-table-select-handle"];
+    if (!handle) return;
+    var region = noteTableRegion();
+    handle.classList.toggle(
+      "is-selected",
+      Boolean(region && ui.noteTableHoveredTable === region.table && noteTableRegionIsWholeTable(region))
+    );
   }
 
   function updateNoteTableEditControls() {
@@ -4035,11 +4155,17 @@
     if (dom["note-table-edit-help"]) {
       dom["note-table-edit-help"].textContent = region
         ? i18n.isEnglish()
-          ? region.cells.length + " cell(s) selected. Shift-click to extend the merge range."
-          : "已选择 " + region.cells.length + " 个单元格；Shift + 点击可扩展合并区域。"
+          ? "Selected " +
+            (region.maxRow - region.minRow + 1) + " row(s) × " +
+            (region.maxColumn - region.minColumn + 1) + " column(s) (" +
+            region.cells.length + " cell(s))."
+          : "已选择 " +
+            (region.maxRow - region.minRow + 1) + " 行 × " +
+            (region.maxColumn - region.minColumn + 1) + " 列（" +
+            region.cells.length + " 个单元格）。"
         : i18n.isEnglish()
-          ? "Click a cell to edit it. Shift-click to select a continuous merge range."
-          : "点击单元格后编辑；Shift + 点击可选择连续区域并合并。";
+          ? "Drag across cells, or click one cell and Shift-click another, to select a rectangular range."
+          : "点击并拖过单元格，或先点击一个格子再按住 Shift 点击另一个格子，即可选择矩形区域。";
     }
   }
 
@@ -4048,15 +4174,95 @@
     if (!selection || !selection.rangeCount) return;
     var range = selectionRangeInsideEditor(dom["note-editor"], selection);
     if (!range) return;
-    var startCell = closestTableCell(range.startContainer);
-    var endCell = closestTableCell(range.endContainer);
-    if (!startCell || !endCell || startCell.closest("table") !== endCell.closest("table")) return;
-    ui.noteTableAnchorCell = startCell;
-    ui.noteTableFocusCell = endCell;
+    var intersecting = queryAll("td, th", dom["note-editor"]).filter(function (cell) {
+      try {
+        return range.intersectsNode(cell);
+      } catch (_error) {
+        return false;
+      }
+    });
+    var anchorCell = closestTableCell(selection.anchorNode) || closestTableCell(range.startContainer);
+    var focusCell = closestTableCell(selection.focusNode) || closestTableCell(range.endContainer);
+    if (!anchorCell && intersecting.length) anchorCell = intersecting[0];
+    if (!focusCell && intersecting.length) focusCell = intersecting[intersecting.length - 1];
+    if (
+      !anchorCell ||
+      !focusCell ||
+      anchorCell.closest("table") !== focusCell.closest("table")
+    ) {
+      return;
+    }
+    ui.noteTableAnchorCell = anchorCell;
+    ui.noteTableFocusCell = focusCell;
     renderNoteTableSelection();
   }
 
+  function handleNoteEditorTableMouseDown(event) {
+    if (event.button !== 0) return;
+    var cell = event.target.closest("td, th");
+    if (!cell || !dom["note-editor"].contains(cell)) {
+      ui.noteTablePointerAnchorCell = null;
+      return;
+    }
+    cancelNoteTableHandleHide();
+    showNoteTableSelectHandle(cell.closest("table"));
+    ui.noteTablePointerAnchorCell = cell;
+    ui.noteTableDragSelecting = false;
+    if (
+      event.shiftKey &&
+      ui.noteTableAnchorCell &&
+      ui.noteTableAnchorCell.isConnected &&
+      ui.noteTableAnchorCell.closest("table") === cell.closest("table")
+    ) {
+      event.preventDefault();
+      ui.noteTableFocusCell = cell;
+      suppressNoteTableRangeSyncForGesture();
+      renderNoteTableSelection();
+      return;
+    }
+    ui.noteTableAnchorCell = cell;
+    ui.noteTableFocusCell = cell;
+    renderNoteTableSelection();
+  }
+
+  function handleNoteEditorTableMouseMove(event) {
+    var table = event.target.closest("table");
+    if (table && dom["note-editor"].contains(table)) {
+      cancelNoteTableHandleHide();
+      showNoteTableSelectHandle(table);
+    } else {
+      scheduleNoteTableHandleHide();
+    }
+    if (!(event.buttons & 1) || !ui.noteTablePointerAnchorCell) return;
+    var cell = event.target.closest("td, th");
+    if (
+      !cell ||
+      cell === ui.noteTablePointerAnchorCell ||
+      cell.closest("table") !== ui.noteTablePointerAnchorCell.closest("table")
+    ) {
+      return;
+    }
+    event.preventDefault();
+    ui.noteTableDragSelecting = true;
+    ui.noteTableAnchorCell = ui.noteTablePointerAnchorCell;
+    ui.noteTableFocusCell = cell;
+    suppressNoteTableRangeSyncForGesture();
+    renderNoteTableSelection();
+  }
+
+  function handleNoteEditorTableMouseUp(event) {
+    if (!ui.noteTableDragSelecting) return;
+    event.preventDefault();
+    ui.noteTableDragSelecting = false;
+    ui.noteTableDragSelectionJustFinished = true;
+    suppressNoteTableRangeSyncForGesture();
+    window.setTimeout(function () {
+      ui.noteTableDragSelectionJustFinished = false;
+    }, 0);
+  }
+
   function handleNoteEditorTableClick(event) {
+    if (ui.noteTableDragSelectionJustFinished) return;
     var cell = event.target.closest("td, th");
     if (!cell || !dom["note-editor"].contains(cell)) {
       clearNoteTableSelection();
@@ -4072,6 +4278,86 @@
     }
     ui.noteTableFocusCell = cell;
     renderNoteTableSelection();
+  }
+
+  function cancelNoteTableHandleHide() {
+    if (ui.noteTableHandleHideTimer) window.clearTimeout(ui.noteTableHandleHideTimer);
+    ui.noteTableHandleHideTimer = null;
+  }
+
+  function scheduleNoteTableHandleHide() {
+    cancelNoteTableHandleHide();
+    ui.noteTableHandleHideTimer = window.setTimeout(function () {
+      hideNoteTableSelectHandle();
+    }, 140);
+  }
+
+  function hideNoteTableSelectHandle() {
+    cancelNoteTableHandleHide();
+    var handle = dom["note-table-select-handle"];
+    if (handle) handle.hidden = true;
+    ui.noteTableHoveredTable = null;
+    updateNoteTableHandleSelectionState();
+  }
+
+  function refreshNoteTableSelectHandle() {
+    var table = ui.noteTableHoveredTable;
+    var handle = dom["note-table-select-handle"];
+    var wrapper = handle && handle.parentElement;
+    if (!table || !table.isConnected || !handle || !wrapper) {
+      if (handle) handle.hidden = true;
+      return;
+    }
+    var editorBounds = dom["note-editor"].getBoundingClientRect();
+    var tableBounds = table.getBoundingClientRect();
+    if (tableBounds.bottom < editorBounds.top || tableBounds.top > editorBounds.bottom) {
+      handle.hidden = true;
+      return;
+    }
+    handle.hidden = false;
+    var wrapperBounds = wrapper.getBoundingClientRect();
+    var left = Math.max(-20, tableBounds.left - wrapperBounds.left - handle.offsetWidth - 4);
+    var top = Math.max(
+      3,
+      Math.min(
+        tableBounds.top - wrapperBounds.top + 4,
+        wrapper.clientHeight - handle.offsetHeight - 3
+      )
+    );
+    handle.style.left = Math.round(left) + "px";
+    handle.style.top = Math.round(top) + "px";
+    updateNoteTableHandleSelectionState();
+  }
+
+  function showNoteTableSelectHandle(table) {
+    if (!table || !dom["note-editor"].contains(table)) return;
+    ui.noteTableHoveredTable = table;
+    cancelNoteTableHandleHide();
+    refreshNoteTableSelectHandle();
+  }
+
+  function selectWholeHoveredNoteTable() {
+    var table = ui.noteTableHoveredTable;
+    if (!table || !table.isConnected || !dom["note-editor"].contains(table)) return;
+    var model = buildTableModel(table);
+    var lastRow = model.grid.length - 1;
+    var anchorInfo = model.grid[0] && model.grid[0][0];
+    var focusInfo = model.grid[lastRow] && model.grid[lastRow][model.width - 1];
+    if (!anchorInfo || !focusInfo) return;
+    ui.noteTableAnchorCell = anchorInfo.cell;
+    ui.noteTableFocusCell = focusInfo.cell;
+    renderNoteTableSelection();
+    var range = document.createRange();
+    range.selectNode(table);
+    var selection = window.getSelection && window.getSelection();
+    if (selection) {
+      selection.removeAllRanges();
+      selection.addRange(range);
+      ui.richTextSelection = { editorId: "note-editor", range: range.cloneRange() };
+    }
+    dom["note-editor"].focus({ preventScroll: true });
+    refreshNoteTableSelectHandle();
+    toast(i18n.isEnglish() ? "Whole table selected." : "已选中整个表格。");
   }
 
   function placeCaretInNode(node) {
@@ -4590,6 +4876,7 @@
     dom["note-title"].value = note ? note.title : "";
     dom["note-title"].classList.remove("is-invalid");
     dom["note-editor"].innerHTML = note ? note.contentHtml : "";
+    hideNoteTableSelectHandle();
     clearNoteTableSelection();
     dom["note-save-state"].textContent = note
       ? i18n.isEnglish()
@@ -5087,12 +5374,69 @@
     toast(i18n.isEnglish() ? "Original note restored." : "已恢复为改写前原文。");
   }
 
+  function prepareAiRewritePayload(originalHtml) {
+    var template = document.createElement("template");
+    template.innerHTML = originalHtml;
+    var tokenSeed = utils.uid("table").replace(/[^a-z0-9]/gi, "").toUpperCase();
+    var tables = queryAll("table", template.content).filter(function (table) {
+      return !(table.parentElement && table.parentElement.closest("table"));
+    }).map(function (table, index) {
+      var token = "[[WEEKFLOW_TABLE_" + tokenSeed + "_" + (index + 1) + "]]";
+      var html = richText.sanitizeHtml(table.outerHTML, richText.MAX_NOTE_TEXT);
+      var placeholder = document.createElement("p");
+      placeholder.textContent = token;
+      table.replaceWith(placeholder);
+      return { token: token, html: html };
+    });
+    return {
+      text: richText.plainText(template.innerHTML),
+      tables: tables
+    };
+  }
+
+  function restoreTablesIntoAiRewrite(result, tables) {
+    var rewritten = String(result || "").replace(/\r\n/g, "\n");
+    if (!tables.length) {
+      return { ok: true, html: richText.fromPlainText(rewritten) };
+    }
+    var output = [];
+    var cursor = 0;
+    for (var index = 0; index < tables.length; index += 1) {
+      var table = tables[index];
+      var position = rewritten.indexOf(table.token, cursor);
+      if (position < 0 || rewritten.indexOf(table.token, position + table.token.length) >= 0) {
+        return { ok: false, reason: "table-token" };
+      }
+      output.push(richText.fromPlainText(rewritten.slice(cursor, position)));
+      output.push(table.html);
+      cursor = position + table.token.length;
+    }
+    for (var reverseIndex = 1; reverseIndex < tables.length; reverseIndex += 1) {
+      if (rewritten.indexOf(tables[reverseIndex - 1].token) > rewritten.indexOf(tables[reverseIndex].token)) {
+        return { ok: false, reason: "table-order" };
+      }
+    }
+    output.push(richText.fromPlainText(rewritten.slice(cursor)));
+    var combined = output.join("");
+    if (richText.plainText(combined).length > richText.MAX_NOTE_TEXT) {
+      return { ok: false, reason: "too-long" };
+    }
+    var sanitized = richText.sanitizeHtml(combined, richText.MAX_NOTE_TEXT);
+    var verification = document.createElement("template");
+    verification.innerHTML = sanitized;
+    if (queryAll("table", verification.content).length !== tables.length) {
+      return { ok: false, reason: "table-restore" };
+    }
+    return { ok: true, html: sanitized };
+  }
+
   function aiRewriteCurrentNote() {
     var originalHtml = richText.sanitizeHtml(
       dom["note-editor"].innerHTML,
       richText.MAX_NOTE_TEXT
     );
-    var contentText = richText.plainText(originalHtml);
+    var rewritePayload = prepareAiRewritePayload(originalHtml);
+    var contentText = rewritePayload.text;
     if (!contentText || !contentText.trim()) {
       toast(i18n.isEnglish() ? "The note is empty." : "笔记内容为空，无法改写。", "warning");
       return;
@@ -5112,7 +5456,8 @@
       id: utils.uid("ai-rewrite"),
       noteId: ui.selectedNoteId || "",
       noteIsNew: ui.noteIsNew,
-      originalHtml: originalHtml
+      originalHtml: originalHtml,
+      tables: rewritePayload.tables
     };
     ui.aiRewriteOperation = operation;
     ui.aiRewriting = true;
@@ -5138,11 +5483,24 @@
         );
         return;
       }
+      var restored = restoreTablesIntoAiRewrite(result, operation.tables);
+      if (!restored.ok) {
+        toast(
+          i18n.isEnglish()
+            ? "AI did not preserve every table position, so the rewrite was cancelled and your note was left unchanged."
+            : "AI 未完整保留表格及其位置，本次改写已取消，原笔记未发生变化。",
+          "warning",
+          7000
+        );
+        return;
+      }
       ui.aiOriginalHtml = originalHtml;
       dom["note-ai-original-content"].innerHTML = originalHtml;
       dom["note-ai-original-panel"].hidden = false;
       dom["note-editor-shell"].classList.add("is-comparing");
-      dom["note-editor"].innerHTML = richText.fromPlainText(result);
+      dom["note-editor"].innerHTML = restored.html;
+      hideNoteTableSelectHandle();
+      clearNoteTableSelection();
       markNoteDirty();
       toast(i18n.isEnglish() ? "AI rewrite completed. Review and save." : "AI 改写完成，请检查后保存。");
     }).catch(function (error) {

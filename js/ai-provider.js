@@ -445,6 +445,7 @@
     var systemPrompt =
       "你是 Weekflow 的笔记润色助手。请把用户随手记改写为完整、结构化、有条理的表达。\n" +
       "要求：不能改变原意；不能增删事实；不能编造信息；保留所有关键细节；可以适当分段、使用列表或标题；" +
+      "若输入中包含形如 [[WEEKFLOW_TABLE_...]] 的表格占位标记，必须逐字保留每个标记，保持数量、顺序和所在位置不变，不得改写、删除、复制或解释标记；" +
       "输出正文本身即可，不要输出解释或前后缀。";
     return chatContent(loadSettings(), [
       { role: "system", content: systemPrompt },

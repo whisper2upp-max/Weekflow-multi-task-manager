@@ -71,14 +71,23 @@ with sync_playwright() as playwright:
     page.on("dialog", lambda dialog: dialog.accept())
 
     def handle_ai(route, request):
-        requests.append(request.post_data_json)
+        payload = request.post_data_json
+        requests.append(payload)
         if mode["value"] == "hold":
             pending_routes.append(route)
             return
+        source = payload["messages"][-1]["content"]
+        table_tokens = ["[[" + part.split("]]", 1)[0] + "]]" for part in source.split("[[") if part.startswith("WEEKFLOW_TABLE_")]
+        if table_tokens and mode["value"] == "table-preserve":
+            response_text = "REWRITTEN INTRO\n\n" + "\n\n".join(table_tokens) + "\n\nREWRITTEN END"
+        elif table_tokens and mode["value"] == "table-missing":
+            response_text = "REWRITE THAT DROPPED THE TABLE"
+        else:
+            response_text = "REWRITTEN CURRENT VERSION"
         route.fulfill(
             status=200,
             content_type="application/json",
-            body=json.dumps({"choices": [{"message": {"content": "REWRITTEN CURRENT VERSION"}}]}),
+            body=json.dumps({"choices": [{"message": {"content": response_text}}]}),
         )
 
     page.route("**/chat/completions", handle_ai)
@@ -105,6 +114,39 @@ with sync_playwright() as playwright:
     page.locator('[data-action="restore-ai-original"]').click()
     assert page.locator("#note-editor").inner_text() == "UNSAVED CURRENT VERSION"
     page.get_by_role("button", name="Save Note", exact=True).click()
+
+    table_html = (
+        "<p>Original intro</p><table><tbody>"
+        '<tr><td rowspan="2">Owner</td><td colspan="2">Status</td></tr>'
+        "<tr><td>Open</td><td>Closed</td></tr>"
+        "</tbody></table><p>Original ending</p>"
+    )
+    set_editor_html(page, table_html)
+    mode["value"] = "table-preserve"
+    page.wait_for_function("document.querySelector('[data-action=\"note-ai-rewrite\"]')?.disabled === false")
+    page.locator('[data-action="note-ai-rewrite"]').click()
+    page.wait_for_function("document.querySelector('#note-editor').innerText.includes('REWRITTEN END')")
+    assert "[[WEEKFLOW_TABLE_" in requests[-1]["messages"][-1]["content"]
+    assert "[[WEEKFLOW_TABLE_" in requests[-1]["messages"][0]["content"]
+    assert "Owner" not in requests[-1]["messages"][-1]["content"]
+    assert page.locator('#note-editor table').count() == 1
+    assert page.locator('#note-editor td[rowspan="2"]').count() == 1
+    assert page.locator('#note-editor td[colspan="2"]').count() == 1
+    preserved_table_text = page.locator('#note-editor table').inner_text()
+    assert all(value in preserved_table_text for value in ["Owner", "Status", "Open", "Closed"])
+    assert page.locator('#note-ai-original-content table').count() == 1
+
+    page.locator('[data-action="restore-ai-original"]').click()
+    set_editor_html(page, table_html)
+    unchanged_html = page.locator("#note-editor").inner_html()
+    mode["value"] = "table-missing"
+    page.wait_for_function("document.querySelector('[data-action=\"note-ai-rewrite\"]')?.disabled === false")
+    page.locator('[data-action="note-ai-rewrite"]').click()
+    page.wait_for_function(
+        "document.querySelector('#toast-region').innerText.toLowerCase().includes('cancelled')"
+    )
+    assert page.locator("#note-editor").inner_html() == unchanged_html
+    assert page.locator('#note-editor table').count() == 1
 
     mode["value"] = "hold"
     page.locator('[data-action="note-ai-rewrite"]').click()

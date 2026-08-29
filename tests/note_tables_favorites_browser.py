@@ -82,6 +82,10 @@ with sync_playwright() as playwright:
     table_trigger = page.locator('[data-action="toggle-note-table-menu"]')
     table_trigger.click()
     assert page.locator("#note-table-menu").is_visible()
+    assert not page.locator("#note-table-create-submenu").is_visible()
+    assert not page.locator("#note-table-edit-submenu").is_visible()
+    page.locator('[data-table-submenu-target="create"]').hover()
+    page.locator("#note-table-create-submenu").wait_for(state="visible")
     assert page.locator("#note-table-size-grid .note-table-size-cell").count() == 80
     page.screenshot(path="/tmp/weekflow-note-table-menu.png", full_page=False)
     page.locator(
@@ -94,9 +98,25 @@ with sync_playwright() as playwright:
     created.locator("td").nth(0).fill("Merged heading")
     created.locator("td").nth(1).fill("Second heading")
     created.locator("td").nth(0).click()
+    created.locator("td").nth(2).click(modifiers=["Shift"])
+    assert created.locator(".is-table-selected").count() == 2
+    selected_background = created.locator("td").nth(0).evaluate(
+        "cell => getComputedStyle(cell).backgroundColor"
+    )
+    assert selected_background == "rgb(223, 228, 255)"
+    first_box = created.locator("td").nth(0).bounding_box()
+    last_box = created.locator("td").nth(3).bounding_box()
+    page.mouse.move(first_box["x"] + first_box["width"] / 2, first_box["y"] + first_box["height"] / 2)
+    page.mouse.down()
+    page.mouse.move(last_box["x"] + last_box["width"] / 2, last_box["y"] + last_box["height"] / 2, steps=6)
+    page.mouse.up()
+    assert created.locator(".is-table-selected").count() == 4
+    created.locator("td").nth(0).click()
     created.locator("td").nth(1).click(modifiers=["Shift"])
     assert created.locator(".is-table-selected").count() == 2
     table_trigger.click()
+    page.locator('[data-table-submenu-target="edit"]').hover()
+    page.locator("#note-table-edit-submenu").wait_for(state="visible")
     merge_button = page.locator(
         '[data-action="edit-note-table"][data-table-operation="merge-cells"]'
     )
@@ -108,24 +128,28 @@ with sync_playwright() as playwright:
 
     created.locator('td[colspan="2"]').click()
     table_trigger.click()
+    page.locator('[data-table-submenu-target="edit"]').hover()
     page.locator(
         '[data-action="edit-note-table"][data-table-operation="insert-row"]'
     ).click()
     assert created.locator("tr").count() == 3
 
     table_trigger.click()
+    page.locator('[data-table-submenu-target="edit"]').hover()
     page.locator(
         '[data-action="edit-note-table"][data-table-operation="insert-column"]'
     ).click()
     assert created.locator("tr").nth(1).locator("td, th").count() == 3
 
     table_trigger.click()
+    page.locator('[data-table-submenu-target="edit"]').hover()
     page.locator(
         '[data-action="edit-note-table"][data-table-operation="delete-column"]'
     ).click()
     assert created.locator("tr").nth(1).locator("td, th").count() == 2
 
     table_trigger.click()
+    page.locator('[data-table-submenu-target="edit"]').hover()
     page.locator(
         '[data-action="edit-note-table"][data-table-operation="delete-row"]'
     ).click()
@@ -156,12 +180,14 @@ with sync_playwright() as playwright:
 
     pasted.locator('td[rowspan="2"]').click()
     table_trigger.click()
+    page.locator('[data-table-submenu-target="edit"]').hover()
     page.locator(
         '[data-action="edit-note-table"][data-table-operation="insert-row"]'
     ).click()
     assert pasted.locator("tr").count() == 3
     assert pasted.locator('td[rowspan="3"]').count() == 1
     table_trigger.click()
+    page.locator('[data-table-submenu-target="edit"]').hover()
     page.locator(
         '[data-action="edit-note-table"][data-table-operation="delete-row"]'
     ).click()
@@ -175,6 +201,7 @@ with sync_playwright() as playwright:
     assert saved["notes"][0]["favorite"] is True
     assert 'rowspan="2"' in saved["notes"][0]["contentHtml"]
     assert 'colspan="2"' in saved["notes"][0]["contentHtml"]
+    assert "is-table-selected" not in saved["notes"][0]["contentHtml"]
 
     page.get_by_role("button", name="New Note", exact=True).first.click()
     page.locator("#note-title").fill("Ordinary note")
@@ -186,20 +213,22 @@ with sync_playwright() as playwright:
     assert page.locator("#note-favorite-count").inner_text() == "1"
 
     pasted = page.locator("#note-editor table").nth(1)
-    clipboard = pasted.evaluate(
-        """table => {
-          const range = document.createRange();
-          range.selectNode(table);
-          const selection = window.getSelection();
-          selection.removeAllRanges();
-          selection.addRange(range);
+    pasted.hover(position={"x": 18, "y": 18})
+    handle = page.locator("#note-table-select-handle")
+    handle.wait_for(state="visible")
+    handle.click()
+    assert pasted.locator(".is-table-selected").count() == pasted.locator("td, th").count()
+    assert handle.get_attribute("aria-label") == "Select entire table"
+    page.screenshot(path="/tmp/weekflow-note-table-selection.png", full_page=False)
+    clipboard = page.locator("#note-editor").evaluate(
+        """editor => {
           const transfer = new DataTransfer();
           const event = new ClipboardEvent('copy', {
             bubbles: true,
             cancelable: true,
             clipboardData: transfer
           });
-          table.closest('[contenteditable="true"]').dispatchEvent(event);
+          editor.dispatchEvent(event);
           return {
             html: transfer.getData('text/html'),
             text: transfer.getData('text/plain'),
@@ -230,6 +259,10 @@ with sync_playwright() as playwright:
     assert "收藏夹" in page.locator("#note-filter-favorites").inner_text()
     assert page.locator("#note-favorite-count").inner_text() == "1"
     assert page.locator('[data-action="toggle-note-table-menu"]').get_attribute("aria-label") == "表格工具"
+    page.locator('[data-action="toggle-note-table-menu"]').click()
+    assert page.locator('[data-table-submenu-target="create"]').inner_text().strip().startswith("新建表格")
+    page.locator('[data-table-submenu-target="edit"]').hover()
+    assert "点击并拖过单元格" in page.locator("#note-table-edit-help").inner_text()
 
     page.screenshot(path="/tmp/weekflow-note-tables-favorites.png", full_page=False)
     assert not errors, errors

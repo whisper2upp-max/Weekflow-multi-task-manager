@@ -791,16 +791,42 @@
                       <span class="note-table-icon" aria-hidden="true"></span><span>表格</span><span aria-hidden="true">⌄</span>
                     </button>
                     <div id="note-table-menu" class="note-table-menu" role="menu" aria-label="表格工具" hidden>
-                      <section class="note-table-create-section">
+                      <button
+                        class="note-table-menu-item"
+                        type="button"
+                        role="menuitem"
+                        data-action="open-note-table-submenu"
+                        data-table-submenu-target="create"
+                        data-editor="note-editor"
+                        aria-haspopup="menu"
+                        aria-controls="note-table-create-submenu"
+                        aria-expanded="false"
+                      >
+                        <span>新建表格</span><span aria-hidden="true">›</span>
+                      </button>
+                      <button
+                        class="note-table-menu-item"
+                        type="button"
+                        role="menuitem"
+                        data-action="open-note-table-submenu"
+                        data-table-submenu-target="edit"
+                        data-editor="note-editor"
+                        aria-haspopup="menu"
+                        aria-controls="note-table-edit-submenu"
+                        aria-expanded="false"
+                      >
+                        <span>编辑表格</span><span aria-hidden="true">›</span>
+                      </button>
+                      <section id="note-table-create-submenu" class="note-table-submenu note-table-create-section" role="menu" aria-label="新建表格" hidden>
                         <div class="note-table-menu-heading">
-                          <strong>新建表格</strong>
+                          <strong>选择行列数</strong>
                           <span id="note-table-size-label">1 × 1</span>
                         </div>
                         <div id="note-table-size-grid" class="note-table-size-grid" role="grid" aria-label="选择表格行列数"></div>
                         <p class="note-table-clipboard-help">可直接粘贴 Excel 表格；选中后复制回 Excel 可保留合并关系。</p>
                       </section>
-                      <section class="note-table-edit-section">
-                        <strong>编辑表格</strong>
+                      <section id="note-table-edit-submenu" class="note-table-submenu note-table-edit-section" role="menu" aria-label="编辑表格" hidden>
+                        <strong>表格操作</strong>
                         <div class="note-table-edit-actions">
                           <button type="button" data-action="edit-note-table" data-table-operation="insert-row" data-editor="note-editor">下方插行</button>
                           <button type="button" data-action="edit-note-table" data-table-operation="insert-column" data-editor="note-editor">右侧插列</button>
@@ -808,7 +834,7 @@
                           <button type="button" data-action="edit-note-table" data-table-operation="delete-column" data-editor="note-editor">删除当前列</button>
                           <button type="button" data-action="edit-note-table" data-table-operation="merge-cells" data-editor="note-editor">合并单元格</button>
                         </div>
-                        <p id="note-table-edit-help">点击单元格后编辑；Shift + 点击可选择连续区域并合并。</p>
+                        <p id="note-table-edit-help">点击并拖过单元格，或先点击一个格子再按住 Shift 点击另一个格子，即可选择矩形区域。</p>
                       </section>
                     </div>
                   </div>
@@ -824,6 +850,17 @@
                     data-user-content
                     data-placeholder="在这里记录工作想法、会议要点或 SharePoint 链接…"
                   ></div>
+                  <button
+                    id="note-table-select-handle"
+                    class="note-table-select-handle"
+                    type="button"
+                    data-action="select-whole-note-table"
+                    aria-label="选择整个表格"
+                    title="选择整个表格"
+                    hidden
+                  >
+                    <span class="note-table-select-handle-icon" aria-hidden="true"></span>
+                  </button>
                   <aside id="note-ai-original-panel" class="note-ai-original-panel" hidden>
                     <div class="note-ai-original-head">
                       <strong>改写前原文</strong>
