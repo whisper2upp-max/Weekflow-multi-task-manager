@@ -706,10 +706,20 @@
           </div>
           <div class="notes-workspace">
             <aside class="notes-sidebar" aria-label="笔记列表">
-              <label class="notes-search" for="note-search">
-                <span aria-hidden="true">⌕</span>
-                <input id="note-search" type="search" autocomplete="off" placeholder="搜索标题或正文" />
-              </label>
+              <div class="notes-sidebar-head">
+                <div class="note-scope-tabs" role="tablist" aria-label="笔记范围">
+                  <button id="note-filter-all" class="is-active" type="button" role="tab" aria-selected="true" data-action="filter-notes" data-note-scope="all">
+                    <span>全部笔记</span><strong id="note-all-count">0</strong>
+                  </button>
+                  <button id="note-filter-favorites" type="button" role="tab" aria-selected="false" data-action="filter-notes" data-note-scope="favorites">
+                    <span aria-hidden="true">★</span><span>收藏夹</span><strong id="note-favorite-count">0</strong>
+                  </button>
+                </div>
+                <label class="notes-search" for="note-search">
+                  <span aria-hidden="true">⌕</span>
+                  <input id="note-search" type="search" autocomplete="off" placeholder="搜索标题或正文" />
+                </label>
+              </div>
               <div id="note-list" class="note-list" role="list"></div>
             </aside>
 
@@ -724,6 +734,9 @@
               <div id="note-editor-shell" class="note-editor-shell" hidden>
                 <div class="note-title-row">
                   <input id="note-title" maxlength="160" autocomplete="off" placeholder="笔记标题" aria-label="笔记标题" />
+                  <button id="note-favorite-toggle" class="note-editor-favorite" type="button" data-action="toggle-note-favorite" aria-label="收藏笔记" title="收藏笔记" hidden>
+                    <span aria-hidden="true">☆</span><span class="sr-only">收藏笔记</span>
+                  </button>
                   <span id="note-save-state">尚未保存</span>
                 </div>
                 <div class="rich-text-toolbar" role="toolbar" aria-label="笔记文字格式">
@@ -764,6 +777,40 @@
                       <span>高亮</span><span class="selected-color-swatch" data-color-preview style="--swatch-color: #FFF1A8"></span><span aria-hidden="true">⌄</span>
                     </button>
                     <div class="preset-color-popover" data-color-palette data-editor="note-editor" data-color-mode="highlight" role="menu" hidden></div>
+                  </div>
+                  <div class="note-table-tool" data-table-tool>
+                    <button
+                      class="note-table-trigger"
+                      type="button"
+                      data-action="toggle-note-table-menu"
+                      data-editor="note-editor"
+                      aria-expanded="false"
+                      aria-label="表格工具"
+                      title="表格工具"
+                    >
+                      <span class="note-table-icon" aria-hidden="true"></span><span>表格</span><span aria-hidden="true">⌄</span>
+                    </button>
+                    <div id="note-table-menu" class="note-table-menu" role="menu" aria-label="表格工具" hidden>
+                      <section class="note-table-create-section">
+                        <div class="note-table-menu-heading">
+                          <strong>新建表格</strong>
+                          <span id="note-table-size-label">1 × 1</span>
+                        </div>
+                        <div id="note-table-size-grid" class="note-table-size-grid" role="grid" aria-label="选择表格行列数"></div>
+                        <p class="note-table-clipboard-help">可直接粘贴 Excel 表格；选中后复制回 Excel 可保留合并关系。</p>
+                      </section>
+                      <section class="note-table-edit-section">
+                        <strong>编辑表格</strong>
+                        <div class="note-table-edit-actions">
+                          <button type="button" data-action="edit-note-table" data-table-operation="insert-row" data-editor="note-editor">下方插行</button>
+                          <button type="button" data-action="edit-note-table" data-table-operation="insert-column" data-editor="note-editor">右侧插列</button>
+                          <button type="button" data-action="edit-note-table" data-table-operation="delete-row" data-editor="note-editor">删除当前行</button>
+                          <button type="button" data-action="edit-note-table" data-table-operation="delete-column" data-editor="note-editor">删除当前列</button>
+                          <button type="button" data-action="edit-note-table" data-table-operation="merge-cells" data-editor="note-editor">合并单元格</button>
+                        </div>
+                        <p id="note-table-edit-help">点击单元格后编辑；Shift + 点击可选择连续区域并合并。</p>
+                      </section>
+                    </div>
                   </div>
                   <button type="button" data-action="rich-command" data-command="removeFormat" data-editor="note-editor">清除格式</button>
                 </div>

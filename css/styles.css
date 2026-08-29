@@ -5712,6 +5712,57 @@ html[data-language="en"] .urgency-badge {
     #f8f9fc;
 }
 
+.notes-sidebar-head {
+  display: grid;
+  gap: 9px;
+}
+
+.note-scope-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+}
+
+.note-scope-tabs button {
+  display: inline-flex;
+  min-width: 0;
+  min-height: 34px;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border: 0;
+  border-right: 1px solid var(--line);
+  padding: 5px 8px;
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.note-scope-tabs button:last-child {
+  border-right: 0;
+}
+
+.note-scope-tabs button:hover,
+.note-scope-tabs button.is-active {
+  background: var(--indigo-soft);
+  color: var(--indigo-dark);
+}
+
+.note-scope-tabs button strong {
+  min-width: 19px;
+  border-radius: 999px;
+  padding: 2px 5px;
+  background: rgba(102, 92, 255, 0.1);
+  color: var(--indigo-dark);
+  font-family: var(--font-data);
+  font-size: 8px;
+  text-align: center;
+}
+
 .notes-search {
   display: flex;
   height: 40px;
@@ -5767,6 +5818,39 @@ html[data-language="en"] .urgency-badge {
   background: transparent;
   color: var(--ink);
   text-align: left;
+}
+
+.note-list-row {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr) 32px;
+  align-items: stretch;
+  gap: 3px;
+}
+
+.note-favorite-button {
+  display: grid;
+  width: 32px;
+  min-height: 32px;
+  place-items: center;
+  align-self: center;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: #a0a8b8;
+  font-size: 17px;
+  line-height: 1;
+}
+
+.note-favorite-button:hover {
+  border-color: #f3d688;
+  background: #fff9e8;
+  color: #d28b00;
+}
+
+.note-favorite-button.is-favorite {
+  color: #e0a000;
+  text-shadow: 0 2px 7px rgba(224, 160, 0, 0.2);
 }
 
 .note-list-item::before {
@@ -5908,6 +5992,37 @@ html[data-language="en"] .urgency-badge {
   color: var(--amber);
 }
 
+.note-editor-favorite {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  color: #9aa3b4;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.note-editor-favorite:hover,
+.note-editor-favorite.is-favorite {
+  border-color: #f2d37a;
+  background: #fff9e4;
+  color: #d99100;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .rich-text-toolbar {
   display: flex;
   min-height: 48px;
@@ -5920,6 +6035,7 @@ html[data-language="en"] .urgency-badge {
 
 .rich-text-toolbar > button,
 .rich-text-toolbar .preset-color-trigger,
+.rich-text-toolbar .note-table-trigger,
 .rich-text-toolbar .font-size-select {
   display: inline-flex;
   min-height: 31px;
@@ -5943,11 +6059,142 @@ html[data-language="en"] .urgency-badge {
 
 .rich-text-toolbar > button:hover,
 .rich-text-toolbar .preset-color-trigger:hover,
+.rich-text-toolbar .note-table-trigger:hover,
 .rich-text-toolbar .font-size-select:hover,
 .rich-text-toolbar .font-size-select:focus {
   border-color: #c7cffb;
   background: var(--indigo-soft);
   color: var(--indigo-dark);
+}
+
+.note-table-tool {
+  position: relative;
+  display: inline-flex;
+}
+
+.note-table-trigger[aria-expanded="true"] {
+  border-color: #aeb8ff;
+  background: var(--indigo-soft);
+  color: var(--indigo-dark);
+}
+
+.note-table-icon {
+  width: 13px;
+  height: 13px;
+  flex: 0 0 auto;
+  border: 1px solid currentColor;
+  border-radius: 2px;
+  background:
+    linear-gradient(to right, transparent 31%, currentColor 32%, currentColor 36%, transparent 37%, transparent 64%, currentColor 65%, currentColor 69%, transparent 70%),
+    linear-gradient(to bottom, transparent 31%, currentColor 32%, currentColor 36%, transparent 37%, transparent 64%, currentColor 65%, currentColor 69%, transparent 70%);
+  opacity: 0.72;
+}
+
+.note-table-menu {
+  position: absolute;
+  z-index: 38;
+  top: calc(100% + 7px);
+  left: 0;
+  width: 292px;
+  border: 1px solid #d9deeb;
+  border-radius: 12px;
+  padding: 12px;
+  background: #fff;
+  box-shadow: 0 16px 38px rgba(24, 33, 61, 0.2);
+}
+
+.note-table-menu section + section {
+  margin-top: 12px;
+  border-top: 1px solid var(--line);
+  padding-top: 11px;
+}
+
+.note-table-menu-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.note-table-menu-heading strong,
+.note-table-edit-section > strong {
+  color: var(--ink);
+  font-size: 10px;
+}
+
+.note-table-menu-heading span {
+  color: var(--indigo-dark);
+  font-family: var(--font-data);
+  font-size: 9px;
+}
+
+.note-table-size-grid {
+  display: grid;
+  grid-template-columns: repeat(10, 20px);
+  gap: 4px;
+}
+
+.note-table-size-cell {
+  width: 20px;
+  height: 20px;
+  border: 1px solid #ccd3e2;
+  border-radius: 3px;
+  padding: 0;
+  background: #fff;
+}
+
+.note-table-size-cell:hover,
+.note-table-size-cell.is-preview {
+  border-color: var(--indigo);
+  background: #dfe3ff;
+}
+
+.note-table-clipboard-help {
+  margin: 8px 0 0;
+  color: var(--ink-soft);
+  font-size: 8px;
+  line-height: 1.5;
+}
+
+.note-table-edit-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.note-table-edit-actions button {
+  min-height: 31px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 5px 7px;
+  background: #fff;
+  color: var(--ink-soft);
+  font-size: 9px;
+  font-weight: 680;
+}
+
+.note-table-edit-actions button:last-child {
+  grid-column: 1 / -1;
+}
+
+.note-table-edit-actions button:hover:not(:disabled) {
+  border-color: #c7cffb;
+  background: var(--indigo-soft);
+  color: var(--indigo-dark);
+}
+
+.note-table-edit-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+.note-table-edit-section p {
+  margin: 8px 0 0;
+  color: var(--ink-soft);
+  font-size: 8px;
+  line-height: 1.5;
 }
 
 .rich-text-toolbar .font-size-select:focus {
@@ -6047,6 +6294,42 @@ html[data-language="en"] .urgency-badge {
 
 .rich-text-editor p {
   margin: 0 0 0.8em;
+}
+
+.rich-text-editor table {
+  width: max-content;
+  min-width: min(100%, 420px);
+  max-width: 100%;
+  margin: 8px 0 14px;
+  border: 1px solid #aeb8c9;
+  border-collapse: collapse;
+  table-layout: fixed;
+  background: #fff;
+}
+
+.rich-text-editor th,
+.rich-text-editor td {
+  min-width: 74px;
+  border: 1px solid #b9c1d1;
+  padding: 7px 9px;
+  vertical-align: top;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.rich-text-editor th {
+  background: #f0f2fb;
+  font-weight: 750;
+}
+
+.rich-text-editor td.is-table-active,
+.rich-text-editor th.is-table-active {
+  box-shadow: inset 0 0 0 2px var(--indigo);
+}
+
+.rich-text-editor td.is-table-selected,
+.rich-text-editor th.is-table-selected {
+  background: #e8ebff;
 }
 
 .rich-text-editor a,

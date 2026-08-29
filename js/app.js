@@ -96,8 +96,11 @@
     progressDirty: false,
     selectedNoteId: null,
     noteSearch: "",
+    noteScope: "all",
     noteDirty: false,
     noteIsNew: false,
+    noteTableAnchorCell: null,
+    noteTableFocusCell: null,
     editingMaterialId: null,
     selectedMaterialIds: [],
     materialFilters: {
@@ -212,14 +215,23 @@
       "materials-group-section",
       "materials-group-board",
       "notes-count",
+      "note-filter-all",
+      "note-filter-favorites",
+      "note-all-count",
+      "note-favorite-count",
       "note-search",
       "note-list",
       "note-editor-panel",
       "note-empty-state",
       "note-editor-shell",
       "note-title",
+      "note-favorite-toggle",
       "note-save-state",
       "note-editor",
+      "note-table-menu",
+      "note-table-size-grid",
+      "note-table-size-label",
+      "note-table-edit-help",
       "note-updated-at",
       "note-character-count",
       "note-conversion-summary",
@@ -387,6 +399,7 @@
     cacheDom();
     updateAiUi();
     renderPresetColorPalettes();
+    renderNoteTableSizePicker();
     bindEvents();
     syncLanguageAssets();
     var recurrenceSync = automation.syncRecurringTaskStates(data, new Date());
@@ -511,6 +524,8 @@
       field.addEventListener("input", markNoteDirty);
     });
     dom["note-editor"].addEventListener("paste", handleRichTextPaste);
+    dom["note-editor"].addEventListener("copy", handleNoteTableCopy);
+    dom["note-editor"].addEventListener("click", handleNoteEditorTableClick);
     dom["note-editor"].addEventListener("mouseup", rememberRichTextSelection);
     dom["note-editor"].addEventListener("keyup", rememberRichTextSelection);
     dom["task-dialog"].addEventListener("cancel", handleTaskDialogCancel);
@@ -620,7 +635,10 @@
   }
 
   function handleKeyboard(event) {
-    if (event.key === "Escape") closePresetColorPalettes();
+    if (event.key === "Escape") {
+      closePresetColorPalettes();
+      closeNoteTableMenu();
+    }
     if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
       event.preventDefault();
       if (ui.view === "home" || ui.view === "dashboard") switchView("timeline");
@@ -670,6 +688,7 @@
       if (details !== activeMenu) details.open = false;
     });
     closePresetColorPalettes(event.target.closest("[data-color-picker]"));
+    closeNoteTableMenu(event.target.closest("[data-table-tool]"));
   }
 
   function handleActionClick(event) {
@@ -734,6 +753,12 @@
       "edit-note": function () {
         selectNote(actionNode.dataset.noteId);
       },
+      "filter-notes": function () {
+        setNoteScope(actionNode.dataset.noteScope);
+      },
+      "toggle-note-favorite": function () {
+        toggleNoteFavorite(actionNode.dataset.noteId || ui.selectedNoteId);
+      },
       "note-to-progress": openNoteProgressDialog,
       "close-note-progress": function () {
         dom["note-progress-dialog"].close();
@@ -754,6 +779,15 @@
       },
       "apply-preset-color": function () {
         applyPresetColor(actionNode);
+      },
+      "toggle-note-table-menu": function () {
+        toggleNoteTableMenu(actionNode);
+      },
+      "insert-note-table": function () {
+        insertNoteTable(Number(actionNode.dataset.rows), Number(actionNode.dataset.columns));
+      },
+      "edit-note-table": function () {
+        editNoteTable(actionNode.dataset.tableOperation);
       },
       "new-material": function () {
         openMaterialDialog();
@@ -3750,6 +3784,7 @@
     var range = selectionRangeInsideEditor(editor, selection);
     if (!range) return;
     ui.richTextSelection = { editorId: editor.id, range: range };
+    if (editor === dom["note-editor"] && !event.skipTableSync) syncNoteTableSelectionFromRange();
   }
 
   function preserveRichTextSelectionBeforeToolbarAction(event) {
@@ -3757,7 +3792,12 @@
     var control = event.target.closest(".rich-text-toolbar [data-editor]");
     if (!control) return;
     var editor = dom[control.dataset.editor];
-    if (editor) rememberRichTextSelection({ currentTarget: editor });
+    if (editor) {
+      rememberRichTextSelection({
+        currentTarget: editor,
+        skipTableSync: Boolean(control.closest("[data-table-tool]"))
+      });
+    }
   }
 
   function restoreRichTextSelection(editor) {
@@ -3805,10 +3845,569 @@
     rememberRichTextSelection({ currentTarget: editor });
   }
 
+  function renderNoteTableSizePicker() {
+    var grid = dom["note-table-size-grid"];
+    if (!grid) return;
+    var fragment = document.createDocumentFragment();
+    for (var row = 1; row <= 8; row += 1) {
+      for (var column = 1; column <= 10; column += 1) {
+        var cell = utils.el("button", "note-table-size-cell");
+        cell.type = "button";
+        cell.dataset.action = "insert-note-table";
+        cell.dataset.editor = "note-editor";
+        cell.dataset.rows = String(row);
+        cell.dataset.columns = String(column);
+        cell.setAttribute("role", "gridcell");
+        cell.setAttribute(
+          "aria-label",
+          i18n.isEnglish()
+            ? row + " rows by " + column + " columns"
+            : row + " 行 × " + column + " 列"
+        );
+        cell.addEventListener("mouseenter", previewNoteTableSize);
+        cell.addEventListener("focus", previewNoteTableSize);
+        fragment.appendChild(cell);
+      }
+    }
+    grid.replaceChildren(fragment);
+    grid.addEventListener("mouseleave", function () {
+      previewNoteTableSize(null, 1, 1);
+    });
+    previewNoteTableSize(null, 1, 1);
+  }
+
+  function previewNoteTableSize(event, forcedRows, forcedColumns) {
+    var target = event && event.currentTarget;
+    var rows = forcedRows || Number(target && target.dataset.rows) || 1;
+    var columns = forcedColumns || Number(target && target.dataset.columns) || 1;
+    queryAll(".note-table-size-cell", dom["note-table-size-grid"]).forEach(function (cell) {
+      cell.classList.toggle(
+        "is-preview",
+        Number(cell.dataset.rows) <= rows && Number(cell.dataset.columns) <= columns
+      );
+    });
+    dom["note-table-size-label"].textContent = rows + " × " + columns;
+  }
+
+  function closeNoteTableMenu(exceptTool) {
+    queryAll("[data-table-tool]").forEach(function (tool) {
+      if (tool === exceptTool) return;
+      var menu = query(".note-table-menu", tool);
+      var trigger = query('[data-action="toggle-note-table-menu"]', tool);
+      if (menu) menu.hidden = true;
+      if (trigger) trigger.setAttribute("aria-expanded", "false");
+    });
+  }
+
+  function toggleNoteTableMenu(trigger) {
+    var tool = trigger && trigger.closest("[data-table-tool]");
+    var menu = tool && query(".note-table-menu", tool);
+    if (!tool || !menu) return;
+    var opening = menu.hidden;
+    closePresetColorPalettes();
+    closeNoteTableMenu(tool);
+    menu.hidden = !opening;
+    trigger.setAttribute("aria-expanded", String(opening));
+    if (opening) {
+      syncNoteTableSelectionFromRange();
+      updateNoteTableEditControls();
+    }
+  }
+
+  function closestTableCell(node) {
+    var element = node && node.nodeType === 1 ? node : node && node.parentElement;
+    var cell = element && element.closest ? element.closest("td, th") : null;
+    return cell && dom["note-editor"].contains(cell) ? cell : null;
+  }
+
+  function buildTableModel(table) {
+    var rows = Array.prototype.slice.call(table && table.rows ? table.rows : []);
+    var grid = [];
+    var infoByCell = new Map();
+    var width = 0;
+    rows.forEach(function (row, rowIndex) {
+      grid[rowIndex] = grid[rowIndex] || [];
+      var columnIndex = 0;
+      Array.prototype.slice.call(row.cells || []).forEach(function (cell) {
+        while (grid[rowIndex][columnIndex]) columnIndex += 1;
+        var rowSpan = richText.normalizeTableSpan(cell.getAttribute("rowspan"));
+        var colSpan = richText.normalizeTableSpan(cell.getAttribute("colspan"));
+        var info = {
+          cell: cell,
+          row: rowIndex,
+          column: columnIndex,
+          rowSpan: rowSpan,
+          colSpan: colSpan
+        };
+        infoByCell.set(cell, info);
+        for (var rowOffset = 0; rowOffset < rowSpan; rowOffset += 1) {
+          var gridRow = rowIndex + rowOffset;
+          grid[gridRow] = grid[gridRow] || [];
+          for (var columnOffset = 0; columnOffset < colSpan; columnOffset += 1) {
+            grid[gridRow][columnIndex + columnOffset] = info;
+          }
+        }
+        columnIndex += colSpan;
+        width = Math.max(width, columnIndex);
+      });
+    });
+    return { table: table, rows: rows, grid: grid, width: width, infoByCell: infoByCell };
+  }
+
+  function noteTableRegion() {
+    var anchor = ui.noteTableAnchorCell;
+    var focus = ui.noteTableFocusCell || anchor;
+    if (!anchor || !anchor.isConnected || !focus || !focus.isConnected) return null;
+    var table = anchor.closest("table");
+    if (!table || table !== focus.closest("table") || !dom["note-editor"].contains(table)) return null;
+    var model = buildTableModel(table);
+    var anchorInfo = model.infoByCell.get(anchor);
+    var focusInfo = model.infoByCell.get(focus);
+    if (!anchorInfo || !focusInfo) return null;
+    var minRow = Math.min(anchorInfo.row, focusInfo.row);
+    var maxRow = Math.max(
+      anchorInfo.row + anchorInfo.rowSpan - 1,
+      focusInfo.row + focusInfo.rowSpan - 1
+    );
+    var minColumn = Math.min(anchorInfo.column, focusInfo.column);
+    var maxColumn = Math.max(
+      anchorInfo.column + anchorInfo.colSpan - 1,
+      focusInfo.column + focusInfo.colSpan - 1
+    );
+    var cells = [];
+    var seen = new Set();
+    for (var row = minRow; row <= maxRow; row += 1) {
+      for (var column = minColumn; column <= maxColumn; column += 1) {
+        var info = model.grid[row] && model.grid[row][column];
+        if (info && !seen.has(info.cell)) {
+          seen.add(info.cell);
+          cells.push(info.cell);
+        }
+      }
+    }
+    cells.sort(function (left, right) {
+      var leftInfo = model.infoByCell.get(left);
+      var rightInfo = model.infoByCell.get(right);
+      return leftInfo.row - rightInfo.row || leftInfo.column - rightInfo.column;
+    });
+    return {
+      table: table,
+      model: model,
+      cells: cells,
+      minRow: minRow,
+      maxRow: maxRow,
+      minColumn: minColumn,
+      maxColumn: maxColumn
+    };
+  }
+
+  function renderNoteTableSelection() {
+    queryAll(".is-table-active, .is-table-selected", dom["note-editor"]).forEach(function (cell) {
+      cell.classList.remove("is-table-active", "is-table-selected");
+    });
+    var region = noteTableRegion();
+    if (!region) {
+      updateNoteTableEditControls();
+      return;
+    }
+    region.cells.forEach(function (cell) {
+      cell.classList.add("is-table-selected");
+    });
+    if (ui.noteTableFocusCell) ui.noteTableFocusCell.classList.add("is-table-active");
+    updateNoteTableEditControls();
+  }
+
+  function clearNoteTableSelection() {
+    ui.noteTableAnchorCell = null;
+    ui.noteTableFocusCell = null;
+    queryAll(".is-table-active, .is-table-selected", dom["note-editor"]).forEach(function (cell) {
+      cell.classList.remove("is-table-active", "is-table-selected");
+    });
+    updateNoteTableEditControls();
+  }
+
+  function updateNoteTableEditControls() {
+    var region = noteTableRegion();
+    queryAll('[data-action="edit-note-table"]', dom["note-table-menu"]).forEach(function (button) {
+      button.disabled = !region ||
+        (button.dataset.tableOperation === "merge-cells" && region.cells.length < 2);
+    });
+    if (dom["note-table-edit-help"]) {
+      dom["note-table-edit-help"].textContent = region
+        ? i18n.isEnglish()
+          ? region.cells.length + " cell(s) selected. Shift-click to extend the merge range."
+          : "已选择 " + region.cells.length + " 个单元格；Shift + 点击可扩展合并区域。"
+        : i18n.isEnglish()
+          ? "Click a cell to edit it. Shift-click to select a continuous merge range."
+          : "点击单元格后编辑；Shift + 点击可选择连续区域并合并。";
+    }
+  }
+
+  function syncNoteTableSelectionFromRange() {
+    var selection = window.getSelection && window.getSelection();
+    if (!selection || !selection.rangeCount) return;
+    var range = selectionRangeInsideEditor(dom["note-editor"], selection);
+    if (!range) return;
+    var startCell = closestTableCell(range.startContainer);
+    var endCell = closestTableCell(range.endContainer);
+    if (!startCell || !endCell || startCell.closest("table") !== endCell.closest("table")) return;
+    ui.noteTableAnchorCell = startCell;
+    ui.noteTableFocusCell = endCell;
+    renderNoteTableSelection();
+  }
+
+  function handleNoteEditorTableClick(event) {
+    var cell = event.target.closest("td, th");
+    if (!cell || !dom["note-editor"].contains(cell)) {
+      clearNoteTableSelection();
+      return;
+    }
+    if (
+      !event.shiftKey ||
+      !ui.noteTableAnchorCell ||
+      !ui.noteTableAnchorCell.isConnected ||
+      ui.noteTableAnchorCell.closest("table") !== cell.closest("table")
+    ) {
+      ui.noteTableAnchorCell = cell;
+    }
+    ui.noteTableFocusCell = cell;
+    renderNoteTableSelection();
+  }
+
+  function placeCaretInNode(node) {
+    if (!node) return;
+    var range = document.createRange();
+    range.selectNodeContents(node);
+    range.collapse(false);
+    var selection = window.getSelection && window.getSelection();
+    if (selection) {
+      selection.removeAllRanges();
+      selection.addRange(range);
+      ui.richTextSelection = { editorId: "note-editor", range: range.cloneRange() };
+    }
+    dom["note-editor"].focus();
+  }
+
+  function selectNoteTableCell(cell) {
+    if (!cell) {
+      clearNoteTableSelection();
+      return;
+    }
+    ui.noteTableAnchorCell = cell;
+    ui.noteTableFocusCell = cell;
+    renderNoteTableSelection();
+    placeCaretInNode(cell);
+  }
+
+  function emptyTableCell(tagName) {
+    var cell = document.createElement(tagName === "TH" ? "th" : "td");
+    cell.appendChild(document.createElement("br"));
+    return cell;
+  }
+
+  function tableHtmlFromDimensions(rows, columns, values, includeTrailingParagraph) {
+    var output = ["<table><tbody>"];
+    for (var row = 0; row < rows; row += 1) {
+      output.push("<tr>");
+      for (var column = 0; column < columns; column += 1) {
+        var value = values && values[row] ? values[row][column] : "";
+        output.push("<td>" + (value ? richText.escapeHtml(value) : "<br>") + "</td>");
+      }
+      output.push("</tr>");
+    }
+    output.push("</tbody></table>");
+    if (includeTrailingParagraph !== false) output.push("<p><br></p>");
+    return output.join("");
+  }
+
+  function insertNoteTableHtml(tableHtml) {
+    var editor = dom["note-editor"];
+    var existingTables = new Set(queryAll("table", editor));
+    restoreRichTextSelection(editor);
+    if (!richText.insertHtmlAtSelection(tableHtml, editor)) {
+      var template = document.createElement("template");
+      template.innerHTML = richText.sanitizeHtml(tableHtml, richText.MAX_NOTE_TEXT);
+      editor.appendChild(template.content);
+    }
+    var inserted = queryAll("table", editor).find(function (table) {
+      return !existingTables.has(table);
+    });
+    editor.dispatchEvent(new Event("input", { bubbles: true }));
+    if (inserted) selectNoteTableCell(query("td, th", inserted));
+    return inserted;
+  }
+
+  function insertNoteTable(rows, columns) {
+    rows = Math.min(20, Math.max(1, Number(rows) || 1));
+    columns = Math.min(20, Math.max(1, Number(columns) || 1));
+    insertNoteTableHtml(tableHtmlFromDimensions(rows, columns));
+    closeNoteTableMenu();
+  }
+
+  function setCellSpan(cell, attribute, value) {
+    if (value > 1) cell.setAttribute(attribute, String(value));
+    else cell.removeAttribute(attribute);
+  }
+
+  function insertTableRowBelow(region) {
+    var model = region.model;
+    var activeInfo = model.infoByCell.get(ui.noteTableFocusCell);
+    var currentRow = activeInfo && model.rows[activeInfo.row];
+    if (!currentRow) return null;
+    var insertAt = activeInfo.row + 1;
+    var crossing = [];
+    Array.from(model.infoByCell.values()).forEach(function (info) {
+      if (info.row < insertAt && info.row + info.rowSpan > insertAt) {
+        crossing.push(info);
+        info.rowSpan += 1;
+        setCellSpan(info.cell, "rowspan", info.rowSpan);
+      }
+    });
+    var newRow = document.createElement("tr");
+    var firstCell = null;
+    for (var column = 0; column < Math.max(1, model.width); column += 1) {
+      var covered = crossing.some(function (info) {
+        return column >= info.column && column < info.column + info.colSpan;
+      });
+      if (covered) continue;
+      var cell = emptyTableCell("TD");
+      if (!firstCell) firstCell = cell;
+      newRow.appendChild(cell);
+    }
+    currentRow.parentNode.insertBefore(newRow, currentRow.nextSibling);
+    return firstCell || (crossing[0] && crossing[0].cell);
+  }
+
+  function insertTableColumnRight(region) {
+    var model = region.model;
+    var activeInfo = model.infoByCell.get(ui.noteTableFocusCell);
+    if (!activeInfo) return null;
+    var insertAt = activeInfo.column + activeInfo.colSpan;
+    var crossing = [];
+    Array.from(model.infoByCell.values()).forEach(function (info) {
+      if (info.column < insertAt && info.column + info.colSpan > insertAt) {
+        crossing.push(info);
+        info.colSpan += 1;
+        setCellSpan(info.cell, "colspan", info.colSpan);
+      }
+    });
+    var firstCell = null;
+    model.rows.forEach(function (row, rowIndex) {
+      var covered = crossing.some(function (info) {
+        return rowIndex >= info.row && rowIndex < info.row + info.rowSpan;
+      });
+      if (covered) return;
+      var tagName = row.parentElement && row.parentElement.tagName === "THEAD" ? "TH" : "TD";
+      var cell = emptyTableCell(tagName);
+      var before = Array.prototype.slice.call(row.cells || []).find(function (candidate) {
+        var info = model.infoByCell.get(candidate);
+        return info && info.column >= insertAt;
+      });
+      row.insertBefore(cell, before || null);
+      if (!firstCell || rowIndex === activeInfo.row) firstCell = cell;
+    });
+    return firstCell;
+  }
+
+  function removeTableAndKeepCaret(table) {
+    var paragraph = document.createElement("p");
+    paragraph.appendChild(document.createElement("br"));
+    table.replaceWith(paragraph);
+    clearNoteTableSelection();
+    placeCaretInNode(paragraph);
+  }
+
+  function deleteCurrentTableRow(region) {
+    var model = region.model;
+    var activeInfo = model.infoByCell.get(ui.noteTableFocusCell);
+    var rowIndex = activeInfo && activeInfo.row;
+    var row = Number.isInteger(rowIndex) ? model.rows[rowIndex] : null;
+    if (!row) return null;
+    if (model.rows.length <= 1) {
+      removeTableAndKeepCaret(region.table);
+      return null;
+    }
+    var nextRow = model.rows[rowIndex + 1] || null;
+    Array.from(model.infoByCell.values())
+      .sort(function (left, right) { return left.column - right.column; })
+      .forEach(function (info) {
+        if (info.row < rowIndex && info.row + info.rowSpan > rowIndex) {
+          info.rowSpan -= 1;
+          setCellSpan(info.cell, "rowspan", info.rowSpan);
+        } else if (info.row === rowIndex && info.rowSpan > 1 && nextRow) {
+          info.rowSpan -= 1;
+          setCellSpan(info.cell, "rowspan", info.rowSpan);
+          var before = Array.prototype.slice.call(nextRow.cells || []).find(function (candidate) {
+            var candidateInfo = model.infoByCell.get(candidate);
+            return candidateInfo && candidateInfo.column > info.column;
+          });
+          nextRow.insertBefore(info.cell, before || null);
+        }
+      });
+    row.remove();
+    var refreshed = buildTableModel(region.table);
+    var targetRow = Math.min(rowIndex, refreshed.rows.length - 1);
+    var targetInfo = refreshed.grid[targetRow] &&
+      (refreshed.grid[targetRow][activeInfo.column] || refreshed.grid[targetRow][0]);
+    return targetInfo && targetInfo.cell;
+  }
+
+  function deleteCurrentTableColumn(region) {
+    var model = region.model;
+    var activeInfo = model.infoByCell.get(ui.noteTableFocusCell);
+    if (!activeInfo) return null;
+    if (model.width <= 1) {
+      removeTableAndKeepCaret(region.table);
+      return null;
+    }
+    var column = activeInfo.column;
+    Array.from(model.infoByCell.values()).forEach(function (info) {
+      if (column < info.column || column >= info.column + info.colSpan) return;
+      if (info.colSpan > 1) {
+        info.colSpan -= 1;
+        setCellSpan(info.cell, "colspan", info.colSpan);
+      } else {
+        info.cell.remove();
+      }
+    });
+    if (!query("td, th", region.table)) {
+      removeTableAndKeepCaret(region.table);
+      return null;
+    }
+    var refreshed = buildTableModel(region.table);
+    var targetRow = Math.min(activeInfo.row, refreshed.rows.length - 1);
+    var targetColumn = Math.min(column, refreshed.width - 1);
+    var targetInfo = refreshed.grid[targetRow] &&
+      (refreshed.grid[targetRow][targetColumn] || refreshed.grid[targetRow][0]);
+    return targetInfo && targetInfo.cell;
+  }
+
+  function mergeSelectedTableCells(region) {
+    if (!region || region.cells.length < 2) return null;
+    var model = region.model;
+    var invalid = region.cells.some(function (cell) {
+      var info = model.infoByCell.get(cell);
+      return (
+        info.row < region.minRow ||
+        info.column < region.minColumn ||
+        info.row + info.rowSpan - 1 > region.maxRow ||
+        info.column + info.colSpan - 1 > region.maxColumn
+      );
+    });
+    if (invalid) {
+      toast(
+        i18n.isEnglish()
+          ? "The selected range crosses an existing merged cell. Select a complete rectangular range."
+          : "所选区域穿过了已有合并单元格，请选择完整的矩形区域。",
+        "warning"
+      );
+      return null;
+    }
+    var primaryInfo = model.grid[region.minRow] && model.grid[region.minRow][region.minColumn];
+    var primary = primaryInfo && primaryInfo.cell;
+    if (!primary) return null;
+    var contents = region.cells
+      .map(function (cell) { return cell.innerHTML; })
+      .filter(function (html) { return richText.plainText(html).trim(); });
+    primary.innerHTML = contents.length ? contents.join("<br>") : "<br>";
+    region.cells.forEach(function (cell) {
+      if (cell !== primary) cell.remove();
+    });
+    setCellSpan(primary, "rowspan", region.maxRow - region.minRow + 1);
+    setCellSpan(primary, "colspan", region.maxColumn - region.minColumn + 1);
+    return primary;
+  }
+
+  function editNoteTable(operation) {
+    var region = noteTableRegion();
+    if (!region) {
+      toast(
+        i18n.isEnglish() ? "Click a table cell before using table editing." : "请先点击要编辑的表格单元格。",
+        "warning"
+      );
+      return;
+    }
+    var beforeHtml = dom["note-editor"].innerHTML;
+    var nextCell = null;
+    if (operation === "insert-row") nextCell = insertTableRowBelow(region);
+    if (operation === "insert-column") nextCell = insertTableColumnRight(region);
+    if (operation === "delete-row") nextCell = deleteCurrentTableRow(region);
+    if (operation === "delete-column") nextCell = deleteCurrentTableColumn(region);
+    if (operation === "merge-cells") nextCell = mergeSelectedTableCells(region);
+    if (nextCell && nextCell.isConnected) selectNoteTableCell(nextCell);
+    if (dom["note-editor"].innerHTML !== beforeHtml) {
+      dom["note-editor"].dispatchEvent(new Event("input", { bubbles: true }));
+    }
+    closeNoteTableMenu();
+  }
+
+  function tableHtmlFromTabText(text) {
+    var source = String(text || "").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+    if (!source.includes("\t")) return "";
+    var rows = source.replace(/\n$/, "").split("\n").slice(0, 200).map(function (line) {
+      return line.split("\t").slice(0, 100);
+    });
+    var columns = rows.reduce(function (maximum, row) {
+      return Math.max(maximum, row.length);
+    }, 0);
+    return rows.length && columns > 1
+      ? tableHtmlFromDimensions(rows.length, columns, rows, false)
+      : "";
+  }
+
+  function cloneSelectedTableRegion(region) {
+    var table = document.createElement("table");
+    var body = document.createElement("tbody");
+    var emitted = new Set();
+    table.appendChild(body);
+    for (var row = region.minRow; row <= region.maxRow; row += 1) {
+      var targetRow = document.createElement("tr");
+      for (var column = region.minColumn; column <= region.maxColumn; column += 1) {
+        var info = region.model.grid[row] && region.model.grid[row][column];
+        if (!info || emitted.has(info.cell)) continue;
+        emitted.add(info.cell);
+        var clone = info.cell.cloneNode(true);
+        setCellSpan(clone, "rowspan", info.rowSpan);
+        setCellSpan(clone, "colspan", info.colSpan);
+        targetRow.appendChild(clone);
+      }
+      body.appendChild(targetRow);
+    }
+    return table;
+  }
+
+  function handleNoteTableCopy(event) {
+    if (!event.clipboardData) return;
+    var selection = window.getSelection && window.getSelection();
+    if (!selection || !selection.rangeCount) return;
+    var range = selectionRangeInsideEditor(dom["note-editor"], selection);
+    if (!range) return;
+    var wrapper = document.createElement("div");
+    wrapper.appendChild(range.cloneContents());
+    var html = wrapper.querySelector("table") ? wrapper.innerHTML : "";
+    var region = noteTableRegion();
+    if (!html && region && region.cells.length > 1) {
+      html = cloneSelectedTableRegion(region).outerHTML;
+    }
+    if (!html) return;
+    html = richText.sanitizeHtml(html, richText.MAX_NOTE_TEXT);
+    event.preventDefault();
+    event.clipboardData.setData("text/html", html);
+    event.clipboardData.setData("text/plain", richText.plainText(html));
+  }
+
   function handleRichTextPaste(event) {
     event.preventDefault();
     var editor = event.currentTarget;
     var text = event.clipboardData ? event.clipboardData.getData("text/plain") : "";
+    var clipboardHtml = event.clipboardData ? event.clipboardData.getData("text/html") : "";
+    if (editor === dom["note-editor"]) {
+      var tableHtml = richText.tableHtmlFromClipboard(clipboardHtml) || tableHtmlFromTabText(text);
+      if (tableHtml) {
+        insertNoteTableHtml(tableHtml + "<p><br></p>");
+        return;
+      }
+    }
     restoreRichTextSelection(editor);
     if (!richText.insertHtmlAtSelection(richText.fromPlainText(text), editor)) {
       editor.appendChild(document.createTextNode(text));
@@ -3845,21 +4444,22 @@
   function renderNotes() {
     renderNoteList();
     if (ui.noteDirty) return;
-    if (!ui.noteIsNew && !ui.selectedNoteId && data.notes.length) {
-      ui.selectedNoteId = data.notes
-        .slice()
-        .sort(function (left, right) {
-          return new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime();
-        })[0].id;
+    var selected = getNote(ui.selectedNoteId);
+    if (ui.noteScope === "favorites" && selected && !selected.favorite) {
+      ui.selectedNoteId = null;
+    }
+    var visibleNotes = getVisibleNotes();
+    if (!ui.noteIsNew && !ui.selectedNoteId && visibleNotes.length) {
+      ui.selectedNoteId = visibleNotes[0].id;
     }
     renderSelectedNote();
   }
 
-  function renderNoteList() {
-    var container = utils.clear(dom["note-list"]);
+  function getVisibleNotes() {
     var queryText = String(ui.noteSearch || "").trim().toLocaleLowerCase();
-    var notes = data.notes
+    return data.notes
       .filter(function (note) {
+        if (ui.noteScope === "favorites" && !note.favorite) return false;
         if (!queryText) return true;
         return (note.title + "\n" + note.contentText).toLocaleLowerCase().includes(queryText);
       })
@@ -3867,6 +4467,39 @@
       .sort(function (left, right) {
         return new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime();
       });
+  }
+
+  function renderNoteScopeControls() {
+    var favoriteCount = data.notes.filter(function (note) { return note.favorite; }).length;
+    dom["note-all-count"].textContent = String(data.notes.length);
+    dom["note-favorite-count"].textContent = String(favoriteCount);
+    [dom["note-filter-all"], dom["note-filter-favorites"]].forEach(function (button) {
+      var active = button.dataset.noteScope === ui.noteScope;
+      button.classList.toggle("is-active", active);
+      button.setAttribute("aria-selected", String(active));
+    });
+  }
+
+  function setNoteScope(scope) {
+    ui.noteScope = scope === "favorites" ? "favorites" : "all";
+    if (!ui.noteDirty && !ui.noteIsNew) {
+      var selected = getNote(ui.selectedNoteId);
+      if (ui.noteScope === "favorites" && selected && !selected.favorite) {
+        ui.selectedNoteId = null;
+      }
+      if (!ui.selectedNoteId) {
+        var first = getVisibleNotes()[0];
+        ui.selectedNoteId = first ? first.id : null;
+      }
+    }
+    renderNoteList();
+    if (!ui.noteDirty && !ui.noteIsNew) renderSelectedNote();
+  }
+
+  function renderNoteList() {
+    var container = utils.clear(dom["note-list"]);
+    var notes = getVisibleNotes();
+    renderNoteScopeControls();
     dom["notes-count"].textContent = data.notes.length + (i18n.isEnglish() ? " notes" : " 条笔记");
     if (!notes.length) {
       container.appendChild(
@@ -3874,9 +4507,13 @@
           "p",
           "note-list-empty",
           data.notes.length
-            ? i18n.isEnglish()
-              ? "No notes match the search."
-              : "没有符合搜索条件的笔记。"
+            ? ui.noteScope === "favorites"
+              ? i18n.isEnglish()
+                ? "No favorite notes match the current search."
+                : "收藏夹中没有符合当前搜索的笔记。"
+              : i18n.isEnglish()
+                ? "No notes match the search."
+                : "没有符合搜索条件的笔记。"
             : i18n.isEnglish()
               ? "Saved notes will appear here."
               : "保存后的笔记会显示在这里。"
@@ -3885,6 +4522,8 @@
       return;
     }
     notes.forEach(function (note) {
+      var row = utils.el("div", "note-list-row");
+      row.setAttribute("role", "listitem");
       var button = utils.el(
         "button",
         "note-list-item" + (note.id === ui.selectedNoteId ? " is-active" : "")
@@ -3893,7 +4532,6 @@
       button.dataset.action = "edit-note";
       button.dataset.noteId = note.id;
       button.dataset.userContent = "";
-      button.setAttribute("role", "listitem");
       button.append(
         utils.el("strong", "", note.title),
         utils.el(
@@ -3907,8 +4545,40 @@
         ),
         utils.el("small", "", noteTimeLabel(note.updatedAt))
       );
-      container.appendChild(button);
+      var favorite = utils.el(
+        "button",
+        "note-favorite-button" + (note.favorite ? " is-favorite" : ""),
+        note.favorite ? "★" : "☆"
+      );
+      favorite.type = "button";
+      favorite.dataset.action = "toggle-note-favorite";
+      favorite.dataset.noteId = note.id;
+      favorite.setAttribute(
+        "aria-label",
+        i18n.isEnglish()
+          ? (note.favorite ? "Remove from favorites: " : "Add to favorites: ") + note.title
+          : (note.favorite ? "取消收藏：" : "收藏笔记：") + note.title
+      );
+      favorite.title = favorite.getAttribute("aria-label");
+      row.append(button, favorite);
+      container.appendChild(row);
     });
+  }
+
+  function renderNoteFavoriteToggle(note) {
+    var button = dom["note-favorite-toggle"];
+    if (!button) return;
+    button.hidden = !note;
+    if (!note) return;
+    button.classList.toggle("is-favorite", Boolean(note.favorite));
+    button.firstElementChild.textContent = note.favorite ? "★" : "☆";
+    var label = i18n.isEnglish()
+      ? note.favorite ? "Remove from favorites" : "Add note to favorites"
+      : note.favorite ? "取消收藏" : "收藏笔记";
+    button.setAttribute("aria-label", label);
+    button.title = label;
+    var accessible = query(".sr-only", button);
+    if (accessible) accessible.textContent = label;
   }
 
   function renderSelectedNote() {
@@ -3920,6 +4590,7 @@
     dom["note-title"].value = note ? note.title : "";
     dom["note-title"].classList.remove("is-invalid");
     dom["note-editor"].innerHTML = note ? note.contentHtml : "";
+    clearNoteTableSelection();
     dom["note-save-state"].textContent = note
       ? i18n.isEnglish()
         ? "Saved"
@@ -3934,6 +4605,7 @@
         ? "Not saved"
         : "尚未保存";
     dom["note-delete-button"].hidden = !note;
+    renderNoteFavoriteToggle(note);
     renderNoteConversionSummary(note);
     updateNoteCharacterCount();
   }
@@ -3987,6 +4659,36 @@
     renderSelectedNote();
   }
 
+  function toggleNoteFavorite(noteId) {
+    var note = getNote(noteId);
+    if (!note) return;
+    note.favorite = !note.favorite;
+    var favorite = note.favorite;
+    try {
+      data = storage.save(data);
+      if (
+        ui.noteScope === "favorites" &&
+        !favorite &&
+        noteId === ui.selectedNoteId &&
+        !ui.noteDirty
+      ) {
+        var next = getVisibleNotes()[0];
+        ui.selectedNoteId = next ? next.id : null;
+      }
+      renderNoteList();
+      if (!ui.noteDirty && noteId !== ui.selectedNoteId) renderSelectedNote();
+      renderNoteFavoriteToggle(getNote(ui.selectedNoteId));
+      toast(
+        favorite
+          ? i18n.isEnglish() ? "Added to Favorites" : "已加入收藏夹"
+          : i18n.isEnglish() ? "Removed from Favorites" : "已取消收藏"
+      );
+    } catch (error) {
+      note.favorite = !note.favorite;
+      toast("保存失败：" + error.message, "error", 6500);
+    }
+  }
+
   function saveCurrentNote(silent) {
     var title = dom["note-title"].value.trim();
     if (!title) {
@@ -4017,6 +4719,7 @@
         title: title,
         contentHtml: contentHtml,
         contentText: contentText,
+        favorite: false,
         conversions: [],
         createdAt: stamp,
         updatedAt: stamp

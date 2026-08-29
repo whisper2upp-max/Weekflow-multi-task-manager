@@ -100,6 +100,32 @@ test("JSON validation preserves Quick Notes, conversions, and rich progress hist
   assert.equal(checked.data.tasks[0].progressEntries.length, 2);
 });
 
+test("Quick Note favorites and merged tables survive JSON normalization", () => {
+  const source = baseData();
+  source.notes[0].favorite = true;
+  source.notes[0].contentHtml = [
+    "<p>Workbook snapshot</p>",
+    '<table onclick="alert(1)"><tbody>',
+    '<tr><th rowspan="2">Owner</th><th colspan="2">Status</th></tr>',
+    '<tr><td>Open</td><td>Closed</td></tr>',
+    "</tbody></table>",
+    "<script>alert('unsafe')</script>"
+  ].join("");
+  const checked = storage.validateData(JSON.parse(JSON.stringify(source)));
+  assert.equal(checked.valid, true, checked.errors.join("\n"));
+  assert.equal(checked.data.notes[0].favorite, true);
+  assert.match(checked.data.notes[0].contentHtml, /<table/i);
+  assert.match(checked.data.notes[0].contentHtml, /rowspan="2"/i);
+  assert.match(checked.data.notes[0].contentHtml, /colspan="2"/i);
+  assert.doesNotMatch(checked.data.notes[0].contentHtml, /onclick|script/i);
+  assert.match(checked.data.notes[0].contentText, /Owner\s+Status/);
+
+  delete source.notes[0].favorite;
+  const legacy = storage.validateData(source);
+  assert.equal(legacy.valid, true, legacy.errors.join("\n"));
+  assert.equal(legacy.data.notes[0].favorite, false);
+});
+
 test("local bilingual parser auto-fills exact fields and only suggests fuzzy matches", () => {
   const context = {
     groups: [{ id: "g1", name: "服务研发" }],
