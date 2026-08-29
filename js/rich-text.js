@@ -12,6 +12,7 @@
   var MAX_HTML = 80000;
   var FONT_SIZE_PRESETS = [12, 14, 16, 18, 22];
   var BLOCK_TAGS = new Set(["P", "DIV", "LI", "UL", "OL"]);
+  var TABLE_CELL_TAGS = new Set(["TD", "TH"]);
   var ALLOWED_TAGS = new Set([
     "P",
     "DIV",
@@ -27,7 +28,15 @@
     "A",
     "UL",
     "OL",
-    "LI"
+    "LI",
+    "TABLE",
+    "THEAD",
+    "TBODY",
+    "TFOOT",
+    "TR",
+    "TH",
+    "TD",
+    "CAPTION"
   ]);
 
   function escapeHtml(value) {
@@ -84,6 +93,11 @@
     }
   }
 
+  function normalizeTableSpan(value) {
+    var span = Number.parseInt(String(value || "1"), 10);
+    return Number.isInteger(span) && span >= 2 && span <= 100 ? span : 1;
+  }
+
   function safeStyle(value) {
     var source = String(value || "");
     var styles = [];
@@ -116,6 +130,18 @@
         output.push("\n");
         return;
       }
+      if (current.tagName === "TABLE") {
+        if (output.length && output[output.length - 1] !== "\n") output.push("\n");
+        Array.prototype.forEach.call(current.rows || [], function (row, rowIndex) {
+          if (rowIndex && output[output.length - 1] !== "\n") output.push("\n");
+          Array.prototype.forEach.call(row.cells || [], function (cell, cellIndex) {
+            if (cellIndex) output.push("\t");
+            output.push(plainTextFromNode(cell).replace(/\n+/g, " ").trim());
+          });
+          if (output[output.length - 1] !== "\n") output.push("\n");
+        });
+        return;
+      }
       var block = BLOCK_TAGS.has(current.tagName);
       if (block && output.length && output[output.length - 1] !== "\n") output.push("\n");
       Array.prototype.forEach.call(current.childNodes, visit);
@@ -140,6 +166,9 @@
     }
     return source
       .replace(/<\s*br\s*\/?>/gi, "\n")
+      .replace(/<\s*\/\s*(td|th)\s*>/gi, "\t")
+      .replace(/<\s*\/\s*tr\s*>/gi, "\n")
+      .replace(/<\s*\/\s*table\s*>/gi, "\n")
       .replace(/<\/(p|div|li|ul|ol)>/gi, "\n")
       .replace(/<[^>]+>/g, "")
       .replace(/&nbsp;/gi, " ")
@@ -186,6 +215,12 @@
         var style = safeStyle(node.getAttribute("style"));
         var fontColor = node.tagName === "FONT" ? normalizeColor(node.getAttribute("color")) : "";
         var fontSize = node.tagName === "FONT" ? normalizeFontSize(node.getAttribute("size")) : "";
+        var rowSpan = TABLE_CELL_TAGS.has(node.tagName)
+          ? normalizeTableSpan(node.getAttribute("rowspan"))
+          : 1;
+        var colSpan = TABLE_CELL_TAGS.has(node.tagName)
+          ? normalizeTableSpan(node.getAttribute("colspan"))
+          : 1;
         Array.prototype.slice.call(node.attributes).forEach(function (attribute) {
           node.removeAttribute(attribute.name);
         });
@@ -204,6 +239,10 @@
         if (fontSize && !/(^|;)\s*font-size\s*:/.test(style)) {
           style = (style ? style + "; " : "") + "font-size: " + fontSize;
         }
+        if (TABLE_CELL_TAGS.has(node.tagName)) {
+          if (rowSpan > 1) node.setAttribute("rowspan", String(rowSpan));
+          if (colSpan > 1) node.setAttribute("colspan", String(colSpan));
+        }
         if (style) node.setAttribute("style", style);
         clean(node);
       });
@@ -212,7 +251,10 @@
       link.__weekflowHref = link.getAttribute("href") || "";
     });
     clean(template.content);
-    return template.innerHTML.slice(0, MAX_HTML);
+    var output = template.innerHTML;
+    return output.length <= MAX_HTML
+      ? output
+      : fromPlainText(plainTextFromNode(template.content).slice(0, MAX_NOTE_TEXT));
   }
 
   function sanitizeFallback(html) {
@@ -266,6 +308,19 @@
         return "<p>" + linkifyEscapedText(paragraph).replace(/\n/g, "<br>") + "</p>";
       })
       .join("");
+  }
+
+  function tableHtmlFromClipboard(html) {
+    var source = String(html || "");
+    if (!/<table\b/i.test(source)) return "";
+    if (typeof document !== "undefined" && document.createElement) {
+      var template = document.createElement("template");
+      template.innerHTML = source.slice(0, MAX_HTML * 4);
+      var table = template.content.querySelector("table");
+      return table ? sanitizeHtml(table.outerHTML, MAX_NOTE_TEXT) : "";
+    }
+    var match = source.match(/<table\b[\s\S]*?<\/table\s*>/i);
+    return match ? sanitizeHtml(match[0], MAX_NOTE_TEXT) : "";
   }
 
   function insertHtmlAtSelection(html, container) {
@@ -364,11 +419,13 @@
     escapeHtml: escapeHtml,
     normalizeColor: normalizeColor,
     normalizeFontSize: normalizeFontSize,
+    normalizeTableSpan: normalizeTableSpan,
     validHttpUrl: validHttpUrl,
     plainText: plainText,
     normalizePlainText: normalizePlainText,
     sanitizeHtml: sanitizeHtml,
     fromPlainText: fromPlainText,
+    tableHtmlFromClipboard: tableHtmlFromClipboard,
     insertHtmlAtSelection: insertHtmlAtSelection,
     timestampLabel: timestampLabel,
     sortProgressEntries: sortProgressEntries,

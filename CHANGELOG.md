@@ -1,5 +1,25 @@
 # Weekflow Changelog
 
+## v3.2 Note Tables and Favorites — 2026-08-29
+
+Added starred Quick Note favorites and Excel-compatible tables with complete selection, AI protection, and native undo behavior.
+
+### Note organization and table editing
+
+- Added a star toggle to every saved Note and a **Favorites** scope with live counts; JSON backup and restore preserve the favorite state.
+- Added direct Excel table paste with `rowspan` / `colspan` merge preservation and safe HTML sanitization.
+- Added copy-back to Excel for rectangular selections and whole tables, retaining the selected structure and merged cells.
+- Added hierarchical **Create Table / Edit Table** menus, an 8 × 10 size picker, insert row below, insert column right, delete current row/column, and merge rectangular selection commands.
+- Added horizontal, vertical, and rectangular mouse or Shift-click selection with clear app-owned highlighting and a floating whole-table selector.
+- Protected tables during AI Rewrite with stable placeholders and restored the original tables after rewriting.
+
+### Undo, stability, and compatibility
+
+- Recorded table creation, Excel paste, row/column insertion or deletion, merged-cell editing, and final-row/final-column removal as native browser editing transactions for consistent `Command/Ctrl + Z` undo and redo.
+- Fixed adjacent unselected cell text appearing natively highlighted after a vertical table selection.
+- Kept forward and reverse rich-text formatting, timeline and Document Library scroll-position safeguards, and Windows-safe OOXML generation unchanged.
+- Kept data structure v4, Task and Document Excel schemas, import/export formats, and dashboard report structures unchanged.
+
 ## v3.1 AI-assisted Notes and Rich-text Sizing — 2026-08-16
 
 Added optional multi-provider AI assistance to Quick Notes and Task-draft conversion, plus preset font sizing for Quick Notes and Task progress history.

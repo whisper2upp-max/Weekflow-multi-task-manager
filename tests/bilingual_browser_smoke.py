@@ -1,3 +1,4 @@
+from datetime import date, timedelta
 from pathlib import Path
 from playwright.sync_api import sync_playwright
 
@@ -6,6 +7,8 @@ BASE_URL = "http://127.0.0.1:8765/Weekflow.html"
 
 
 def seed_data():
+    today = date.today()
+    current_week_ddl = today - timedelta(days=today.weekday()) + timedelta(days=2)
     groups = []
     flows = []
     tasks = []
@@ -39,7 +42,7 @@ def seed_data():
             "reportTo": "Lucy Chen",
             "managedObject": "Jack Wang",
             "deliverable": f"Deliverable {index + 1}",
-            "ddl": "2026-08-14",
+            "ddl": current_week_ddl.isoformat(),
             "urgency": "medium",
             "status": "pending",
             "completedAt": None,
@@ -110,11 +113,14 @@ with sync_playwright() as playwright:
     page.locator('[data-action="open-user-guide"]').click()
     guide = page.locator("#user-guide-dialog")
     assert guide.get_by_text("Group Layout:", exact=False).is_visible()
-    assert guide.get_by_text("Latest release (v3.1): August 16, 2026", exact=True).is_visible()
+    assert guide.get_by_text("Latest release (v3.2): August 29, 2026", exact=True).is_visible()
     page.locator('[data-action="close-user-guide"]').first.click()
     page.locator('[data-action="open-changelog"]').click()
     changelog = page.locator("#changelog-dialog")
     assert changelog.locator(".release-heading").first.get_by_text(
+        "v3.2 Note Tables and Favorites", exact=True
+    ).is_visible()
+    assert changelog.get_by_text(
         "v3.1 AI-assisted Notes and Rich-text Sizing", exact=True
     ).is_visible()
     assert changelog.get_by_text(

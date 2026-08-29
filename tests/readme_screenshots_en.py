@@ -226,6 +226,23 @@ def note_payload(language):
     if language == "en":
         return [
             {
+                "id": "note-table",
+                "title": "Project Review Tracker",
+                "contentHtml": (
+                    "<p>Favorite checklist for the weekly project review.</p>"
+                    "<table><tbody>"
+                    "<tr><td colspan=\"2\"><strong>Project Review Tracker</strong></td></tr>"
+                    "<tr><td><strong>Owner</strong></td><td><strong>Status</strong></td></tr>"
+                    "<tr><td>Lucy</td><td><span style=\"background-color:#C7D2FE\">In review</span></td></tr>"
+                    "<tr><td>Jack</td><td><span style=\"color:#15803D\">Completed</span></td></tr>"
+                    "</tbody></table><p><br></p>"
+                ),
+                "favorite": True,
+                "conversions": [],
+                "createdAt": "2026-08-15T03:45:00.000Z",
+                "updatedAt": "2026-08-15T03:45:00.000Z",
+            },
+            {
                 "id": "note-next-week",
                 "title": "Next Week's Task Notes",
                 "contentHtml": (
@@ -258,6 +275,23 @@ def note_payload(language):
             },
         ]
     return [
+        {
+            "id": "note-table",
+            "title": "项目复核跟踪表",
+            "contentHtml": (
+                "<p>每周项目复核收藏清单。</p>"
+                "<table><tbody>"
+                "<tr><td colspan=\"2\"><strong>项目复核跟踪表</strong></td></tr>"
+                "<tr><td><strong>负责人</strong></td><td><strong>状态</strong></td></tr>"
+                "<tr><td>Lucy</td><td><span style=\"background-color:#C7D2FE\">复核中</span></td></tr>"
+                "<tr><td>Jack</td><td><span style=\"color:#15803D\">已完成</span></td></tr>"
+                "</tbody></table><p><br></p>"
+            ),
+            "favorite": True,
+            "conversions": [],
+            "createdAt": "2026-08-15T03:45:00.000Z",
+            "updatedAt": "2026-08-15T03:45:00.000Z",
+        },
         {
             "id": "note-next-week",
             "title": "下周任务记录",
@@ -425,12 +459,21 @@ def seed_current_app(page, sample, language):
 def capture_ai_readme_surfaces(page, language):
     home_path = ZH_OUTPUT / "主页.png" if language == "zh" else EN_OUTPUT / "home.png"
     notes_path = ZH_OUTPUT / "笔记编辑.png" if language == "zh" else EN_OUTPUT / "quick-notes.png"
+    table_path = (
+        ZH_OUTPUT / "笔记表格与收藏.png"
+        if language == "zh"
+        else EN_OUTPUT / "note-tables-favorites.png"
+    )
 
     page.locator('[data-view="home"]').first.click()
     capture(page, home_path, 1435, 618)
 
     page.locator('[data-view="notes"]').first.click()
-    page.locator('[data-note-id="note-next-week"]').click()
+    page.locator('[data-action="edit-note"][data-note-id="note-table"]').click()
+    page.evaluate("window.scrollTo(0, 0)")
+    capture(page, table_path, 1435, 737)
+
+    page.locator('[data-action="edit-note"][data-note-id="note-next-week"]').click()
     page.locator('[data-action="note-ai-rewrite"]').click()
     page.locator("#note-ai-original-panel").wait_for(state="visible")
     page.wait_for_function(
@@ -507,7 +550,7 @@ def capture_core(page, language, progress_task_id):
 
 def capture_english_features(page, progress_task_id):
     page.locator('[data-view="notes"]').first.click()
-    page.locator('[data-note-id="note-progress"]').click()
+    page.locator('[data-action="edit-note"][data-note-id="note-progress"]').click()
     page.locator('[data-action="note-to-progress"]').click()
     page.locator("#note-progress-dialog[open]").wait_for(state="visible")
     page.locator("#note-progress-group").select_option("sample_group_5")
@@ -532,7 +575,7 @@ def capture_english_features(page, progress_task_id):
     capture(page, EN_OUTPUT / "document-library-group.png", 1425, 639)
 
     page.locator('[data-view="notes"]').first.click()
-    page.locator('[data-note-id="note-next-week"]').click()
+    page.locator('[data-action="edit-note"][data-note-id="note-next-week"]').click()
     page.locator('[data-action="note-to-task-drafts"]').click()
     page.locator("#task-dialog[open]").wait_for(state="visible")
     capture(page, EN_OUTPUT / "task-draft-conversion.png", 1401, 632)

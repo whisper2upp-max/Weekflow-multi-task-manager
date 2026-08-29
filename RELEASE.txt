@@ -1,5 +1,14 @@
-Weekflow v3.1
-Release date: 2026-08-16
+Weekflow v3.2
+Release date: 2026-08-29
+
+Quick Note tables and favorites release: 2026-08-29
+- Adds star favorites and a Favorites filter for saved Quick Notes; JSON backup and restore preserve the favorite state.
+- Pastes Excel tables into Notes with merged cells intact and copies rectangular selections or whole tables back to Excel with the same structure.
+- Adds hierarchical Create/Edit table menus, an 8 × 10 size picker, insert/delete row and column commands, rectangular merge selection, and a floating whole-table selector.
+- Keeps AI Rewrite from deleting tables by replacing them with stable placeholders and restoring the original tables after the rewrite.
+- Makes table creation, paste, insert, delete, merge, and final-row/final-column removal independently undoable with Command/Ctrl+Z and redo.
+- Fixes misleading native text highlighting in adjacent unselected cells after vertical selection.
+- Keeps business data v4, Task and Document Excel schemas, report formats, Windows-safe OOXML generation, and prior scroll-position protections unchanged.
 
 AI-assisted Notes and rich-text sizing release: 2026-08-16
 - Adds optional multi-provider AI Settings, current-Note rewriting, and AI-first Task-draft parsing.
@@ -81,7 +90,7 @@ This is the clean release build.
 - Document search and filters live in a dedicated bar above the table; document names edit in place and URLs open directly.
 - The document editor uses a compact two-row details area so Group, Flow, and Task relations keep most of the dialog space.
 - Document table headers, type, Flow, Group, and notes use the same 12px primary size as document names; URLs and related Tasks stay compact.
-- The in-app changelog shows the full v3.1, v3.0, v2.6, v2.5, v2.4, v2.3, v2.2, v2.1, v2.0, v1.1, and v1.0 history in descending version order.
+- The in-app changelog shows the full v3.2, v3.1, v3.0, v2.6, v2.5, v2.4, v2.3, v2.2, v2.1, v2.0, v1.1, and v1.0 history in descending version order.
 - The user guide identifies Weekflow as a Multi-task management cockpit and records the Wesley Yan development attribution plus first/latest release dates.
 - Urgency, report-to, and deliverable are required for new or edited Tasks.
 - Start with: open Weekflow.html directly, or run npm run serve and visit /Weekflow.html

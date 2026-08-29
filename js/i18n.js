@@ -27,6 +27,10 @@
     "· 记录临时想法，再转为进度或 Task 草稿": "· Capture quick thoughts, then convert them into progress or Task drafts",
     "新建笔记": "New Note",
     "笔记列表": "Note list",
+    "笔记范围": "Note scope",
+    "全部笔记": "All Notes",
+    "收藏夹": "Favorites",
+    "收藏笔记": "Add note to favorites",
     "搜索标题或正文": "Search titles or content",
     "写下第一条随手记": "Write Your First Quick Note",
     "保存后可以把内容添加为 Task 进度记录，或转换成一个或多个 Task 草稿。": "After saving, append the note to a Task's progress history or convert it into one or more Task drafts.",
@@ -44,6 +48,22 @@
     "选择字色": "Choose text color",
     "选择高亮颜色": "Choose highlight color",
     "清除格式": "Clear formatting",
+    "表格": "Table",
+    "表格工具": "Table tools",
+    "新建表格": "Create Table",
+    "编辑表格": "Edit Table",
+    "选择行列数": "Choose Rows and Columns",
+    "表格操作": "Table Actions",
+    "选择表格行列数": "Choose table size",
+    "选择整个表格": "Select entire table",
+    "可直接粘贴 Excel 表格；选中后复制回 Excel 可保留合并关系。": "Paste Excel tables directly; copy a selected table back to Excel with merged cells preserved.",
+    "下方插行": "Insert Row Below",
+    "右侧插列": "Insert Column Right",
+    "删除当前行": "Delete Current Row",
+    "删除当前列": "Delete Current Column",
+    "合并单元格": "Merge Cells",
+    "点击单元格后编辑；Shift + 点击可选择连续区域并合并。": "Click a cell to edit it. Shift-click to select a continuous merge range.",
+    "点击并拖过单元格，或先点击一个格子再按住 Shift 点击另一个格子，即可选择矩形区域。": "Drag across cells, or click one cell and Shift-click another, to select a rectangular range.",
     "在这里记录工作想法、会议要点或 SharePoint 链接…": "Capture work ideas, meeting notes, or SharePoint links here…",
     "删除笔记": "Delete Note",
     "添加到进度记录": "Add to Progress History",
@@ -129,7 +149,7 @@
     "了解主要功能、数据保存与导出方法": "Learn the key features, data storage, and export workflows",
     "更新日志": "Changelog",
     "查看 Weekflow v2.6 的发布内容": "Review the Weekflow v2.6 release history",
-    "查看 Weekflow v3.1 的发布内容": "Review the Weekflow v3.1 release history",
+    "查看 Weekflow v3.2 的发布内容": "Review the Weekflow v3.2 release history",
     "周一至周日 · 表头显示周五 · 双击周表头查看每天": "Monday to Sunday · Headers show Friday · Double-click a week to view each day",
     "本周": "This Week",
     "今天": "Today",
@@ -459,7 +479,7 @@
     "开发团队：Wesley Yan": "Development team: Wesley Yan",
     "首个正式版本（v1.0）：2026年7月30日": "First release (v1.0): July 30, 2026",
     "最新版本（v2.6）更新时间：2026年8月14日": "Latest v2.6 update: August 14, 2026",
-    "最新版本（v3.1）更新时间：2026年8月16日": "Latest v3.1 update: August 16, 2026",
+    "最新版本（v3.2）更新时间：2026年8月29日": "Latest v3.2 update: August 29, 2026",
     "Weekflow 更新日志": "Weekflow Changelog",
     "新增与调整": "New and Updated",
     "新增": "New",
@@ -789,7 +809,7 @@
       "向后 4 周": "Forward 4 weeks",
       "Weekflow 首页": "Weekflow Home"
       ,"Weekflow v2.6 中英双语本地 Task 管理工具，支持周/日双时间轴、分组、Flow、资料库双布局、双向联动、看板、备份和 Excel 批量导入导出。": "Weekflow v2.6 bilingual local Task manager with weekly/daily timelines, Groups, Flows, a dual-layout Document Library, dashboards, backup, and Excel import/export."
-      ,"Weekflow v3.1 中英双语本地 Task 管理工具，支持周/日双时间轴、随手记、多条进度历史、可选 AI 改写与 Task 草稿解析、资料库、看板、备份和 Excel 批量导入导出。": "Weekflow v3.1 bilingual local Task manager with weekly/daily timelines, Quick Notes, multi-entry progress history, optional AI rewriting and Task-draft parsing, a Document Library, dashboards, backup, and Excel import/export."
+      ,"Weekflow v3.2 中英双语本地 Task 管理工具，支持周/日双时间轴、可收藏随手记、Excel 兼容表格、多条进度历史、可选 AI 改写与 Task 草稿解析、资料库、看板和本地备份。": "Weekflow v3.2 bilingual local Task manager with weekly/daily timelines, favorite Quick Notes, Excel-compatible tables, multi-entry progress history, optional AI rewriting and Task-draft parsing, a Document Library, dashboards, and local backup."
       ,"例如：已完成需求确认和接口联调，当前等待业务方验收。\n\n可按日期分段记录，也可以作为持续更新的项目备注。": "Example: Requirements and integration are complete; business acceptance is pending.\n\nUse dated entries or maintain this as a continuously updated project note."
       ,"例如：已完成需求确认和接口联调，当前等待业务方验收。": "Example: Requirements and integration are complete; business acceptance is pending."
     };
@@ -911,7 +931,8 @@
       '<section><h3>Key Features</h3><ul>',
       '<li><b>Timeline:</b> Task by Week shows deadlines by natural week. Double-click a week header to open Task by Day for Monday through Sunday.</li>',
       '<li><b>Task Management:</b> Create and edit Tasks with multi-entry progress history, completion status, people fields, Deliverables, related documents, and optional weekly or monthly recurrence. Every progress entry keeps its own created and last-edited time and supports links, five preset font sizes, and Excel-like 20-color text and highlight palettes.</li>',
-      '<li><b>Quick Notes:</b> Capture titled rich-text-only Notes with bold, italic, five preset font sizes (12/14/16/18/22), SharePoint/HTTP/HTTPS links, Excel-like 20-color text and highlight palettes, search, updated-time sorting, unsaved-change protection, and double-confirm deletion.</li>',
+      '<li><b>Quick Notes:</b> Capture titled rich-text Notes with bold, italic, five preset font sizes (12/14/16/18/22), SharePoint/HTTP/HTTPS links, Excel-like 20-color text and highlight palettes, search, Favorites, updated-time sorting, unsaved-change protection, and double-confirm deletion.</li>',
+      '<li><b>Note Tables:</b> Paste tables from Excel with merged cells preserved, copy selected regions back to Excel, create tables from a size grid, and insert/delete rows or columns or merge rectangular selections. A floating handle selects the whole table, Cmd/Ctrl+Z supports every structural edit, and AI Rewrite protects tables instead of removing them.</li>',
       '<li><b>Note Conversion:</b> Append a Note as a new Task progress entry or convert it into one or more Task drafts. Deterministic bilingual local rules are the default; configured AI semantic parsing runs first when enabled, with automatic local fallback after failures or timeouts. The source Note remains and every candidate can be reviewed, skipped, or manually added.</li>',
       '<li><b>AI Assistance:</b> Choose a provider and model in AI Settings and enter an API Key to enable Note rewriting and AI Task-draft parsing; deterministic bilingual rules remain fully available without AI. Failed or timed-out AI parsing automatically falls back to local rules, and every result only prefills the existing Task-draft review form instead of creating a Task directly. Rewriting uses the editor\'s current content, and late results never overwrite a Note changed or selected while waiting. The API Key is stored in the current browser origin\'s separate AI setting and excluded from business-data JSON backups; clear it after use on a shared device.</li>',
       '<li><b>Draft Recognition Rules:</b> Common labels include Task / Todo / Action Item, Group, Flow / Workflow, DDL / Deadline / Due Date, Urgency / Priority, Report To, Managed Person, and Deliverable; corresponding Chinese aliases are recognized as well. Numbered 1/2/3 lines and ordinary non-empty unlabeled lines become separate candidates, while labeled detail lines remain attached to the preceding Task. Leading Chinese current/next/two-weeks-ahead weekdays, bare current-week weekdays, month-day forms, and year variants prefill DDL and are removed from Task names. Every Wednesday prefills Weekly recurrence and next Wednesday; Monthly on the 5th prefills Monthly recurrence and the 5th of next month. Equivalent Chinese recurring phrases are also recognized. Recurrence End still requires user confirmation; other fuzzy relative dates and names remain suggestions.</li>',
@@ -924,16 +945,17 @@
       '<li><b>Group Layout:</b> Show four Groups per row by default. Documents sort by open count in the current and previous natural week, then by name. Select a document name to edit or <b>Go to</b> to open its link. <b>Arrange Layout</b> supports one to four Groups per row and drag reordering.</li>',
       '<li><b>Recently Used:</b> List filters documents opened in the current or previous natural week; Group automatically ranks documents with more recent opens first.</li>',
       '</ul></section>',
-      '<section><h3>Data Storage Location</h3><p>Business data is stored in <code>localStorage</code> for the current browser and page origin under:</p><pre>weekflow-v2.4:data:v4</pre><p>v3.1 keeps the v2.4-compatible namespace; the internal structure has remained v4 since v3.0. Existing single progress notes migrate into one history entry. Clearing site data, using a private window, changing browsers, or changing the launch origin affects which data is visible.</p></section>',
+      '<section><h3>Data Storage Location</h3><p>Business data is stored in <code>localStorage</code> for the current browser and page origin under:</p><pre>weekflow-v2.4:data:v4</pre><p>v3.2 keeps the v2.4-compatible namespace; the internal structure has remained v4 since v3.0. Existing single progress notes migrate into one history entry. Clearing site data, using a private window, changing browsers, or changing the launch origin affects which data is visible.</p></section>',
       '<section><h3>Data Backup and Restore</h3><ol><li>Open the <b>•••</b> data menu.</li><li>Select <b>Export JSON Backup</b> and save the file securely.</li><li>To restore, select <b>Restore from JSON</b>; Weekflow validates the data and asks for confirmation.</li></ol><p>Export a JSON backup before bulk changes, browser migration, or clearing site data.</p><p>JSON backup stores Groups, Flows, Tasks, complete progress history, all Documents including unlinked items, Quick Notes, conversion records, and Document Library layout preferences.</p></section>',
       '<section><h3>Excel Bulk Import</h3><ol><li>Open <b>•••</b> and download a blank Task template or current data in import format.</li><li>Edit <b>Task Import</b>; each row represents one Task. Edit <b>Progress History</b> for one progress entry per row.</li><li>Upload the workbook and review errors and preview data.</li><li>Choose <b>Supplement Import</b> or <b>Complete Replacement</b>.</li></ol><p>Group, Task Name, Deadline, Urgency, Report To, and Deliverable are required. Missing Groups and Flows are created; matching names are reused. Recurring Tasks require start and end dates. Legacy one-cell Progress Notes remain importable.</p></section>',
       '<section><h3>Excel Export</h3><p><b>Export Dashboard Report</b> creates Overall Dashboard, Timeline Dashboard, and Progress History worksheets containing every Task, hierarchy summary, recurrence fields, all progress entries, deadlines, and related links. It is a presentation report, not an import workbook.</p><p>For re-import, select <b>Download Current Data in Import Format</b>. The Overall Dashboard also exports three-sheet one-person Task status reports. All report sheets are unfrozen and use Windows-safe OOXML. The Document Library Download menu provides its blank template and complete library.</p></section>',
-      '<section><h3>Development Team</h3><p>Developer: Wesley Yan</p><p>First release (v1.0): July 30, 2026</p><p>Latest release (v3.1): August 16, 2026</p></section>'
+      '<section><h3>Development Team</h3><p>Developer: Wesley Yan</p><p>First release (v1.0): July 30, 2026</p><p>Latest release (v3.2): August 29, 2026</p></section>'
     ].join("");
   }
 
   function englishChangelogHtml() {
     var entries = [
+      ["v3.2 Note Tables and Favorites", "2026-08-29", "Added starred Note favorites and Excel-compatible tables with complete selection, AI protection, and native undo behavior.", ["Added per-Note star toggles and a Favorites scope; the favorite state is preserved by JSON backup and restore.", "Pastes Excel tables with merged cells preserved and copies selected regions or the whole table back to Excel with the same merge structure.", "Added hierarchical Create / Edit table menus, an 8 × 10 size picker, insert/delete row and column commands, rectangular merge selection, and a floating whole-table selector.", "Supports horizontal, vertical, and rectangular mouse or Shift-click selection with program-owned highlighting and no misleading native text highlight in adjacent cells.", "Protects tables during AI Rewrite with stable placeholders and restores each original table after rewriting.", "Records create, paste, insert, delete, merge, and final-row/final-column removal as native browser editing transactions for Cmd/Ctrl+Z undo and redo.", "Kept data structure v4, Task and Document Excel schemas, report formats, Windows-safe OOXML paths, and timeline/Document Library scroll protections unchanged."]],
       ["v3.1 AI-assisted Notes and Rich-text Sizing", "2026-08-16", "Added optional multi-provider AI rewriting and Task-draft parsing, plus preset font sizing for Quick Notes and Task progress history.", ["Added optional multi-provider AI Settings, current-Note rewriting, and AI-first Task-draft parsing while keeping v3.0 deterministic bilingual rules available without an API Key or network connection.", "Automatically falls back to local parsing after AI failures or timeouts; every result stays in the existing sequential review form, while cross-Group Flows and impossible dates are rejected.", "Prevents late AI rewrite results from overwriting another Note or newer edits, isolates provider-specific request fields, and adds timeout and abort handling.", "Added 12/14/16/18/22 font-size presets to Notes and progress history while preserving forward, reverse, whole-line, and multi-line selections.", "Stores the API Key in the current browser origin's separate AI setting and excludes it from business-data JSON backups.", "Kept the business data structure, Task and Document Excel schemas, report mechanisms, Windows-safe OOXML path, and scroll-position safeguards unchanged."]],
       ["v3.0 Quick Notes and Progress History", "2026-08-15", "Added Quick Notes, deterministic local Task-draft conversion, and reusable multi-entry Task progress history.", ["Added titled rich-text-only Notes with links, search, latest-updated sorting, unsaved-change protection, and double-confirm deletion.", "Replaced arbitrary text/highlight color controls in Notes and progress history with two Excel-like 20-color preset palettes.", "Added one-time Note-to-progress conversion and sequential multi-candidate Task-draft review with source split view, skip, save-and-continue, and manual Add Task Draft.", "Used bilingual deterministic rules without AI/network access: numbered and ordinary non-empty lines split into candidates while labeled detail lines stay attached; precise Chinese weekday/month-day/year prefixes prefill DDL and are removed from Task names; explicit recurring phrases prefill recurrence plus next-period DDL/start.", "Upgraded JSON to v4 with Notes and progressEntries while migrating legacy progressNote content into one history entry.", "Added one-row-per-entry Progress History to re-importable data, dashboard reports, and person reports; kept main-cell newline aggregation and Excel's 32,767-character limit.", "Stabilized all five English navigation tabs across page switches and retained unfrozen Windows-safe three-sheet OOXML plus all timeline/document scroll-position safeguards.", "Fixed right-to-left whole-line and multi-line selections in Quick Notes and Task progress history so Bold, Italic, text color, highlight, and other formatting commands retain the intended selection."]],
       ["v2.6 Document Library Dual Layout", "2026-08-14", "Added a Group layout for browsing documents by Task Group while preserving the existing List layout and data workflows.", ["Added List / Group switching and fixed-height Group cards in a four-column default grid with independent scrolling.", "Sorted documents by current/previous natural-week open count and then by name; document names edit and Go to opens links.", "Added Arrange Layout to the left of the layout switch, with one-to-four columns and drag or button reordering.", "Stored layout mode, column count, and Group order in JSON preferences, retained the unified language-switch position, stable checkbox scrolling, unchanged Excel schemas, and Windows-safe OOXML packaging."]],

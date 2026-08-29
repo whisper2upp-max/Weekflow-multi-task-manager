@@ -1,10 +1,10 @@
 <p align="right"><a href="README.md">中文</a> · <strong>English</strong></p>
 
-# Weekflow v3.1 · Bilingual Task Management
+# Weekflow v3.2 · Bilingual Task Management
 
-Weekflow is a desktop-first, backend-free Multi-task management cockpit for tracking several workstreams and organizing all Task-related documents in one place. It combines weekly and daily deadline timelines, `Group → optional Flow → ordered Task` workflows, Quick Notes, multi-entry progress history, optional AI rewriting and Task-draft parsing, an Overall Dashboard, a dual-layout Document Library, Excel bulk import/export, and local JSON backup.
+Weekflow is a desktop-first, backend-free Multi-task management cockpit for tracking several workstreams and organizing all Task-related documents in one place. It combines weekly and daily deadline timelines, `Group → optional Flow → ordered Task` workflows, favorite Quick Notes with Excel-compatible tables, multi-entry progress history, optional AI rewriting and Task-draft parsing, an Overall Dashboard, a dual-layout Document Library, Excel bulk import/export, and local JSON backup.
 
-The Chinese / English switch changes presentation and download language only; it never rewrites user-entered content. Weekflow v3.0 introduced Quick Notes and multi-entry progress history; v3.1 adds optional AI assistance and preset font sizing while preserving recurrence, linking, filtering, and scroll-position safeguards. Without an API Key, Note-to-Task conversion continues to use deterministic bilingual local rules; with AI enabled, results remain editable drafts and are never saved as Tasks without user review. API Keys are excluded from business-data JSON backups.
+The Chinese / English switch changes presentation and download language only; it never rewrites user-entered content. Weekflow v3.2 adds Note favorites and Excel-compatible table editing while retaining optional AI assistance, recurrence, linking, filtering, and scroll-position safeguards. Without an API Key, Note-to-Task conversion continues to use deterministic bilingual local rules; with AI enabled, results remain editable drafts and are never saved as Tasks without user review. API Keys are excluded from business-data JSON backups.
 
 ## Quick Start
 
@@ -34,7 +34,7 @@ Both English and Chinese import headers and supported field values remain accept
 
 ### Home and Navigation
 
-![Weekflow v3.1 Home with the AI Settings entry](readme-images-en/home.png)
+![Weekflow v3.2 Home with the AI Settings entry](readme-images-en/home.png)
 
 - Home displays Task, Group, Flow, document, note, and completion-rate totals.
 - Direct entries open Task by Week, Overall Dashboard, Document Library, Quick Notes, User Guide, and Changelog.
@@ -72,8 +72,13 @@ Both English and Chinese import headers and supported field values remain accept
 
 ### Quick Notes, AI Assistance, and Task Draft Conversion
 
-- The fourth business page, **Quick Notes**, provides a titled rich-text-only writing area and a left list sorted by latest update. Search covers title and body, and unsaved-change prompts protect navigation, note switching, language switching, and page closing.
-- Formatting supports bold, italic, five preset font sizes (12/14/16/18/22), pasted SharePoint/HTTP/HTTPS links, and Excel-like 20-color preset palettes for text and highlights. Arbitrary color pickers, images, attachments, and tables are intentionally excluded.
+- The fourth business page, **Quick Notes**, provides a titled rich-text writing area and a left list sorted by latest update. Search covers title and body; Notes can be starred and filtered through **Favorites**, and unsaved-change prompts protect navigation, note switching, language switching, and page closing.
+- Formatting supports bold, italic, five preset font sizes (12/14/16/18/22), pasted SharePoint/HTTP/HTTPS links, and Excel-like 20-color preset palettes for text and highlights. Arbitrary color pickers, images, and attachments remain excluded.
+- Paste tables directly from Excel with merged cells preserved. Copy a rectangular selection—or use the floating side handle to select the whole table—back to Excel with the same table and merge structure.
+- The hierarchical **Create Table / Edit Table** menu provides a size grid, insert row below, insert column right, delete current row/column, and merge rectangular selection commands. Horizontal, vertical, and rectangular selections use clear app-owned highlighting without falsely highlighting adjacent text.
+- Create, paste, insert, delete, merge, and final-row/final-column removal are native editing-history steps, so `Command/Ctrl + Z` and redo work consistently. AI Rewrite protects every table with a placeholder and restores it after rewriting.
+
+![Quick Note tables and Favorites](readme-images-en/note-tables-favorites.png)
 
 ![AI Rewrite comparison in the Quick Notes editor](readme-images-en/quick-notes.png)
 
@@ -129,7 +134,7 @@ Business data is stored in `localStorage` for the current browser and page origi
 weekflow-v2.4:data:v4
 ```
 
-Weekflow v3.1 keeps the v2.4 storage namespace; the internal structure has remained v4 since v3.0. This compatibility key does not indicate that the application is still v2.4.
+Weekflow v3.2 keeps the v2.4 storage namespace; the internal structure has remained v4 since v3.0. This compatibility key does not indicate that the application is still v2.4.
 
 The top-level data structure is `version: 4` with `groups`, `flows`, `tasks`, `materials`, `notes`, and `preferences`. Task `progressEntries` stores multi-entry progress history; `notes` stores Quick Notes and one-time conversion records. `preferences.documentLibrary` stores List / Group mode, columns per row, and Group order. Recurrence settings remain on each Task, so recurring deadlines do not create duplicate Tasks. Existing v3 `progressNote` content migrates into one history entry, and older same-origin releases remain readable.
 
@@ -250,7 +255,7 @@ Weekflow/
 
 - Developer: Wesley Yan
 - First release (v1.0): July 30, 2026
-- Latest release (v3.1): August 16, 2026
+- Latest release (v3.2): August 29, 2026
 - Bilingual interface release: August 12, 2026
 
 ## Security and Limits

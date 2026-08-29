@@ -274,6 +274,7 @@
       title: String(source.title || "").trim().slice(0, 160),
       contentHtml: contentHtml,
       contentText: richText.plainText(contentHtml).slice(0, richText.MAX_NOTE_TEXT),
+      favorite: Boolean(source.favorite),
       conversions: (Array.isArray(source.conversions) ? source.conversions : []).map(
         normalizeConversion
       ),
