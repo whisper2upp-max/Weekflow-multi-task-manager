@@ -4041,12 +4041,10 @@
     return { table: table, rows: rows, grid: grid, width: width, infoByCell: infoByCell };
   }
 
-  function noteTableRegion() {
-    var anchor = ui.noteTableAnchorCell;
-    var focus = ui.noteTableFocusCell || anchor;
-    if (!anchor || !anchor.isConnected || !focus || !focus.isConnected) return null;
-    var table = anchor.closest("table");
-    if (!table || table !== focus.closest("table") || !dom["note-editor"].contains(table)) return null;
+  function tableRegionBetweenCells(anchor, focus, table) {
+    if (!anchor || !focus || !table || table !== anchor.closest("table") || table !== focus.closest("table")) {
+      return null;
+    }
     var model = buildTableModel(table);
     var anchorInfo = model.infoByCell.get(anchor);
     var focusInfo = model.infoByCell.get(focus);
@@ -4086,6 +4084,15 @@
       minColumn: minColumn,
       maxColumn: maxColumn
     };
+  }
+
+  function noteTableRegion() {
+    var anchor = ui.noteTableAnchorCell;
+    var focus = ui.noteTableFocusCell || anchor;
+    if (!anchor || !anchor.isConnected || !focus || !focus.isConnected) return null;
+    var table = anchor.closest("table");
+    if (!table || table !== focus.closest("table") || !dom["note-editor"].contains(table)) return null;
+    return tableRegionBetweenCells(anchor, focus, table);
   }
 
   function renderNoteTableSelection() {
@@ -4422,11 +4429,55 @@
     return output.join("");
   }
 
+  function insertHtmlWithNativeUndo(editor, html) {
+    if (!editor) return false;
+    var sanitized = richText.sanitizeHtml(html, richText.MAX_NOTE_TEXT);
+    if (!sanitized) return false;
+    restoreRichTextSelection(editor);
+    var inserted = false;
+    try {
+      inserted = document.execCommand("insertHTML", false, sanitized);
+    } catch (_error) {
+      inserted = false;
+    }
+    if (!inserted) inserted = richText.insertHtmlAtSelection(sanitized, editor);
+    return inserted;
+  }
+
+  function replaceNoteTableWithNativeUndo(table, replacementHtml) {
+    var editor = dom["note-editor"];
+    if (!table || !table.isConnected || !editor.contains(table)) {
+      return { success: false, table: null };
+    }
+    var tableIndex = queryAll("table", editor).indexOf(table);
+    var range = document.createRange();
+    range.selectNode(table);
+    var selection = window.getSelection && window.getSelection();
+    if (!selection) return { success: false, table: null };
+    try {
+      editor.focus({ preventScroll: true });
+    } catch (_error) {
+      editor.focus();
+    }
+    selection.removeAllRanges();
+    selection.addRange(range);
+    ui.richTextSelection = { editorId: "note-editor", range: range.cloneRange() };
+    if (!insertHtmlWithNativeUndo(editor, replacementHtml)) {
+      return { success: false, table: null };
+    }
+    var expectsTable = /<table\b/i.test(replacementHtml);
+    return {
+      success: true,
+      table: expectsTable && tableIndex >= 0
+        ? queryAll("table", editor)[tableIndex] || null
+        : null
+    };
+  }
+
   function insertNoteTableHtml(tableHtml) {
     var editor = dom["note-editor"];
     var existingTables = new Set(queryAll("table", editor));
-    restoreRichTextSelection(editor);
-    if (!richText.insertHtmlAtSelection(tableHtml, editor)) {
+    if (!insertHtmlWithNativeUndo(editor, tableHtml)) {
       var template = document.createElement("template");
       template.innerHTML = richText.sanitizeHtml(tableHtml, richText.MAX_NOTE_TEXT);
       editor.appendChild(template.content);
@@ -4451,9 +4502,9 @@
     else cell.removeAttribute(attribute);
   }
 
-  function insertTableRowBelow(region) {
+  function insertTableRowBelow(region, focusCell) {
     var model = region.model;
-    var activeInfo = model.infoByCell.get(ui.noteTableFocusCell);
+    var activeInfo = model.infoByCell.get(focusCell || ui.noteTableFocusCell);
     var currentRow = activeInfo && model.rows[activeInfo.row];
     if (!currentRow) return null;
     var insertAt = activeInfo.row + 1;
@@ -4480,9 +4531,9 @@
     return firstCell || (crossing[0] && crossing[0].cell);
   }
 
-  function insertTableColumnRight(region) {
+  function insertTableColumnRight(region, focusCell) {
     var model = region.model;
-    var activeInfo = model.infoByCell.get(ui.noteTableFocusCell);
+    var activeInfo = model.infoByCell.get(focusCell || ui.noteTableFocusCell);
     if (!activeInfo) return null;
     var insertAt = activeInfo.column + activeInfo.colSpan;
     var crossing = [];
@@ -4519,9 +4570,9 @@
     placeCaretInNode(paragraph);
   }
 
-  function deleteCurrentTableRow(region) {
+  function deleteCurrentTableRow(region, focusCell) {
     var model = region.model;
-    var activeInfo = model.infoByCell.get(ui.noteTableFocusCell);
+    var activeInfo = model.infoByCell.get(focusCell || ui.noteTableFocusCell);
     var rowIndex = activeInfo && activeInfo.row;
     var row = Number.isInteger(rowIndex) ? model.rows[rowIndex] : null;
     if (!row) return null;
@@ -4554,9 +4605,9 @@
     return targetInfo && targetInfo.cell;
   }
 
-  function deleteCurrentTableColumn(region) {
+  function deleteCurrentTableColumn(region, focusCell) {
     var model = region.model;
-    var activeInfo = model.infoByCell.get(ui.noteTableFocusCell);
+    var activeInfo = model.infoByCell.get(focusCell || ui.noteTableFocusCell);
     if (!activeInfo) return null;
     if (model.width <= 1) {
       removeTableAndKeepCaret(region.table);
@@ -4620,6 +4671,21 @@
     return primary;
   }
 
+  function cloneNoteTableEditContext(region) {
+    var anchorInfo = region.model.infoByCell.get(ui.noteTableAnchorCell);
+    var focusInfo = region.model.infoByCell.get(ui.noteTableFocusCell);
+    if (!anchorInfo || !focusInfo) return null;
+    var table = region.table.cloneNode(true);
+    var model = buildTableModel(table);
+    var anchor = model.grid[anchorInfo.row] && model.grid[anchorInfo.row][anchorInfo.column];
+    var focus = model.grid[focusInfo.row] && model.grid[focusInfo.row][focusInfo.column];
+    if (!anchor || !focus) return null;
+    var clonedRegion = tableRegionBetweenCells(anchor.cell, focus.cell, table);
+    return clonedRegion
+      ? { table: table, region: clonedRegion, focusCell: focus.cell }
+      : null;
+  }
+
   function editNoteTable(operation) {
     var region = noteTableRegion();
     if (!region) {
@@ -4629,17 +4695,52 @@
       );
       return;
     }
-    var beforeHtml = dom["note-editor"].innerHTML;
+    var context = cloneNoteTableEditContext(region);
+    if (!context) return;
+    var beforeTableHtml = richText.sanitizeHtml(context.table.outerHTML, richText.MAX_NOTE_TEXT);
+    var removeTable =
+      (operation === "delete-row" && context.region.model.rows.length <= 1) ||
+      (operation === "delete-column" && context.region.model.width <= 1);
     var nextCell = null;
-    if (operation === "insert-row") nextCell = insertTableRowBelow(region);
-    if (operation === "insert-column") nextCell = insertTableColumnRight(region);
-    if (operation === "delete-row") nextCell = deleteCurrentTableRow(region);
-    if (operation === "delete-column") nextCell = deleteCurrentTableColumn(region);
-    if (operation === "merge-cells") nextCell = mergeSelectedTableCells(region);
-    if (nextCell && nextCell.isConnected) selectNoteTableCell(nextCell);
-    if (dom["note-editor"].innerHTML !== beforeHtml) {
-      dom["note-editor"].dispatchEvent(new Event("input", { bubbles: true }));
+    if (!removeTable) {
+      if (operation === "insert-row") {
+        nextCell = insertTableRowBelow(context.region, context.focusCell);
+      }
+      if (operation === "insert-column") {
+        nextCell = insertTableColumnRight(context.region, context.focusCell);
+      }
+      if (operation === "delete-row") {
+        nextCell = deleteCurrentTableRow(context.region, context.focusCell);
+      }
+      if (operation === "delete-column") {
+        nextCell = deleteCurrentTableColumn(context.region, context.focusCell);
+      }
+      if (operation === "merge-cells") nextCell = mergeSelectedTableCells(context.region);
     }
+    var nextPosition = null;
+    if (nextCell && context.table.contains(nextCell)) {
+      var changedModel = buildTableModel(context.table);
+      var nextInfo = changedModel.infoByCell.get(nextCell);
+      if (nextInfo) nextPosition = { row: nextInfo.row, column: nextInfo.column };
+    }
+    var replacementHtml = removeTable
+      ? "<p><br></p>"
+      : richText.sanitizeHtml(context.table.outerHTML, richText.MAX_NOTE_TEXT);
+    if (!removeTable && replacementHtml === beforeTableHtml) {
+      closeNoteTableMenu();
+      return;
+    }
+    var replacement = replaceNoteTableWithNativeUndo(region.table, replacementHtml);
+    if (!replacement.success) return;
+    clearNoteTableSelection();
+    if (replacement.table && nextPosition) {
+      var replacementModel = buildTableModel(replacement.table);
+      var replacementInfo = replacementModel.grid[nextPosition.row] &&
+        (replacementModel.grid[nextPosition.row][nextPosition.column] ||
+          replacementModel.grid[nextPosition.row][0]);
+      if (replacementInfo) selectNoteTableCell(replacementInfo.cell);
+    }
+    dom["note-editor"].dispatchEvent(new Event("input", { bubbles: true }));
     closeNoteTableMenu();
   }
 

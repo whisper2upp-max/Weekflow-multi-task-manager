@@ -60,6 +60,14 @@ def put_caret_at_end(page, selector):
     )
 
 
+def undo_editor(page):
+    page.keyboard.press("Meta+z")
+
+
+def redo_editor(page):
+    page.keyboard.press("Meta+Shift+z")
+
+
 with sync_playwright() as playwright:
     browser = playwright.chromium.launch(headless=True)
     context = browser.new_context(viewport={"width": 1600, "height": 960})
@@ -92,6 +100,12 @@ with sync_playwright() as playwright:
         '#note-table-size-grid [data-action="insert-note-table"][data-rows="2"][data-columns="2"]'
     ).click()
     created = page.locator("#note-editor table").first
+    assert created.locator("tr").count() == 2
+    assert created.locator("td").count() == 4
+    undo_editor(page)
+    assert page.locator("#note-editor table").count() == 0
+    redo_editor(page)
+    assert page.locator("#note-editor table").count() == 1
     assert created.locator("tr").count() == 2
     assert created.locator("td").count() == 4
 
@@ -129,6 +143,11 @@ with sync_playwright() as playwright:
     assert created.locator('td[colspan="2"]').count() == 1
     assert "Merged heading" in created.locator('td[colspan="2"]').inner_text()
     assert "Second heading" in created.locator('td[colspan="2"]').inner_text()
+    undo_editor(page)
+    assert created.locator('td[colspan="2"]').count() == 0
+    assert created.locator("td").count() == 4
+    redo_editor(page)
+    assert created.locator('td[colspan="2"]').count() == 1
 
     created.locator('td[colspan="2"]').click()
     table_trigger.click()
@@ -137,12 +156,20 @@ with sync_playwright() as playwright:
         '[data-action="edit-note-table"][data-table-operation="insert-row"]'
     ).click()
     assert created.locator("tr").count() == 3
+    undo_editor(page)
+    assert created.locator("tr").count() == 2
+    redo_editor(page)
+    assert created.locator("tr").count() == 3
 
     table_trigger.click()
     page.locator('[data-table-submenu-target="edit"]').hover()
     page.locator(
         '[data-action="edit-note-table"][data-table-operation="insert-column"]'
     ).click()
+    assert created.locator("tr").nth(1).locator("td, th").count() == 3
+    undo_editor(page)
+    assert created.locator("tr").nth(1).locator("td, th").count() == 2
+    redo_editor(page)
     assert created.locator("tr").nth(1).locator("td, th").count() == 3
 
     table_trigger.click()
@@ -151,12 +178,20 @@ with sync_playwright() as playwright:
         '[data-action="edit-note-table"][data-table-operation="delete-column"]'
     ).click()
     assert created.locator("tr").nth(1).locator("td, th").count() == 2
+    undo_editor(page)
+    assert created.locator("tr").nth(1).locator("td, th").count() == 3
+    redo_editor(page)
+    assert created.locator("tr").nth(1).locator("td, th").count() == 2
 
     table_trigger.click()
     page.locator('[data-table-submenu-target="edit"]').hover()
     page.locator(
         '[data-action="edit-note-table"][data-table-operation="delete-row"]'
     ).click()
+    assert created.locator("tr").count() == 2
+    undo_editor(page)
+    assert created.locator("tr").count() == 3
+    redo_editor(page)
     assert created.locator("tr").count() == 2
 
     put_caret_at_end(page, "#note-editor")
@@ -176,6 +211,10 @@ with sync_playwright() as playwright:
     )
     assert paste_result["prevented"] is True
     assert page.locator("#note-editor table").count() == 2
+    undo_editor(page)
+    assert page.locator("#note-editor table").count() == 1
+    redo_editor(page)
+    assert page.locator("#note-editor table").count() == 2
     pasted = page.locator("#note-editor table").nth(1)
     assert pasted.locator('td[rowspan="2"]').count() == 1
     assert pasted.locator('td[colspan="2"]').count() == 1
@@ -190,6 +229,12 @@ with sync_playwright() as playwright:
     ).click()
     assert pasted.locator("tr").count() == 3
     assert pasted.locator('td[rowspan="3"]').count() == 1
+    undo_editor(page)
+    assert pasted.locator("tr").count() == 2
+    assert pasted.locator('td[rowspan="2"]').count() == 1
+    redo_editor(page)
+    assert pasted.locator("tr").count() == 3
+    assert pasted.locator('td[rowspan="3"]').count() == 1
     table_trigger.click()
     page.locator('[data-table-submenu-target="edit"]').hover()
     page.locator(
@@ -197,6 +242,54 @@ with sync_playwright() as playwright:
     ).click()
     assert pasted.locator("tr").count() == 2
     assert pasted.locator('td[rowspan="2"]').count() == 1
+    undo_editor(page)
+    assert pasted.locator("tr").count() == 3
+    assert pasted.locator('td[rowspan="3"]').count() == 1
+    redo_editor(page)
+    assert pasted.locator("tr").count() == 2
+    assert pasted.locator('td[rowspan="2"]').count() == 1
+
+    put_caret_at_end(page, "#note-editor")
+    table_trigger.click()
+    page.locator('[data-table-submenu-target="create"]').hover()
+    page.locator(
+        '#note-table-size-grid [data-action="insert-note-table"][data-rows="1"][data-columns="1"]'
+    ).click()
+    single_row_table = page.locator("#note-editor table").last
+    single_row_table.locator("td").fill("Remove row undo")
+    single_row_table.locator("td").click()
+    table_trigger.click()
+    page.locator('[data-table-submenu-target="edit"]').hover()
+    page.locator(
+        '[data-action="edit-note-table"][data-table-operation="delete-row"]'
+    ).click()
+    assert page.locator("#note-editor table").count() == 2
+    undo_editor(page)
+    assert page.locator("#note-editor table").count() == 3
+    assert "Remove row undo" in page.locator("#note-editor table").last.inner_text()
+    redo_editor(page)
+    assert page.locator("#note-editor table").count() == 2
+
+    put_caret_at_end(page, "#note-editor")
+    table_trigger.click()
+    page.locator('[data-table-submenu-target="create"]').hover()
+    page.locator(
+        '#note-table-size-grid [data-action="insert-note-table"][data-rows="1"][data-columns="1"]'
+    ).click()
+    single_column_table = page.locator("#note-editor table").last
+    single_column_table.locator("td").fill("Remove column undo")
+    single_column_table.locator("td").click()
+    table_trigger.click()
+    page.locator('[data-table-submenu-target="edit"]').hover()
+    page.locator(
+        '[data-action="edit-note-table"][data-table-operation="delete-column"]'
+    ).click()
+    assert page.locator("#note-editor table").count() == 2
+    undo_editor(page)
+    assert page.locator("#note-editor table").count() == 3
+    assert "Remove column undo" in page.locator("#note-editor table").last.inner_text()
+    redo_editor(page)
+    assert page.locator("#note-editor table").count() == 2
 
     page.get_by_role("button", name="Save Note", exact=True).click()
     page.locator("#note-favorite-toggle").click()
