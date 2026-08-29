@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Weekflow v3.1 中英双语本地 Task 管理工具，支持周/日双时间轴、随手记、多条进度历史、可选 AI 改写与 Task 草稿解析、资料库、看板、备份和 Excel 批量导入导出。"
+      content="Weekflow v3.2 中英双语本地 Task 管理工具，支持周/日双时间轴、可收藏随手记、Excel 兼容表格、多条进度历史、可选 AI 改写与 Task 草稿解析、资料库、看板和本地备份。"
     />
-    <title>Weekflow v3.1 · Task management</title>
+    <title>Weekflow v3.2 · Task management</title>
     <link rel="stylesheet" href="./css/styles.css" />
   </head>
   <body>
@@ -274,7 +274,7 @@
         <section id="home-view" class="view-panel home-view" aria-labelledby="home-heading">
           <div class="home-hero">
             <div class="home-hero-copy">
-              <p class="eyebrow">Weekflow v3.1</p>
+              <p class="eyebrow">Weekflow v3.2</p>
               <h1 id="home-heading">把工作拆成清晰的下一步</h1>
               <p>
                 用分组建立工作版图，用 Flow 串起执行步骤，再用周时间轴看清每一个 DDL。
@@ -370,7 +370,7 @@
               <span class="home-entry-copy">
                 <small>WHAT'S NEW</small>
                 <strong>更新日志</strong>
-                <span>查看 Weekflow v3.1 的发布内容</span>
+                <span>查看 Weekflow v3.2 的发布内容</span>
               </span>
               <span class="home-entry-arrow" aria-hidden="true">↗</span>
             </button>
@@ -972,7 +972,8 @@
           <ul>
             <li><b>时间轴看板：</b>主界面 Task by Week 按自然周查看 Task DDL；双击任意周表头进入 Task by Day，只显示该周 DDL，并按周一至周日精确落到具体日期。日视图通过“返回 Task by Week”回到周时间轴。</li>
             <li><b>Task 管理：</b>创建和编辑 Task，可记录多条独立进度、完成状态和相关资料；紧急程度、汇报对象和交付物为必填项，汇报对象与管理对象均按人员姓名录入。每条进度记录保留自己的创建和最后编辑时间，并支持链接、加粗、斜体、五档字号及两套 20 色字色/底色预设盘。周期可选每周或每月，需指定周期开始和结束日期。</li>
-            <li><b>随手记：</b>以标题和纯文本富格式正文保存临时想法，可搜索、编辑和双重确认删除；支持加粗、斜体、12/14/16/18/22 五档字号、SharePoint/HTTP/HTTPS 链接，以及类似 Excel 的 20 色字色和 20 色底色预设盘。</li>
+            <li><b>随手记：</b>以标题和富文本正文保存临时想法，可搜索、编辑、星标收藏和双重确认删除；支持加粗、斜体、12/14/16/18/22 五档字号、SharePoint/HTTP/HTTPS 链接、两套 20 色预设盘，以及可从 Excel 粘贴并复制回 Excel 的表格。</li>
+            <li><b>笔记表格：</b>可通过三级菜单新建表格，或在当前格插行、插列、删行、删列和合并矩形选区；保留 Excel 合并单元格，提供整表选择按钮，并支持 Cmd/Ctrl+Z 撤销及重做。AI 改写会保护表格，不会把表格内容删除。</li>
             <li><b>笔记转换：</b>可把笔记一次性追加为指定 Task 的新进度记录，也可识别一个或多个 Task 草稿。默认使用本地中英文规则；配置并启用 AI 后优先使用 AI 语义解析，失败或超时自动回退本地规则。原笔记始终保留，候选可逐个复核、跳过或手动增加。</li>
             <li><b>AI 辅助：</b>在 AI 设置中选择服务商、模型并填写 API Key，可开启笔记改写和 AI Task 草稿解析；不配置 AI 时，本地中英文规则仍可完整使用。AI 解析失败或超时会自动回退本地规则，所有结果只预填到现有 Task 草稿复核界面，不会直接创建 Task。改写始终读取编辑框当前内容；等待期间切换或继续编辑不会被迟到结果覆盖。API Key 只保存在当前浏览器来源的独立 AI 设置中，不进入业务 JSON 备份，共享设备使用后应清除连接。</li>
             <li><b>草稿识别规则：</b>支持 Task/任务/待办、Group/分组、Flow/流程、DDL/Deadline/截止日期、Urgency/Priority/紧急程度、Report To/汇报对象、Managed Person/管理对象和 Deliverable/交付物等标签。独立行的 1/2/3 或普通非空换行默认拆成不同 Task，字段行仍跟随上一 Task；行首“本周二 / 下周五 / 下下周三 / 周二”、8-25、8.25、8月25日及带年份变体会移出 Task 名称并直接预填 DDL。“每周三 / Every Wednesday”会预填每周周期和下周三 DDL，“每月 5 日 / Monthly on the 5th”会预填每月周期和下个月 5 日 DDL，周期结束仍需用户确认。其他模糊相对日期、近似名称或拼写只显示建议。</li>
@@ -992,7 +993,7 @@
           <h3>数据保存位置</h3>
           <p>数据保存在当前浏览器、当前页面来源的 <code>localStorage</code> 中，主数据键为：</p>
           <pre>weekflow-v2.4:data:v4</pre>
-          <p>v3.1 继续沿用 v2.4 兼容命名空间；内部结构自 v3.0 起为 v4，旧单条进度会自动迁移为一条历史记录。</p>
+          <p>v3.2 继续沿用 v2.4 兼容命名空间；内部结构自 v3.0 起为 v4，旧单条进度会自动迁移为一条历史记录。</p>
           <p>清除浏览器网站数据、使用无痕窗口、更换浏览器或更换启动地址，都会影响可见数据。</p>
         </section>
         <section>
@@ -1031,7 +1032,7 @@
           <h3>开发团队</h3>
           <p>开发团队：Wesley Yan</p>
           <p>首个正式版本（v1.0）：2026年7月30日</p>
-          <p>最新版本（v3.1）更新时间：2026年8月16日</p>
+          <p>最新版本（v3.2）更新时间：2026年8月29日</p>
         </section>
       </article>
       <div class="modal-actions">
@@ -1048,6 +1049,33 @@
         <button class="icon-button" type="button" data-action="close-changelog" aria-label="关闭">×</button>
       </div>
       <article class="document-content changelog-content">
+        <div class="release-entry" data-version="3.2">
+          <div class="release-heading">
+            <span>v3.2 笔记表格与收藏版</span>
+            <time datetime="2026-08-29">2026-08-29</time>
+          </div>
+          <p class="release-lead">为随手记增加星标收藏和 Excel 兼容表格，并完善表格选择、AI 改写保护与原生撤销体验。</p>
+          <section>
+            <h3>新增与调整</h3>
+            <ul>
+              <li>笔记支持星标收藏和收藏夹筛选；收藏状态随业务 JSON 一起备份和恢复。</li>
+              <li>支持从 Excel 粘贴表格并保留合并单元格；复制回 Excel 时仍保持表格结构和合并关系。</li>
+              <li>表格工具采用新建/编辑二级菜单与具体操作三级菜单，可新建最多 8 × 10 的表格，并执行插行、插列、删行、删列和合并单元格。</li>
+              <li>支持鼠标拖动或 Shift 点击选择纵向、横向及矩形单元格区域，提供清晰选中高亮和整表快捷选择按钮。</li>
+              <li>AI 改写使用占位保护表格；改写完成后恢复原表格，避免表格内容被模型删除或改写。</li>
+              <li>新建、粘贴、插入、删除和合并表格均进入浏览器原生编辑历史，可使用 Cmd/Ctrl+Z 撤销并重做。</li>
+            </ul>
+          </section>
+          <section>
+            <h3>稳定性与兼容性</h3>
+            <ul>
+              <li>修复纵向选择时相邻未选中单元格文字出现浏览器假高亮的问题。</li>
+              <li>继续保留正向/反向富文本格式、时间轴与资料库滚动位置保护，以及 Windows-safe OOXML 模板和报告生成路径。</li>
+              <li>业务数据结构仍为 v4；Task 与资料 Excel 模板、上传下载结构和看板报告格式不变。</li>
+            </ul>
+          </section>
+        </div>
+
         <div class="release-entry" data-version="3.1">
           <div class="release-heading">
             <span>v3.1 AI 辅助与富文本字号版</span>

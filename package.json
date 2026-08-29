@@ -1,8 +1,8 @@
 {
   "name": "weekflow-task-manager",
-  "version": "3.1.0",
+  "version": "3.2.0",
   "private": true,
-  "description": "Weekflow v3.1 bilingual local Task management with optional AI-assisted Notes and Task drafts, rich-text sizing, Week/Day timelines, Workflow, dashboards, and a dual-layout Document Library",
+  "description": "Weekflow v3.2 bilingual local Task management with favorite Quick Notes, Excel-compatible note tables, optional AI-assisted Task drafts, Week/Day timelines, dashboards, and a dual-layout Document Library",
   "scripts": {
     "serve": "python3 -m http.server 8080",
     "test": "node --test tests/*.test.js"

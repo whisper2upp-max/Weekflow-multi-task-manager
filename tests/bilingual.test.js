@@ -68,7 +68,7 @@ test("Document Library exposes bilingual List and Group layout controls", () => 
   assert.equal(i18n.translateText("前往"), "Go to");
 });
 
-test("v3.1 version and release documentation stay aligned", () => {
+test("v3.2 version and release documentation stay aligned", () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
   const html = fs.readFileSync(path.join(root, "Weekflow.html"), "utf8");
   const readme = fs.readFileSync(path.join(root, "README.md"), "utf8");
@@ -76,10 +76,14 @@ test("v3.1 version and release documentation stay aligned", () => {
   const changelog = fs.readFileSync(path.join(root, "CHANGELOG.md"), "utf8");
   const release = fs.readFileSync(path.join(root, "RELEASE.txt"), "utf8");
 
-  assert.equal(pkg.version, "3.1.0");
-  assert.match(html, /<title>Weekflow v3\.1/);
-  assert.match(readme, /^# Weekflow v3\.1/m);
-  assert.match(readmeEn, /^# Weekflow v3\.1/m);
+  assert.equal(pkg.version, "3.2.0");
+  assert.match(html, /<title>Weekflow v3\.2/);
+  assert.match(readme, /^# Weekflow v3\.2/m);
+  assert.match(readmeEn, /^# Weekflow v3\.2/m);
+  assert.match(
+    changelog,
+    /^## v3\.2 Note Tables and Favorites — 2026-08-29/m
+  );
   assert.match(
     changelog,
     /^## v3\.1 AI-assisted Notes and Rich-text Sizing — 2026-08-16/m
@@ -89,7 +93,8 @@ test("v3.1 version and release documentation stay aligned", () => {
     /^## v3\.0 Quick Notes and Progress History — 2026-08-15/m
   );
   assert.doesNotMatch(changelog, /^## Unreleased/m);
-  assert.match(release, /^Weekflow v3\.1\nRelease date: 2026-08-16/);
+  assert.match(release, /^Weekflow v3\.2\nRelease date: 2026-08-29/);
+  assert.match(html, /v3\.2 笔记表格与收藏版/);
   assert.match(html, /v3\.1 AI 辅助与富文本字号版/);
   assert.match(html, /v3\.0 随手记与进度历史版/);
   assert.match(html, /只预填到现有 Task 草稿复核界面/);
@@ -97,13 +102,17 @@ test("v3.1 version and release documentation stay aligned", () => {
   assert.match(readmeEn, /### Quick Notes, AI Assistance, and Task Draft Conversion/);
   assert.match(readme, /API Key 也不会写入业务 JSON 备份/);
   assert.match(readmeEn, /API Keys are excluded from business-data JSON backups/);
+  assert.match(readme, /Excel 兼容笔记表格/);
+  assert.match(readmeEn, /Excel-compatible tables/);
+  assert.match(readme, /笔记表格与收藏\.png/);
+  assert.match(readmeEn, /note-tables-favorites\.png/);
 });
 
 test("English current-Task workbook has English sheets and can be imported", async () => {
   i18n.setLanguage("en");
   const workbook = excelImport.buildWorkbook(sampleData(), { language: "en" });
   assert.deepEqual(workbook.SheetNames, ["Task Import", "Progress History", "Instructions"]);
-  assert.equal(workbook.Props.Subject, "Weekflow v3.1 re-importable Task data");
+  assert.equal(workbook.Props.Subject, "Weekflow v3.2 re-importable Task data");
   assert.equal(workbook.Sheets["Task Import"].A4.v, "Group*");
   assert.equal(workbook.Sheets["Task Import"].L5.v, "High");
   const buffer = await excelImport.buildXlsxPackage(sampleData(), JSZip, "nodebuffer", { language: "en" });
@@ -140,7 +149,7 @@ test("English Document Library workbook has English headers and can be imported"
   i18n.setLanguage("en");
   const workbook = materialExcel.buildWorkbook(sampleData(), { language: "en" });
   assert.deepEqual(workbook.SheetNames, ["Document Library"]);
-  assert.equal(workbook.Props.Title, "Weekflow v3.1 Document Library");
+  assert.equal(workbook.Props.Title, "Weekflow v3.2 Document Library");
   assert.equal(workbook.Sheets["Document Library"].A1.v, "Link Name*");
   assert.equal(workbook.Sheets["Document Library"].C2.v, "Documentation");
   const buffer = await materialExcel.buildXlsxPackage(sampleData(), JSZip, "nodebuffer", { language: "en" });
