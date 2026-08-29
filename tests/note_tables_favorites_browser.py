@@ -100,10 +100,13 @@ with sync_playwright() as playwright:
     created.locator("td").nth(0).click()
     created.locator("td").nth(2).click(modifiers=["Shift"])
     assert created.locator(".is-table-selected").count() == 2
+    assert page.evaluate("window.getSelection().isCollapsed") is True
+    assert page.evaluate("window.getSelection().toString()") == ""
     selected_background = created.locator("td").nth(0).evaluate(
         "cell => getComputedStyle(cell).backgroundColor"
     )
     assert selected_background == "rgb(223, 228, 255)"
+    page.screenshot(path="/tmp/weekflow-note-table-vertical-selection.png", full_page=False)
     first_box = created.locator("td").nth(0).bounding_box()
     last_box = created.locator("td").nth(3).bounding_box()
     page.mouse.move(first_box["x"] + first_box["width"] / 2, first_box["y"] + first_box["height"] / 2)
@@ -111,6 +114,7 @@ with sync_playwright() as playwright:
     page.mouse.move(last_box["x"] + last_box["width"] / 2, last_box["y"] + last_box["height"] / 2, steps=6)
     page.mouse.up()
     assert created.locator(".is-table-selected").count() == 4
+    assert page.evaluate("window.getSelection().isCollapsed") is True
     created.locator("td").nth(0).click()
     created.locator("td").nth(1).click(modifiers=["Shift"])
     assert created.locator(".is-table-selected").count() == 2
@@ -219,6 +223,8 @@ with sync_playwright() as playwright:
     handle.click()
     assert pasted.locator(".is-table-selected").count() == pasted.locator("td, th").count()
     assert handle.get_attribute("aria-label") == "Select entire table"
+    assert page.evaluate("window.getSelection().isCollapsed") is True
+    assert page.evaluate("window.getSelection().toString()") == ""
     page.screenshot(path="/tmp/weekflow-note-table-selection.png", full_page=False)
     clipboard = page.locator("#note-editor").evaluate(
         """editor => {

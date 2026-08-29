@@ -4195,6 +4195,25 @@
     ui.noteTableAnchorCell = anchorCell;
     ui.noteTableFocusCell = focusCell;
     renderNoteTableSelection();
+    var region = noteTableRegion();
+    if (region && region.cells.length > 1) collapseNativeTableTextSelection(focusCell);
+  }
+
+  function collapseNativeTableTextSelection(cell) {
+    if (!cell || !cell.isConnected || !dom["note-editor"].contains(cell)) return;
+    try {
+      dom["note-editor"].focus({ preventScroll: true });
+    } catch (_error) {
+      dom["note-editor"].focus();
+    }
+    var range = document.createRange();
+    range.selectNodeContents(cell);
+    range.collapse(false);
+    var selection = window.getSelection && window.getSelection();
+    if (!selection) return;
+    selection.removeAllRanges();
+    selection.addRange(range);
+    ui.richTextSelection = { editorId: "note-editor", range: range.cloneRange() };
   }
 
   function handleNoteEditorTableMouseDown(event) {
@@ -4218,6 +4237,7 @@
       ui.noteTableFocusCell = cell;
       suppressNoteTableRangeSyncForGesture();
       renderNoteTableSelection();
+      collapseNativeTableTextSelection(cell);
       return;
     }
     ui.noteTableAnchorCell = cell;
@@ -4256,6 +4276,7 @@
     ui.noteTableDragSelecting = false;
     ui.noteTableDragSelectionJustFinished = true;
     suppressNoteTableRangeSyncForGesture();
+    collapseNativeTableTextSelection(ui.noteTableFocusCell);
     window.setTimeout(function () {
       ui.noteTableDragSelectionJustFinished = false;
     }, 0);
@@ -4278,6 +4299,9 @@
     }
     ui.noteTableFocusCell = cell;
     renderNoteTableSelection();
+    if (event.shiftKey && noteTableRegion().cells.length > 1) {
+      collapseNativeTableTextSelection(cell);
+    }
   }
 
   function cancelNoteTableHandleHide() {
@@ -4347,15 +4371,7 @@
     ui.noteTableAnchorCell = anchorInfo.cell;
     ui.noteTableFocusCell = focusInfo.cell;
     renderNoteTableSelection();
-    var range = document.createRange();
-    range.selectNode(table);
-    var selection = window.getSelection && window.getSelection();
-    if (selection) {
-      selection.removeAllRanges();
-      selection.addRange(range);
-      ui.richTextSelection = { editorId: "note-editor", range: range.cloneRange() };
-    }
-    dom["note-editor"].focus({ preventScroll: true });
+    collapseNativeTableTextSelection(focusInfo.cell);
     refreshNoteTableSelectHandle();
     toast(i18n.isEnglish() ? "Whole table selected." : "已选中整个表格。");
   }
@@ -4672,7 +4688,11 @@
     wrapper.appendChild(range.cloneContents());
     var html = wrapper.querySelector("table") ? wrapper.innerHTML : "";
     var region = noteTableRegion();
-    if (!html && region && region.cells.length > 1) {
+    if (
+      !html &&
+      region &&
+      (region.cells.length > 1 || noteTableRegionIsWholeTable(region))
+    ) {
       html = cloneSelectedTableRegion(region).outerHTML;
     }
     if (!html) return;
