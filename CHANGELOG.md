@@ -10,6 +10,7 @@ Added starred Quick Note favorites and Excel-compatible tables with complete sel
 - Added direct Excel table paste with `rowspan` / `colspan` merge preservation and safe HTML sanitization.
 - Added copy-back to Excel for rectangular selections and whole tables, retaining the selected structure and merged cells.
 - Added hierarchical **Create Table / Edit Table** menus, an 8 × 10 size picker, insert row below, insert column right, delete current row/column, and merge rectangular selection commands.
+- Added **Delete Entire Table** to the Edit Table menu. With a whole-table selection, Windows Delete / macOS Delete clears cell contents, while Windows Backspace / macOS Fn+Delete removes the table; both actions use native undo.
 - Added horizontal, vertical, and rectangular mouse or Shift-click selection with clear app-owned highlighting and a floating whole-table selector.
 - Protected tables during AI Rewrite with stable placeholders and restored the original tables after rewriting.
 

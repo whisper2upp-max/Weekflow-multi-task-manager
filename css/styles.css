@@ -6217,8 +6217,20 @@ html[data-language="en"] .urgency-badge {
   font-weight: 680;
 }
 
-.note-table-edit-actions button:last-child {
+.note-table-edit-actions button[data-table-operation="merge-cells"],
+.note-table-edit-actions button[data-table-operation="delete-table"] {
   grid-column: 1 / -1;
+}
+
+.note-table-edit-actions .note-table-delete-action {
+  border-color: rgba(239, 86, 104, 0.28);
+  color: var(--coral);
+}
+
+.note-table-edit-actions .note-table-delete-action:hover:not(:disabled) {
+  border-color: rgba(239, 86, 104, 0.5);
+  background: rgba(239, 86, 104, 0.08);
+  color: var(--coral);
 }
 
 .note-table-edit-actions button:hover:not(:disabled) {

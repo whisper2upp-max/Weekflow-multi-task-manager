@@ -68,6 +68,31 @@ def redo_editor(page):
     page.keyboard.press("Meta+Shift+z")
 
 
+def set_keyboard_platform(page, platform):
+    page.evaluate(
+        """platform => {
+          Object.defineProperty(navigator, 'platform', {
+            configurable: true,
+            value: platform
+          });
+          Object.defineProperty(navigator, 'userAgentData', {
+            configurable: true,
+            value: { platform }
+          });
+        }""",
+        platform,
+    )
+
+
+def select_whole_table(page, table):
+    table.hover(position={"x": 18, "y": 18})
+    handle = page.locator("#note-table-select-handle")
+    handle.wait_for(state="visible")
+    handle.click()
+    assert table.locator(".is-table-selected").count() == table.locator("td, th").count()
+    return handle
+
+
 with sync_playwright() as playwright:
     browser = playwright.chromium.launch(headless=True)
     context = browser.new_context(viewport={"width": 1600, "height": 960})
@@ -310,11 +335,7 @@ with sync_playwright() as playwright:
     assert page.locator("#note-favorite-count").inner_text() == "1"
 
     pasted = page.locator("#note-editor table").nth(1)
-    pasted.hover(position={"x": 18, "y": 18})
-    handle = page.locator("#note-table-select-handle")
-    handle.wait_for(state="visible")
-    handle.click()
-    assert pasted.locator(".is-table-selected").count() == pasted.locator("td, th").count()
+    handle = select_whole_table(page, pasted)
     assert handle.get_attribute("aria-label") == "Select entire table"
     assert page.evaluate("window.getSelection().isCollapsed") is True
     assert page.evaluate("window.getSelection().toString()") == ""
@@ -352,6 +373,57 @@ with sync_playwright() as playwright:
     )
     assert merge_count == 2
 
+    set_keyboard_platform(page, "Win32")
+    select_whole_table(page, pasted)
+    page.keyboard.press("Delete")
+    assert page.locator("#note-editor table").count() == 2
+    assert pasted.locator("td, th").evaluate_all(
+        "cells => cells.every(cell => !(cell.textContent || '').trim())"
+    )
+    assert pasted.locator('td[rowspan="2"]').count() == 1
+    assert pasted.locator('td[colspan="2"]').count() == 1
+    undo_editor(page)
+    assert "Owner" in pasted.inner_text() and "Status" in pasted.inner_text()
+
+    select_whole_table(page, pasted)
+    page.keyboard.press("Backspace")
+    assert page.locator("#note-editor table").count() == 1
+    undo_editor(page)
+    assert page.locator("#note-editor table").count() == 2
+    assert "Owner" in pasted.inner_text()
+
+    set_keyboard_platform(page, "MacIntel")
+    select_whole_table(page, pasted)
+    page.keyboard.press("Backspace")
+    assert page.locator("#note-editor table").count() == 2
+    assert pasted.locator("td, th").evaluate_all(
+        "cells => cells.every(cell => !(cell.textContent || '').trim())"
+    )
+    undo_editor(page)
+    assert "Owner" in pasted.inner_text() and "Status" in pasted.inner_text()
+
+    select_whole_table(page, pasted)
+    page.keyboard.press("Delete")
+    assert page.locator("#note-editor table").count() == 1
+    undo_editor(page)
+    assert page.locator("#note-editor table").count() == 2
+
+    pasted.locator('td[rowspan="2"]').click()
+    table_trigger.click()
+    page.locator('[data-table-submenu-target="edit"]').hover()
+    delete_table_button = page.get_by_role("button", name="Delete Entire Table", exact=True)
+    assert delete_table_button.is_visible()
+    assert delete_table_button.is_enabled()
+    delete_table_button.click()
+    assert page.locator("#note-editor table").count() == 1
+    undo_editor(page)
+    assert page.locator("#note-editor table").count() == 2
+    redo_editor(page)
+    assert page.locator("#note-editor table").count() == 1
+    undo_editor(page)
+    assert page.locator("#note-editor table").count() == 2
+    page.get_by_role("button", name="Save Note", exact=True).click()
+
     page.locator('[data-language="zh-CN"]').click()
     page.wait_for_load_state("networkidle")
     page.get_by_role("button", name="随手记", exact=True).click()
@@ -361,6 +433,7 @@ with sync_playwright() as playwright:
     page.locator('[data-action="toggle-note-table-menu"]').click()
     assert page.locator('[data-table-submenu-target="create"]').inner_text().strip().startswith("新建表格")
     page.locator('[data-table-submenu-target="edit"]').hover()
+    assert page.get_by_role("button", name="删除整个表格", exact=True).is_visible()
     assert "点击并拖过单元格" in page.locator("#note-table-edit-help").inner_text()
 
     page.screenshot(path="/tmp/weekflow-note-tables-favorites.png", full_page=False)

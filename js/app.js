@@ -655,6 +655,13 @@
   }
 
   function handleKeyboard(event) {
+    var tableOperation = wholeNoteTableKeyboardOperation(event);
+    if (tableOperation) {
+      event.preventDefault();
+      event.stopPropagation();
+      editNoteTable(tableOperation);
+      return;
+    }
     if (event.key === "Escape") {
       closePresetColorPalettes();
       closeNoteTableMenu();
@@ -673,6 +680,41 @@
         search.select();
       });
     }
+  }
+
+  function usesAppleDeleteKeyLayout() {
+    var platform =
+      (navigator.userAgentData && navigator.userAgentData.platform) ||
+      navigator.platform ||
+      "";
+    return /mac|iphone|ipad|ipod/i.test(String(platform));
+  }
+
+  function wholeNoteTableKeyboardOperation(event) {
+    if (
+      ui.view !== "notes" ||
+      event.defaultPrevented ||
+      event.isComposing ||
+      event.altKey ||
+      event.ctrlKey ||
+      event.metaKey ||
+      event.shiftKey
+    ) {
+      return "";
+    }
+    var editor = dom["note-editor"];
+    var activeElement = document.activeElement;
+    if (!editor || (activeElement !== editor && !editor.contains(activeElement))) return "";
+    var region = noteTableRegion();
+    if (!noteTableRegionIsWholeTable(region)) return "";
+    if (usesAppleDeleteKeyLayout()) {
+      if (event.key === "Backspace") return "clear-table";
+      if (event.key === "Delete") return "delete-table";
+      return "";
+    }
+    if (event.key === "Delete") return "clear-table";
+    if (event.key === "Backspace") return "delete-table";
+    return "";
   }
 
   function handleTimelineSingleFilterChange(event) {
@@ -4380,7 +4422,15 @@
     renderNoteTableSelection();
     collapseNativeTableTextSelection(focusInfo.cell);
     refreshNoteTableSelectHandle();
-    toast(i18n.isEnglish() ? "Whole table selected." : "已选中整个表格。");
+    toast(
+      usesAppleDeleteKeyLayout()
+        ? i18n.isEnglish()
+          ? "Whole table selected. Delete clears contents; Fn+Delete deletes the table."
+          : "已选中整个表格。Delete 清空内容；Fn+Delete 删除表格。"
+        : i18n.isEnglish()
+          ? "Whole table selected. Delete clears contents; Backspace deletes the table."
+          : "已选中整个表格。Delete 清空内容；Backspace 删除表格。"
+    );
   }
 
   function placeCaretInNode(node) {
@@ -4699,10 +4749,17 @@
     if (!context) return;
     var beforeTableHtml = richText.sanitizeHtml(context.table.outerHTML, richText.MAX_NOTE_TEXT);
     var removeTable =
+      operation === "delete-table" ||
       (operation === "delete-row" && context.region.model.rows.length <= 1) ||
       (operation === "delete-column" && context.region.model.width <= 1);
     var nextCell = null;
     if (!removeTable) {
+      if (operation === "clear-table") {
+        queryAll("td, th", context.table).forEach(function (cell) {
+          cell.replaceChildren(document.createElement("br"));
+        });
+        nextCell = context.focusCell;
+      }
       if (operation === "insert-row") {
         nextCell = insertTableRowBelow(context.region, context.focusCell);
       }
