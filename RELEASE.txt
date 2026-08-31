@@ -5,6 +5,7 @@ Quick Note tables and favorites release: 2026-08-29
 - Adds star favorites and a Favorites filter for saved Quick Notes; JSON backup and restore preserve the favorite state.
 - Pastes Excel tables into Notes with merged cells intact and copies rectangular selections or whole tables back to Excel with the same structure.
 - Adds hierarchical Create/Edit table menus, an 8 × 10 size picker, insert/delete row and column commands, rectangular merge selection, and a floating whole-table selector.
+- Adds Delete Entire Table to the Edit Table menu. Whole-table Windows Delete / macOS Delete clears contents; Windows Backspace / macOS Fn+Delete removes the table, with native undo for both.
 - Keeps AI Rewrite from deleting tables by replacing them with stable placeholders and restoring the original tables after the rewrite.
 - Makes table creation, paste, insert, delete, merge, and final-row/final-column removal independently undoable with Command/Ctrl+Z and redo.
 - Fixes misleading native text highlighting in adjacent unselected cells after vertical selection.
