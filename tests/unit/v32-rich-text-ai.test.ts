@@ -51,4 +51,39 @@ describe("AI provider transport", () => {
     expect(aiChat.mock.calls[0][0].payload).toHaveProperty("thinking");
     expect(aiChat.mock.calls[1][0].payload).not.toHaveProperty("thinking");
   });
+
+  it("AI 漏字段时用原始片段补齐可靠的 DDL、人员、交付物和分组", async () => {
+    const response = JSON.stringify({
+      tasks: [{
+        sourceText: "- **下周四**：完成汇报材料；分组：服务研发；汇报对象：Lucy；管理对象：Jack",
+        taskName: "**下周四**：完成汇报材料"
+      }]
+    });
+    const aiChat = vi.fn(async (request: { payload: Record<string, unknown> }) => ({
+      ok: true,
+      data: { choices: [{ message: { content: response } }] },
+      request
+    }));
+    Object.assign(globalThis, { window: { weekflow: { aiChat } } });
+    const settings = ai.normalizeSettings({ enabled: true, provider: "custom", apiKey: "key", baseUrl: "https://example.com/v1", model: "model" });
+    const groups = [{
+      id: "g-service", name: "服务研发", color: "#665CFF", order: 0,
+      collapsed: false, createdAt: "2026-08-01T00:00:00.000Z", updatedAt: "2026-08-01T00:00:00.000Z"
+    }];
+    const [candidate] = await ai.parseTasks("note", {
+      settings, groups, reportToValues: ["Lucy"], managedObjectValues: ["Jack"],
+      referenceDate: new Date(2026, 7, 15, 10, 0, 0)
+    });
+    expect(candidate).toMatchObject({
+      taskName: "完成汇报材料",
+      ddl: "2026-08-20",
+      groupId: "g-service",
+      reportTo: "Lucy",
+      managedObject: "Jack",
+      deliverable: "汇报材料"
+    });
+    const messages = aiChat.mock.calls[0][0].payload.messages as Array<{ content: string }>;
+    expect(messages[0].content).toContain("deliverable 必须提取");
+    expect(messages[0].content).toContain("不得编造");
+  });
 });

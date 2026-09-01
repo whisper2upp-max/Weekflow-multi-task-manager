@@ -1,6 +1,6 @@
 /** Weekflow Desktop AI settings and OpenAI-compatible client. */
 import type { Flow, Group, RecurrenceCadence, Urgency } from "./types";
-import type { DraftSuggestion, TaskDraftCandidate } from "./task-draft-parser";
+import { parseSingle, type DraftSuggestion, type TaskDraftCandidate } from "./task-draft-parser";
 
 export const STORAGE_KEY = "weekflow-desktop:ai-settings:v1";
 export const REQUEST_TIMEOUT_MS = 45_000;
@@ -168,30 +168,42 @@ function validIsoDate(value: unknown): boolean {
 }
 function normalizeAiTask(raw: unknown, context: AiParserContext): TaskDraftCandidate {
   const source = raw && typeof raw === "object" ? raw as Record<string, unknown> : {};
+  const sourceText = String(source.sourceText || "").trim();
+  const rawTaskName = String(source.taskName || "").trim();
+  // AI output can omit an otherwise obvious field. Re-run the local,
+  // explainable parser on the exact source fragment and use it only as a
+  // fallback, never to overwrite a valid AI value.
+  const local = parseSingle(sourceText || rawTaskName, context);
   const groupName = matchKnown(source.groupName || source.group, context.groups || [], (group) => group.name);
   let group = (context.groups || []).find((item) => item.name === groupName) || null;
+  if (!group && local.groupId) group = (context.groups || []).find((item) => item.id === local.groupId) || null;
   const scopedFlows = (context.flows || []).filter((flow) => !group || flow.groupId === group.id);
   const flowName = matchKnown(source.flowName || source.flow, scopedFlows, (flow) => flow.name);
   const matchingFlows = scopedFlows.filter((flow) => flow.name === flowName);
   const flow = matchingFlows.length === 1 ? matchingFlows[0] : null;
+  const localFlow = scopedFlows.find((item) => item.id === local.flowId) || null;
   if (!group && flow) group = (context.groups || []).find((item) => item.id === flow.groupId) || null;
-  let ddl = String(source.ddl || "").trim(); if (ddl && !validIsoDate(ddl)) ddl = "";
-  const cadence: RecurrenceCadence = ["none", "weekly", "monthly"].includes(String(source.recurrenceCadence)) ? source.recurrenceCadence as RecurrenceCadence : "none";
-  let recurrenceStart = String(source.recurrenceStart || "").trim(); if (recurrenceStart && !validIsoDate(recurrenceStart)) recurrenceStart = "";
-  let recurrenceEnd = String(source.recurrenceEnd || "").trim(); if (recurrenceEnd && !validIsoDate(recurrenceEnd)) recurrenceEnd = "";
+  let ddl = String(source.ddl || "").trim(); if (ddl && !validIsoDate(ddl)) ddl = ""; ddl ||= local.ddl;
+  const cadence: RecurrenceCadence = ["none", "weekly", "monthly"].includes(String(source.recurrenceCadence))
+    ? source.recurrenceCadence as RecurrenceCadence
+    : local.recurrenceCadence;
+  let recurrenceStart = String(source.recurrenceStart || "").trim(); if (recurrenceStart && !validIsoDate(recurrenceStart)) recurrenceStart = ""; recurrenceStart ||= local.recurrenceStart;
+  let recurrenceEnd = String(source.recurrenceEnd || "").trim(); if (recurrenceEnd && !validIsoDate(recurrenceEnd)) recurrenceEnd = ""; recurrenceEnd ||= local.recurrenceEnd;
   const urgencyText = String(source.urgency || "").toLocaleLowerCase();
-  const urgency: Urgency | "" = ["low", "medium", "high"].includes(urgencyText) ? urgencyText as Urgency : "";
-  const reportTo = matchKnown(source.reportTo, context.reportToValues || [], (value) => value);
-  const managedObject = matchKnown(source.managedObject, context.managedObjectValues || [], (value) => value);
+  const urgency: Urgency | "" = ["low", "medium", "high"].includes(urgencyText) ? urgencyText as Urgency : local.urgency;
+  const reportTo = matchKnown(source.reportTo, context.reportToValues || [], (value) => value) || local.reportTo;
+  const managedObject = matchKnown(source.managedObject, context.managedObjectValues || [], (value) => value) || local.managedObject;
+  const aiTaskName = parseSingle(rawTaskName, context).taskName;
+  const deliverable = String(source.deliverable || "").trim().slice(0, 500) || local.deliverable;
   const suggestions: DraftSuggestion[] = [];
   const candidate: TaskDraftCandidate = {
-    sourceText: String(source.sourceText || "").trim(),
-    taskName: String(source.taskName || "").trim().slice(0, 160),
-    groupId: group?.id || "", groupName: group?.name || groupName,
-    flowId: flow?.id || "", flowName: flow?.name || flowName,
+    sourceText,
+    taskName: (aiTaskName || local.taskName).slice(0, 160),
+    groupId: group?.id || "", groupName: group?.name || local.groupName || groupName,
+    flowId: flow?.id || localFlow?.id || "", flowName: flow?.name || localFlow?.name || flowName,
     ddl, recurrenceCadence: cadence, recurrenceStart, recurrenceEnd, urgency,
     reportTo: reportTo.trim().slice(0, 120), managedObject: managedObject.trim().slice(0, 160),
-    deliverable: String(source.deliverable || "").trim().slice(0, 500), suggestions, recognizedFields: []
+    deliverable, suggestions, recognizedFields: []
   };
   if (!candidate.taskName && candidate.sourceText) candidate.taskName = candidate.sourceText.split(/\n/)[0].replace(/^[-*•▪◦\s]+/, "").slice(0, 160);
   if (candidate.recurrenceCadence !== "none" && !candidate.recurrenceStart && candidate.ddl) candidate.recurrenceStart = candidate.ddl;
@@ -212,7 +224,9 @@ export async function parseTasks(noteText: string, context: AiParserContext = {}
   const reference = context.referenceDate instanceof Date && !Number.isNaN(context.referenceDate.getTime()) ? context.referenceDate : new Date();
   const two = (value: number) => String(value).padStart(2, "0");
   const today = `${reference.getFullYear()}-${two(reference.getMonth() + 1)}-${two(reference.getDate())}`;
-  const systemPrompt = "你是 Weekflow 的任务草稿解析器。请把用户随手记按语义拆分成一个或多个潜在 Task，并从原文中提取字段。\n只能输出一个 JSON 对象，不要输出 Markdown 代码块、不要输出解释。格式：\n" +
+  const systemPrompt = "你是 Weekflow 的任务草稿解析器。请把用户随手记按语义拆分成一个或多个潜在 Task，并从原文中提取字段。\n" +
+    "提取规则：1. DDL 必须结合今天解析明确日期或本周/下周/下下周等相对日期；2. groupName 只能返回现有分组中的准确名称，无法可靠匹配时留空；3. reportTo 是汇报对象，managedObject 是管理对象，不得互换；4. deliverable 必须提取任务要产出的具体交付物，例如‘完成报告’的交付物是‘报告’，‘完成汇报材料’的交付物是‘汇报材料’；5. 原文没有依据的字段必须留空，不得编造；6. sourceText 保留该 Task 对应的原始片段，taskName 不带日期前缀、Markdown 星号或字段标签。\n" +
+    "只能输出一个 JSON 对象，不要输出 Markdown 代码块、不要输出解释。格式：\n" +
     '{"tasks":[{"sourceText":"原始片段","taskName":"任务名称","groupName":"分组名称或空","flowName":"Flow名称或空","ddl":"YYYY-MM-DD或空","recurrenceCadence":"none/weekly/monthly","recurrenceStart":"YYYY-MM-DD或空","recurrenceEnd":"YYYY-MM-DD或空","urgency":"low/medium/high或空","reportTo":"汇报对象或空","managedObject":"管理对象或空","deliverable":"交付物或空"}]}';
   const userPrompt = `今天是 ${today}\n现有分组：${knownGroups || "无"}\n现有 Flow：${knownFlows || "无"}\n已知汇报对象：${(context.reportToValues || []).join("、") || "无"}\n已知管理对象：${(context.managedObjectValues || []).join("、") || "无"}\n\n请解析以下随手记：\n${noteText}`;
   const content = await chatContent(context.settings || getSettings(), [{ role: "system", content: systemPrompt }, { role: "user", content: userPrompt }], { temperature: 0.1, maxTokens: outputTokenBudget(noteText, 0.6) });

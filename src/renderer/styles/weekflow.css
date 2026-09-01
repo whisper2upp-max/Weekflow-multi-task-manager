@@ -6574,18 +6574,29 @@ html[data-language="en"] .urgency-badge {
 }
 .note-table-select-handle[hidden] { display: none; }
 .note-table-select-handle:hover,
-.note-table-select-handle.is-selected { border-color: var(--indigo); background: var(--indigo-soft); }
+.note-table-select-handle:focus-visible,
+.note-table-select-handle.is-selected { outline: 0; border-color: var(--indigo); background: var(--indigo-soft); }
+.note-table-select-handle-icon {
+  width: 13px;
+  height: 13px;
+  border: 1px solid currentColor;
+  border-radius: 2px;
+  background:
+    linear-gradient(to right, transparent 46%, currentColor 47%, currentColor 53%, transparent 54%),
+    linear-gradient(to bottom, transparent 46%, currentColor 47%, currentColor 53%, transparent 54%);
+  opacity: 0.82;
+}
 
 .note-editor-comparison {
   position: relative;
   display: grid;
-  min-height: 0;
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto minmax(260px, 1fr);
+  gap: 0;
+  min-height: 260px;
 }
-.note-editor-comparison > .rich-text-toolbar { grid-column: 1 / -1; }
-.note-editor-comparison.is-comparing { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 14px; }
-.note-editor-comparison.is-comparing > .rich-text-toolbar { grid-column: 1 / -1; }
+.note-editor-comparison .rich-text-toolbar { grid-column: 1 / -1; }
+.note-editor-shell.is-comparing .note-editor-comparison { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 14px; }
 .note-ai-original-panel {
   display: grid;
   min-width: 0;
@@ -6595,8 +6606,9 @@ html[data-language="en"] .urgency-badge {
   border-radius: 12px;
   background: #f8f9fc;
 }
-.note-ai-original-panel > div:first-child { display: flex; align-items: center; justify-content: space-between; gap: 8px; border-bottom: 1px solid var(--line); padding: 8px 12px; background: #eef0f7; font-size: 11px; }
-.note-ai-original-content { overflow: auto; padding: 12px; color: var(--ink-soft); font-size: 14px; line-height: 1.7; }
+.note-ai-original-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; border-bottom: 1px solid var(--line); padding: 8px 12px; background: #eef0f7; color: var(--ink); font-size: 13px; font-weight: 700; }
+.note-ai-original-actions { display: inline-flex; align-items: center; gap: 6px; }
+.note-ai-original-content { overflow: auto; padding: 12px; color: var(--ink-soft); font-size: 14px; line-height: 1.7; white-space: pre-wrap; word-break: break-word; }
 .note-actions { grid-template-columns: auto 1fr auto auto auto auto auto; align-items: center; }
 .note-ai-toggle { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-soft); font-size: 10px; white-space: nowrap; }
 .note-ai-toggle input { width: 16px; height: 16px; accent-color: var(--indigo); }

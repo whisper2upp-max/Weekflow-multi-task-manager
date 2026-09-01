@@ -76,6 +76,14 @@ function clean(value: unknown, limit = 500): string {
   return String(value ?? "").replace(/\r\n/g, "\n").trim().slice(0, limit);
 }
 
+/** Remove lightweight Markdown decoration before applying deterministic rules. */
+function textForParsing(value: unknown): string {
+  return clean(value, 30_000)
+    .replace(/\*+/g, "")
+    .replace(/__+/g, "")
+    .replace(/`+/g, "");
+}
+
 export function normalized(value: unknown): string {
   return clean(value).toLocaleLowerCase().replace(/[\s\u3000_\-—–·•:：,，.。/\\()（）\[\]【】]+/g, "");
 }
@@ -229,6 +237,28 @@ function fieldLine(line: string): boolean {
   return FIELD_KEYS.some((key) => LABELS[key].some((label) => new RegExp(`^\\s*${escapeRegExp(label)}\\s*[:：=]`, "i").test(line)));
 }
 
+const DELIVERABLE_NOUN = /(?:材料|报告|方案|文档|表格|清单|台账|底稿|文件|幻灯片|演示稿|ppt|邮件|记录|考题|代码|脚本|原型|模板|数据|结果|纪要|计划|合同|申请|审批|report|material|deck|presentation|document|spreadsheet|workbook|checklist|register|workpaper|file|email|record|question|code|script|prototype|template|data|result|minutes|plan|contract|application|approval)/i;
+
+/**
+ * Conservative fallback for simple phrases such as “完成汇报材料”. It only
+ * fills the field when the object contains a recognisable deliverable noun;
+ * ambiguous actions remain blank for user review.
+ */
+function inferDeliverable(text: string): string {
+  const explicit = labeledValue(text, LABELS.deliverable);
+  if (explicit) return clean(explicit, 500);
+  const fragments = text.split(/\n|[;；]/).map((line) => stripLeadingDatePrefix(line.replace(BULLET, "")).trim()).filter(Boolean);
+  for (const fragment of fragments) {
+    const prefix = fragment.match(/^(?:完成|提交|输出|编写|撰写|制作|准备|交付|提供|整理|更新|发布|产出)\s*(?:一份|一个|一套)?\s*([^，,。.!！]+)$/i)
+      || fragment.match(/^(?:complete|finish|submit|deliver|write|draft|prepare|produce|create|update)\s+(?:the\s+|a\s+|an\s+)?([^,.;!]+)$/i);
+    const suffix = fragment.match(/^([^，,。.!！]+?)(?:必须|需要|得|要)?(?:写完|做完|完成|提交|交付)$/i);
+    const candidate = clean(prefix?.[1] || suffix?.[1] || "", 500)
+      .replace(/^[：:,，、\s]+|[：:,，、\s]+$/g, "");
+    if (candidate && DELIVERABLE_NOUN.test(candidate)) return candidate;
+  }
+  return "";
+}
+
 export function editDistance(left: unknown, right: unknown): number {
   const a = normalized(left);
   const b = normalized(right);
@@ -315,7 +345,7 @@ function firstTaskName(text: string): string {
     .replace(/^\s*(?:(?:every|each)\s+|weekly\s+(?:on\s+)?)(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b\s*/i, "")
     .replace(/^\s*(?:every\s+month|monthly)(?:\s+on)?(?:\s+(?:the|day))?\s+\d{1,2}(?:st|nd|rd|th)?\b\s*/i, "")
     .replace(/^\s*(?:the\s+)?last\s+day\s+of\s+(?:every|each)\s+month\b\s*/i, "");
-  const marker = line.search(/\s+(?:ddl|deadline|due|截止|紧急程度|urgency|priority|分组|group|flow|交付物|deliverable)\s*[:：=]/i);
+  const marker = line.search(/(?:\s+|[;；]\s*)(?:ddl|deadline|due|截止|紧急程度|urgency|priority|分组|group|flow|汇报对象|report\s+to|管理对象|managed\s+object|交付物|deliverable)\s*[:：=]/i);
   if (marker > 0) line = line.slice(0, marker);
   return clean(line.replace(/[;；|]+$/, ""), 160);
 }
@@ -353,36 +383,37 @@ function extractPerson(text: string, labels: readonly string[], knownValues: str
 
 export function parseSingle(value: unknown, context: DraftParserContext = {}): TaskDraftCandidate {
   const sourceText = clean(value, 30_000);
-  const natural = parseNaturalRecurrenceSchedule(sourceText, context.referenceDate);
+  const parseText = textForParsing(sourceText);
+  const natural = parseNaturalRecurrenceSchedule(parseText, context.referenceDate);
   const groups = context.groups || [];
-  const groupRaw = labeledValue(sourceText, LABELS.groupName);
-  let groupMatch = matchKnown(groupRaw, groups, sourceText, (item) => item.name);
+  const groupRaw = labeledValue(parseText, LABELS.groupName);
+  let groupMatch = matchKnown(groupRaw, groups, parseText, (item) => item.name);
   let group = groupMatch.item;
   const matchingFlows = (context.flows || []).filter((flow) => !group || flow.groupId === group.id);
-  const flowRaw = labeledValue(sourceText, LABELS.flowName);
-  const flowMatch = matchKnown(flowRaw, matchingFlows, sourceText, (item) => item.name);
+  const flowRaw = labeledValue(parseText, LABELS.flowName);
+  const flowMatch = matchKnown(flowRaw, matchingFlows, parseText, (item) => item.name);
   const flow = flowMatch.item;
   if (!group && flow) {
     group = groups.find((item) => item.id === flow.groupId) || null;
     if (group) groupMatch = { item: group, confidence: "medium", suggestion: "" };
   }
-  const explicitDdl = labeledValue(sourceText, LABELS.ddl);
+  const explicitDdl = labeledValue(parseText, LABELS.ddl);
   const ddl = explicitDdl
     ? parseFlexibleDate(explicitDdl, context.referenceDate)
     : natural.ddl
       ? { value: natural.ddl, confidence: "high" as const, source: natural.source }
-      : parseFlexibleDate(sourceText, context.referenceDate);
+      : parseFlexibleDate(parseText, context.referenceDate);
   const recurrence = natural.confidence === "high"
     ? { value: natural.cadence, confidence: "high" as const }
-    : parseRecurrence(sourceText);
-  const recurrenceStart = parseFlexibleDate(labeledValue(sourceText, LABELS.recurrenceStart), context.referenceDate);
-  const recurrenceEnd = parseFlexibleDate(labeledValue(sourceText, LABELS.recurrenceEnd), context.referenceDate);
-  const urgency = parseUrgency(sourceText);
-  const reportTo = extractPerson(sourceText, LABELS.reportTo, context.reportToValues);
-  const managedObject = extractPerson(sourceText, LABELS.managedObject, context.managedObjectValues);
+    : parseRecurrence(parseText);
+  const recurrenceStart = parseFlexibleDate(labeledValue(parseText, LABELS.recurrenceStart), context.referenceDate);
+  const recurrenceEnd = parseFlexibleDate(labeledValue(parseText, LABELS.recurrenceEnd), context.referenceDate);
+  const urgency = parseUrgency(parseText);
+  const reportTo = extractPerson(parseText, LABELS.reportTo, context.reportToValues);
+  const managedObject = extractPerson(parseText, LABELS.managedObject, context.managedObjectValues);
   const candidate: TaskDraftCandidate = {
     sourceText,
-    taskName: firstTaskName(sourceText),
+    taskName: firstTaskName(parseText),
     groupId: group?.id || "",
     groupName: group?.name || groupRaw,
     flowId: flow?.id || "",
@@ -394,7 +425,7 @@ export function parseSingle(value: unknown, context: DraftParserContext = {}): T
     urgency: urgency.confidence === "high" ? urgency.value : "",
     reportTo: reportTo.value,
     managedObject: managedObject.value,
-    deliverable: clean(labeledValue(sourceText, LABELS.deliverable), 500),
+    deliverable: inferDeliverable(parseText),
     suggestions: [],
     recognizedFields: []
   };

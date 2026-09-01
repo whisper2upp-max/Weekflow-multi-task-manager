@@ -529,9 +529,21 @@ export default function AdvancedRichTextEditor({ id, value, onChange, maxLength,
   const refreshHandle = (table: HTMLTableElement | null): void => {
     const control = controlRef.current;
     if (!control || !table?.isConnected) return setHandlePosition((position) => ({ ...position, visible: false }));
-    const controlBounds = control.getBoundingClientRect();
+    // .rich-text-control intentionally uses display: contents so that the editor
+    // can participate in the surrounding grid. Such an element has no usable
+    // layout box: its getBoundingClientRect() is effectively the viewport origin,
+    // which previously sent this absolutely positioned handle far below/right of
+    // the table. The handle is positioned by the real parent grid, so calculate
+    // against that same box and overlap the table's upper-left corner like Word.
+    const positioningHost = control.parentElement;
+    if (!positioningHost) return setHandlePosition((position) => ({ ...position, visible: false }));
+    const hostBounds = positioningHost.getBoundingClientRect();
     const tableBounds = table.getBoundingClientRect();
-    setHandlePosition({ visible: true, left: Math.max(2, tableBounds.left - controlBounds.left - 24), top: Math.max(58, tableBounds.top - controlBounds.top + 4) });
+    setHandlePosition({
+      visible: true,
+      left: Math.max(0, tableBounds.left - hostBounds.left - 17),
+      top: Math.max(0, tableBounds.top - hostBounds.top - 17)
+    });
   };
   const cancelHandleHide = (): void => {
     if (handleHideTimerRef.current !== null) window.clearTimeout(handleHideTimerRef.current);
@@ -617,7 +629,7 @@ export default function AdvancedRichTextEditor({ id, value, onChange, maxLength,
         </div> : null}
         <button type="button" onMouseDown={(event) => event.preventDefault()} onClick={() => command("removeFormat")}>清除格式</button>
       </div>
-      {allowTables ? <button className={`note-table-select-handle${wholeTable(selectedRegion) && selectedRegion?.table === hoveredTable ? " is-selected" : ""}`} type="button" hidden={!handlePosition.visible} style={{ left: handlePosition.left, top: handlePosition.top }} aria-label="选择整个表格" title="选择整个表格" onMouseEnter={cancelHandleHide} onMouseLeave={scheduleHandleHide} onMouseDown={(event) => event.preventDefault()} onClick={selectWholeHoveredTable}>↖</button> : null}
+      {allowTables ? <button className={`note-table-select-handle${wholeTable(selectedRegion) && selectedRegion?.table === hoveredTable ? " is-selected" : ""}`} type="button" hidden={!handlePosition.visible} style={{ left: handlePosition.left, top: handlePosition.top }} aria-label="选择整个表格" title="选择整个表格" onMouseEnter={cancelHandleHide} onMouseLeave={scheduleHandleHide} onMouseDown={(event) => event.preventDefault()} onClick={selectWholeHoveredTable}><span className="note-table-select-handle-icon" aria-hidden="true"></span></button> : null}
       <div ref={editorRef} id={id} className={`rich-text-editor ${className}`.trim()} contentEditable suppressContentEditableWarning role="textbox" aria-multiline="true" data-user-content="true" data-placeholder={placeholder}
         onInput={emit}
         onMouseDown={(event) => {

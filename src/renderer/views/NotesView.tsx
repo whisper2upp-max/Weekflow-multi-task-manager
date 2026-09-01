@@ -71,6 +71,7 @@ export default function NotesView() {
   const [saving, setSaving] = useState(false);
   const [rewriting, setRewriting] = useState(false);
   const [aiOriginalHtml, setAiOriginalHtml] = useState<string | null>(null);
+  const [aiOriginalVisible, setAiOriginalVisible] = useState(false);
   const [aiSettingsVersion, setAiSettingsVersion] = useState(0);
   const rewriteOperationRef = useRef<{ id: string; noteId: string; isNew: boolean; originalHtml: string } | null>(null);
   const activeNoteRef = useRef({ selectedId, isNew, html });
@@ -95,6 +96,7 @@ export default function NotesView() {
     rewriteOperationRef.current = null;
     setRewriting(false);
     setAiOriginalHtml(null);
+    setAiOriginalVisible(false);
     setSelectedId(note?.id || null);
     setIsNew(nextIsNew);
     setTitle(note?.title || "");
@@ -218,6 +220,7 @@ export default function NotesView() {
         return;
       }
       setAiOriginalHtml(originalHtml);
+      setAiOriginalVisible(true);
       setHtml(restored.html);
       setText(richText.plainText(restored.html));
       markDirty();
@@ -235,6 +238,7 @@ export default function NotesView() {
     setHtml(aiOriginalHtml);
     setText(richText.plainText(aiOriginalHtml));
     setAiOriginalHtml(null);
+    setAiOriginalVisible(false);
     markDirty();
     useUiStore.getState().pushToast("已恢复为改写前原文。");
   };
@@ -291,15 +295,15 @@ export default function NotesView() {
           {!editing ? (
             <div className="notes-empty-state"><span className="empty-icon" aria-hidden="true">✎</span><h2>写下第一条随手记</h2><p>保存后可以把内容添加为 Task 进度记录，或转换成一个或多个 Task 草稿。</p><button className="button button-primary" type="button" onClick={newNote}>新建笔记</button></div>
           ) : (
-            <div className="note-editor-shell">
+            <div className={`note-editor-shell${aiOriginalHtml && aiOriginalVisible ? " is-comparing" : ""}`}>
               <div className="note-title-row">
                 <input maxLength={160} autoComplete="off" placeholder="笔记标题" aria-label="笔记标题" value={title} onChange={(event) => { setTitle(event.target.value); markDirty(); }} />
                 {selected ? <button className={`note-favorite-toggle${selected.favorite ? " is-favorite" : ""}`} type="button" aria-label={selected.favorite ? "取消收藏" : "收藏笔记"} title={selected.favorite ? "取消收藏" : "收藏笔记"} onClick={() => toggleFavorite(selected)}><span aria-hidden="true">{selected.favorite ? "★" : "☆"}</span></button> : null}
                 <span className={dirty ? "is-dirty" : ""}>{dirty ? "有未保存修改" : selected ? "已保存" : "尚未保存"}</span>
               </div>
-              <div className={`note-editor-comparison${aiOriginalHtml ? " is-comparing" : ""}`}>
+              <div className="note-editor-comparison">
                 <RichTextEditor key={selectedId || "new"} id="note-editor" value={html} maxLength={richText.MAX_NOTE_TEXT} className="note-editor" placeholder="在这里记录工作想法、会议要点或 SharePoint 链接…" allowTables onChange={(next) => { setHtml(next.html); setText(next.text); markDirty(); }} />
-                {aiOriginalHtml ? <aside className="note-ai-original-panel"><div><strong>AI 改写前原文</strong><button className="button button-quiet" type="button" onClick={restoreOriginal}>恢复原文</button></div><RichTextView className="note-ai-original-content" html={aiOriginalHtml} /></aside> : null}
+                {aiOriginalHtml && aiOriginalVisible ? <aside className="note-ai-original-panel"><div className="note-ai-original-head"><strong>改写前原文</strong><span className="note-ai-original-actions"><button className="button button-quiet button-small" type="button" onClick={restoreOriginal}>恢复原文</button><button className="icon-button" type="button" aria-label="关闭原文预览" onClick={() => setAiOriginalVisible(false)}>×</button></span></div><RichTextView className="note-ai-original-content" html={aiOriginalHtml} /></aside> : null}
               </div>
               <div className="note-meta-row"><span>{selected ? "最后更新：" + noteTime(selected.updatedAt) : "尚未保存"}</span><span>{text.length} / {richText.MAX_NOTE_TEXT}</span></div>
               {selected && (progressConversions || taskConversions) ? <div className="note-conversion-summary">已完成一次性转换：{progressConversions} 条进度记录 · {taskConversions} 个 Task</div> : null}

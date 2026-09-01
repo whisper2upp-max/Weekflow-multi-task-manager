@@ -40,6 +40,30 @@ describe("Quick Note Task 草稿本地规则解析", () => {
     expect(monthly.recurrenceCadence).toBe("monthly");
     expect(monthly.ddl).toBe("2026-09-25");
   });
+
+  it("忽略 Markdown 标记并保守预填简单交付物、人员与分组", () => {
+    const candidate = taskDrafts.parseSingle(
+      "- **下周四**：完成汇报材料；分组：服务研发；汇报对象：Lucy；管理对象：Jack",
+      {
+        referenceDate,
+        groups: [{
+          id: "g-service", name: "服务研发", color: "#665CFF", order: 0,
+          collapsed: false, createdAt: "2026-08-01T00:00:00.000Z", updatedAt: "2026-08-01T00:00:00.000Z"
+        }],
+        reportToValues: ["Lucy"],
+        managedObjectValues: ["Jack"]
+      }
+    );
+    expect(candidate.taskName).toBe("完成汇报材料");
+    expect(candidate.ddl).toBe("2026-08-20");
+    expect(candidate.groupId).toBe("g-service");
+    expect(candidate.reportTo).toBe("Lucy");
+    expect(candidate.managedObject).toBe("Jack");
+    expect(candidate.deliverable).toBe("汇报材料");
+    expect(candidate.recognizedFields).toEqual(expect.arrayContaining([
+      "taskName", "group", "ddl", "reportTo", "managedObject", "deliverable"
+    ]));
+  });
 });
 
 describe("富文本与 data v4 迁移", () => {

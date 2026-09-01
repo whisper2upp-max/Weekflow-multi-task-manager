@@ -40,12 +40,12 @@ function blankForm(groupId = ""): DraftForm {
   };
 }
 
-function candidatesFrom(items: parser.TaskDraftCandidate[], firstGroup: string): Candidate[] {
+function candidatesFrom(items: parser.TaskDraftCandidate[]): Candidate[] {
   return items.map((item) => ({
     id: crypto.randomUUID(), sourceText: item.sourceText, recognizedFields: item.recognizedFields,
     suggestions: item.suggestions, status: "pending", taskId: null,
     form: {
-      name: item.taskName, groupId: item.groupId || firstGroup, flowId: item.flowId, ddl: item.ddl,
+      name: item.taskName, groupId: item.groupId, flowId: item.flowId, ddl: item.ddl,
       recurrenceCadence: item.recurrenceCadence, recurrenceStart: item.recurrenceStart,
       recurrenceEnd: item.recurrenceEnd, urgency: item.urgency, reportTo: item.reportTo,
       managedObject: item.managedObject, deliverable: item.deliverable
@@ -98,8 +98,7 @@ export default function TaskDraftsDialog() {
       managedObjectValues,
       referenceDate: new Date()
     });
-    const firstGroup = currentData.groups.slice().sort((a, b) => Number(a.order) - Number(b.order))[0].id;
-    setCandidates(candidatesFrom(parsed, firstGroup));
+    setCandidates(candidatesFrom(parsed));
     setIndex(0);
     setSaving(false);
     setParsing(false);
@@ -137,8 +136,7 @@ export default function TaskDraftsDialog() {
         reportToValues: reportToOptions, managedObjectValues: managedObjectOptions,
         referenceDate: new Date()
       });
-      const firstGroup = data.groups.slice().sort((a, b) => Number(a.order) - Number(b.order))[0]?.id || "";
-      setCandidates(candidatesFrom(items, firstGroup));
+      setCandidates(candidatesFrom(items));
       setIndex(0);
       setParserSource("ai");
       useUiStore.getState().pushToast("AI 解析完成，请逐条复核后保存。");
@@ -234,7 +232,7 @@ export default function TaskDraftsDialog() {
           <p className="task-draft-recognition">{recognition}{current.suggestions.map((suggestion) => ` · 可能的 ${suggestion.field}：${suggestion.value}`).join("")}</p>
           <div className="form-grid task-draft-form-grid">
             <label className="form-field form-field-wide"><span>Task name <em>*</em></span><input maxLength={160} value={current.form.name} onChange={(event) => patchForm({ name: event.target.value })} /></label>
-            <label className="form-field"><span>分组 <em>*</em></span><select value={current.form.groupId} onChange={(event) => patchForm({ groupId: event.target.value, flowId: "" })}>{data.groups.slice().sort((a, b) => Number(a.order) - Number(b.order)).map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label>
+            <label className="form-field"><span>分组 <em>*</em></span><select value={current.form.groupId} onChange={(event) => patchForm({ groupId: event.target.value, flowId: "" })}><option value="">请选择分组</option>{data.groups.slice().sort((a, b) => Number(a.order) - Number(b.order)).map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label>
             <label className="form-field"><span>Flow</span><select value={current.form.flowId} onChange={(event) => patchForm({ flowId: event.target.value })}><option value="">不加入 Flow</option>{flows.map((flow) => <option key={flow.id} value={flow.id}>{flow.name}</option>)}</select></label>
             <label className="form-field"><span>DDL <em>*</em></span><DateInput value={current.form.ddl} onChange={(event) => patchForm({ ddl: event.target.value })} /></label>
             <label className="form-field"><span>周期生成</span><select value={current.form.recurrenceCadence} onChange={(event) => patchForm({ recurrenceCadence: event.target.value as RecurrenceCadence })}><option value="none">不重复</option><option value="weekly">每周</option><option value="monthly">每月</option></select></label>
