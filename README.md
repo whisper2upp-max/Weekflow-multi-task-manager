@@ -2,6 +2,13 @@
 
 # Weekflow v3.2 · Task management
 
+<p>
+  <img src="https://img.shields.io/badge/version-3.2-665CFF?style=flat-square" alt="version 3.2">
+  <img src="https://img.shields.io/badge/platforms-macOS%20%7C%20Windows-18213F?style=flat-square" alt="platforms macOS and Windows">
+  <img src="https://img.shields.io/badge/runtime-HTML%20%7C%20CSS%20%7C%20JavaScript-16A8B8?style=flat-square" alt="runtime HTML, CSS and JavaScript">
+  <img src="https://img.shields.io/badge/languages-%E4%B8%AD%E6%96%87%20%7C%20English-2F80ED?style=flat-square" alt="languages Chinese and English">
+</p>
+
 Weekflow 是一个桌面端优先、无需后端的本地 Task 管理程序。它以自然周总览和单周日粒度下钻组织时间，通过“分组 → 可选 Flow → 有序 Task”组织工作，并提供可收藏随手记、Excel 兼容笔记表格、多条进度历史、可选 AI 改写与 Task 草稿解析、整体看板、List / Group 双布局资料库、Excel 批量录入与本地备份。
 
 程序由原生 HTML、CSS 和 JavaScript 构建，不需要安装前端依赖。本正式版从空白数据启动，不包含示例分组、Flow、Task、资料或恢复示例数据入口。

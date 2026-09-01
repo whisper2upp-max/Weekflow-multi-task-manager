@@ -2,6 +2,13 @@
 
 # Weekflow v3.2 · Bilingual Task Management
 
+<p>
+  <img src="https://img.shields.io/badge/version-3.2-665CFF?style=flat-square" alt="version 3.2">
+  <img src="https://img.shields.io/badge/platforms-macOS%20%7C%20Windows-18213F?style=flat-square" alt="platforms macOS and Windows">
+  <img src="https://img.shields.io/badge/runtime-HTML%20%7C%20CSS%20%7C%20JavaScript-16A8B8?style=flat-square" alt="runtime HTML, CSS and JavaScript">
+  <img src="https://img.shields.io/badge/languages-%E4%B8%AD%E6%96%87%20%7C%20English-2F80ED?style=flat-square" alt="languages Chinese and English">
+</p>
+
 Weekflow is a desktop-first, backend-free Multi-task management cockpit for tracking several workstreams and organizing all Task-related documents in one place. It combines weekly and daily deadline timelines, `Group → optional Flow → ordered Task` workflows, favorite Quick Notes with Excel-compatible tables, multi-entry progress history, optional AI rewriting and Task-draft parsing, an Overall Dashboard, a dual-layout Document Library, Excel bulk import/export, and local JSON backup.
 
 The Chinese / English switch changes presentation and download language only; it never rewrites user-entered content. Weekflow v3.2 adds Note favorites and Excel-compatible table editing while retaining optional AI assistance, recurrence, linking, filtering, and scroll-position safeguards. Without an API Key, Note-to-Task conversion continues to use deterministic bilingual local rules; with AI enabled, results remain editable drafts and are never saved as Tasks without user review. API Keys are excluded from business-data JSON backups.
