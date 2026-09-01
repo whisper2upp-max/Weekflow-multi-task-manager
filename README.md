@@ -1,8 +1,8 @@
-# Weekflow Desktop v1.1.0
+# Weekflow Desktop v1.2.0
 
-Weekflow Desktop is the Tauri v2 desktop edition of Weekflow. It uses React, TypeScript, Rust, and the operating system WebView. Desktop v1.1.0 aligns with Web v2.7 and uses the backward-compatible data v4 contract.
+Weekflow Desktop is the Tauri v2 desktop edition of Weekflow. It uses React, TypeScript, Rust, and the operating system WebView. Desktop v1.2.0 aligns with the Web v3.1/v3.2 feature set and keeps the backward-compatible data v4 contract.
 
-> Branch status: `codex/tauri-v3-windows` now contains a development preview of the Web v3.1/v3.2 feature set. The released desktop version remains v1.1.0 until validation and release approval.
+> Release branch: `codex/tauri-v3-windows`. Desktop releases remain independent from the Web edition on `main`.
 
 Developer: Wesley Yan
 
@@ -42,15 +42,15 @@ The `Build Windows installers` workflow runs on a real `windows-latest` GitHub r
 - WiX Microsoft Installer: `.msi`
 - NSIS setup executable: `-setup.exe`
 
-It runs automatically when application files are pushed to `codex/tauri-v3-windows`, and it can also be started manually from **Actions → Build Windows installers → Run workflow**. Download the resulting `Weekflow-Desktop-v1.1.0-windows-x64` artifact after the workflow succeeds.
+It runs automatically when application files are pushed to `codex/tauri-v3-windows`, and it can also be started manually from **Actions → Build Windows installers → Run workflow**. Download the resulting `Weekflow-Desktop-v1.2.0-windows-x64` artifact after the workflow succeeds.
 
 The installer uses Tauri's WebView2 download bootstrapper. Windows 10 and Windows 11 normally already provide WebView2. These builds are unsigned, so Windows SmartScreen may show an unknown-publisher warning.
 
 This branch is maintained independently from the Web edition on `main`.
 
-## Development-preview safety notes
+## AI and data safety notes
 
 - Opening Task draft conversion never sends note content to AI. Local rules run first; an external request is made only after the user clicks **Parse with AI** and confirms.
 - AI requests are sent by the Rust backend over HTTPS (plain HTTP is allowed only for localhost development).
 - Quick Note Favorites and table content are included in JSON backup/restore. AI connection settings and API Keys are local application preferences and are intentionally excluded.
-- Existing Excel templates and dashboard reports retain the Windows-safe workbook generation path from Desktop v1.1.0.
+- Excel templates and dashboard reports retain the Windows-safe workbook generation path from earlier desktop releases.

@@ -1,6 +1,6 @@
 [package]
 name = "weekflow-desktop"
-version = "1.1.0"
+version = "1.2.0"
 description = "Weekflow Desktop - Tauri v2 桌面任务管理应用"
 authors = ["Wesley Yan"]
 license = "UNLICENSED"

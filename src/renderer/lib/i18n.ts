@@ -884,7 +884,7 @@ function translateAttribute(name: string, value: string | null): string | null {
     "链接类型": "Link Type",
     "从当前 Task 移除资料关联": "Remove the document relation from this Task",
     "Weekflow Desktop v1.0 中英双语桌面 Task 管理工具，支持周/日双时间轴、分组、Flow、资料库、双向联动、看板、备份和 Excel 批量导入导出。": "Weekflow Desktop v1.0 bilingual desktop Task manager with weekly/daily timelines, Groups, Flows, Document Library, dashboards, backup, and Excel import/export.",
-    "Weekflow Desktop v1.1.0 中英双语桌面 Task 管理工具，支持周/日双时间轴、资料库双布局、随手记、多条进度历史、Task 草稿转换、看板、备份和 Excel 批量导入导出。": "Weekflow Desktop v1.1.0 bilingual desktop Task manager with weekly/daily timelines, dual Document Library layouts, Quick Notes, progress history, Task draft conversion, dashboards, backup, and Excel import/export.",
+    "Weekflow Desktop v1.2.0 中英双语桌面 Task 管理工具，支持周/日双时间轴、资料库双布局、随手记、多条进度历史、Task 草稿转换、看板、备份和 Excel 批量导入导出。": "Weekflow Desktop v1.2.0 bilingual desktop Task manager with weekly/daily timelines, dual Document Library layouts, Quick Notes, progress history, Task draft conversion, dashboards, backup, and Excel import/export.",
     "例如：已完成需求确认和接口联调，当前等待业务方验收。\n\n可按日期分段记录，也可以作为持续更新的项目备注。": "Example: Requirements and integration are complete; business acceptance is pending.\n\nUse dated entries or maintain this as a continuously updated project note."
   };
   return attributes[clean] || translateCompositeText(value || "");

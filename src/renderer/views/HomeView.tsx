@@ -1,5 +1,5 @@
 /* 主页：hero + 动态统计胶囊 + 6 张入口卡。等价 Web v2.7 主页。
-   文案差异：eyebrow 为「Weekflow Desktop v1.1.0」，
+   文案差异：eyebrow 为「Weekflow Desktop v1.2.0」，
    更新日志入口卡描述指向 Weekflow Desktop 发布内容。 */
 import * as stats from "../../shared/stats";
 import { useDataStore } from "../store/dataStore";
@@ -22,7 +22,7 @@ export default function HomeView() {
     >
       <div className="home-hero">
         <div className="home-hero-copy">
-          <p className="eyebrow">Weekflow Desktop v1.1.0</p>
+          <p className="eyebrow">Weekflow Desktop v1.2.0</p>
           <h1 id="home-heading">把工作拆成清晰的下一步</h1>
           <p>用分组建立工作版图，用 Flow 串起执行步骤，再用周时间轴看清每一个 DDL。</p>
           <div className="home-stats" aria-label="当前数据概览">

@@ -1230,7 +1230,7 @@ export function buildWorkbook(
       : isTemplate
         ? "Weekflow Task 导入模板"
         : "Weekflow Task 当前数据",
-    Subject: "Weekflow Desktop 1.1.0 re-importable Task data",
+    Subject: "Weekflow Desktop 1.2.0 re-importable Task data",
     Author: "Wesley Yan",
     Comments: english
       ? isTemplate

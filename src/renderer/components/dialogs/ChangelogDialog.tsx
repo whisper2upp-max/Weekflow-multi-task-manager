@@ -1,5 +1,5 @@
 /* 更新日志弹窗：原生 <dialog> + useModalDialog。
-   Desktop v1.1.0 为最新已发布版本；当前开发分支预览同步 Web v3.1/v3.2，
+   Desktop v1.2.0 为最新已发布版本，功能同步 Web v3.1/v3.2，
    旧版条目继续保留并按新到旧排列。
    维护约定：后续只有新增功能才追加条目，移植与架构说明不再重复。
    英文模式按 isEnglish() 渲染英文 JSX（等价原版整篇 innerHTML 替换机制）。 */
@@ -15,15 +15,16 @@ const EN_ENTRIES: ReadonlyArray<{
   sections: ReadonlyArray<{ heading: string; items: readonly string[] }>;
 }> = [
   {
-    title: "Feature Sync Preview · Web v3.1 / v3.2",
+    title: "Weekflow Desktop v1.2.0",
     date: "2026-09-01",
-    lead: "The Tauri development branch now reproduces the latest Web features while keeping Desktop v1.1.0 as the latest released version.",
+    lead: "Feature alignment with Web v3.1 and v3.2: optional AI, Excel-compatible note tables, Favorites, richer formatting, and safer Task draft prefill are now available in the desktop app.",
     sections: [
       {
         heading: "Optional AI and Safer Conversion",
         items: [
           "Added local AI settings for DeepSeek, DashScope, Kimi, GLM, MiniMax, and custom OpenAI-compatible endpoints. API Keys remain local and never enter business JSON or Excel exports.",
-          "AI note rewriting preserves embedded tables. Task draft conversion always starts with local rules and sends note content only after the user explicitly chooses Parse with AI and confirms the request."
+          "AI note rewriting preserves embedded tables and uses the same side-by-side comparison layout as the Web edition. Task draft conversion always starts with local rules and sends note content only after the user explicitly chooses Parse with AI and confirms the request.",
+          "When AI omits an obvious value, the deterministic fallback can safely prefill DDL, Group, Report To, Managed Person, and Deliverable; fields that cannot be resolved reliably stay blank."
         ]
       },
       {
@@ -152,17 +153,18 @@ export default function ChangelogDialog() {
         </article>
       ) : (
       <article className="document-content changelog-content">
-        <div className="release-entry" data-version="desktop-web-3.2-preview">
+        <div className="release-entry" data-version="desktop-1.2.0">
           <div className="release-heading">
-            <span>功能同步预览 · Web v3.1 / v3.2</span>
+            <span>Weekflow Desktop v1.2.0</span>
             <time dateTime="2026-09-01">2026-09-01</time>
           </div>
-          <p className="release-lead">Tauri 开发分支已复现近期 Web 功能；Desktop v1.1.0 仍是最新已发布版本，本条暂不提前修改桌面版版本号。</p>
+          <p className="release-lead">同步 Web v3.1 与 v3.2：桌面版新增可选 AI、Excel 兼容笔记表格、笔记收藏、字号控制，并增强 Task 草稿安全预填。</p>
           <section>
             <h3>可选 AI 与安全转换</h3>
             <ul>
               <li>新增本机 AI 设置，支持 DeepSeek、百炼、Kimi、GLM、MiniMax 和自定义 OpenAI 兼容接口；API Key 不进入业务 JSON 或 Excel。</li>
-              <li>AI 笔记改写会保护内嵌表格；Task 草稿始终先跑本地规则，只有用户主动点击“使用 AI 解析”并确认后才发送笔记正文。</li>
+              <li>AI 笔记改写会保护内嵌表格，并使用与 Web 版一致的双栏对照布局；Task 草稿始终先跑本地规则，只有用户主动点击“使用 AI 解析”并确认后才发送笔记正文。</li>
+              <li>AI 漏掉明显字段时，确定性规则会安全补填 DDL、分组、汇报对象、管理对象和交付物；无法可靠解析的字段保持空白。</li>
             </ul>
           </section>
           <section>

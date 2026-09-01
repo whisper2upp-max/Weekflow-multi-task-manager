@@ -1,5 +1,5 @@
-/* 使用说明弹窗：原生 <dialog> + useModalDialog。Weekflow Desktop v1.1.0 桌面版内容：
-   当前开发分支功能同步至 Web v3.2；「数据保存位置」一节为 JSON 文件存储
+/* 使用说明弹窗：原生 <dialog> + useModalDialog。Weekflow Desktop v1.2.0 桌面版内容：
+   当前版本功能同步至 Web v3.2；「数据保存位置」一节为 JSON 文件存储
    （window.weekflow.getDataInfo() 展示真实路径，backups/ 保留最近 30 份轮换备份、
    主文件损坏自动从备份恢复），并说明与 Web 版（浏览器 localStorage）的差异及迁移方法。
    英文模式按 isEnglish() 渲染英文 JSX（等价原版 englishGuideHtml 整篇替换机制；
@@ -146,7 +146,7 @@ export default function UserGuideDialog() {
             <h3>Development Team</h3>
             <p>Development team: Wesley Yan</p>
             <p>First desktop release (v1.0): August 14, 2026</p>
-            <p>Latest released version (v1.1.0): August 15, 2026 · this development branch previews feature alignment through Web v3.2</p>
+            <p>Latest released version (v1.2.0): September 1, 2026 · feature alignment through Web v3.2</p>
           </section>
         </article>
       ) : (
@@ -222,7 +222,7 @@ export default function UserGuideDialog() {
           <h3>开发团队</h3>
           <p>开发团队：Wesley Yan</p>
           <p>首个桌面版本（v1.0）：2026年8月14日</p>
-          <p>最新已发布版本（v1.1.0）：2026年8月15日 · 当前开发分支预览同步至 Web v3.2 的功能</p>
+          <p>最新已发布版本（v1.2.0）：2026年9月1日 · 功能同步至 Web v3.2</p>
         </section>
       </article>
       )}

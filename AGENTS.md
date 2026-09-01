@@ -1,8 +1,8 @@
-# Weekflow Desktop v1.1.0（Tauri v2 版）
+# Weekflow Desktop v1.2.0（Tauri v2 版）
 
 首个桌面版本（v1.0，2026-08-14）：Weekflow 从 Web 版（v2.5）完整移植为 macOS 桌面应用，**功能与 Web 版 v2.5 完全对齐**。前端最初自 `/Users/cici/Desktop/AI/project/task manager kimi`（Electron 版 Weekflow 3.0）逐字移植；Electron 版仅作只读参考，**不要修改它任何文件**。安装包从 Electron 方案的约 277MB 降到约 3.6MB。
 
-当前桌面版本（v1.1.0，2026-08-15）已同步 Web v2.6/v2.7：资料库 List/Group 双布局、布局偏好、随手记、纯本地 Task 草稿规则解析、富文本多条进度历史和进度历史 Excel 工作表。
+当前桌面版本（v1.2.0，2026-09-01）已同步 Web v3.1/v3.2：可选 AI 改写与 Task 草稿解析、Excel 兼容笔记表格、笔记收藏、字号控制、资料库 List/Group 双布局、富文本多条进度历史和进度历史 Excel 工作表。
 
 开发团队 / 署名：**Wesley Yan**（Excel 元数据 Author、使用说明、更新日志等处保持此署名）。
 
@@ -39,7 +39,7 @@ src/
                      （替代原版运行时注入，避免与 React 受控节点冲突）
 src-tauri/       Rust 后端
   src/lib.rs     数据读写（轮换备份/损坏恢复）+ 文件保存/打开对话框 commands
-  tauri.conf.json  productName Weekflow Desktop、version 1.1.0、窗口标题 Weekflow Desktop、
+  tauri.conf.json  productName Weekflow Desktop、version 1.2.0、窗口标题 Weekflow Desktop、
                    identifier com.weekflow.app（保持不变以延续数据目录与钥匙串等系统归属）、
                    窗口 1440x900（min 960x640）、CSP；Cargo 包名 weekflow-desktop
                    （二进制同名，lib name weekflow_desktop_lib）
