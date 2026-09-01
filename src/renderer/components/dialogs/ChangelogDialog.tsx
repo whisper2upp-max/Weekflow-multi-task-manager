@@ -1,5 +1,6 @@
 /* 更新日志弹窗：原生 <dialog> + useModalDialog。
-   Desktop v1.1.0 对齐 Web v2.7，旧版条目继续保留并按新到旧排列。
+   Desktop v1.1.0 为最新已发布版本；当前开发分支预览同步 Web v3.1/v3.2，
+   旧版条目继续保留并按新到旧排列。
    维护约定：后续只有新增功能才追加条目，移植与架构说明不再重复。
    英文模式按 isEnglish() 渲染英文 JSX（等价原版整篇 innerHTML 替换机制）。 */
 import { useUiStore } from "../../store/uiStore";
@@ -13,6 +14,34 @@ const EN_ENTRIES: ReadonlyArray<{
   lead: string;
   sections: ReadonlyArray<{ heading: string; items: readonly string[] }>;
 }> = [
+  {
+    title: "Feature Sync Preview · Web v3.1 / v3.2",
+    date: "2026-09-01",
+    lead: "The Tauri development branch now reproduces the latest Web features while keeping Desktop v1.1.0 as the latest released version.",
+    sections: [
+      {
+        heading: "Optional AI and Safer Conversion",
+        items: [
+          "Added local AI settings for DeepSeek, DashScope, Kimi, GLM, MiniMax, and custom OpenAI-compatible endpoints. API Keys remain local and never enter business JSON or Excel exports.",
+          "AI note rewriting preserves embedded tables. Task draft conversion always starts with local rules and sends note content only after the user explicitly chooses Parse with AI and confirms the request."
+        ]
+      },
+      {
+        heading: "Excel-compatible Note Tables",
+        items: [
+          "Paste Excel ranges, including merged cells, into Quick Notes; create tables from the toolbar; insert or delete rows and columns; merge cells; select a rectangle or the entire table; and copy back to Excel.",
+          "Structural table operations support undo and redo. Whole-table Delete/Backspace behavior follows the operating system convention, with an explicit Delete Entire Table action in the nested Table menu."
+        ]
+      },
+      {
+        heading: "Favorites and Rich-text Improvements",
+        items: [
+          "Added starred Quick Note Favorites and a Favorites filter; favorite state is included in JSON backup and restore.",
+          "Added 12/14/16/18/22 font sizes to Notes and progress records while retaining the existing preset text and highlight palettes."
+        ]
+      }
+    ]
+  },
   {
     title: "Weekflow Desktop v1.1.0",
     date: "2026-08-15",
@@ -123,6 +152,35 @@ export default function ChangelogDialog() {
         </article>
       ) : (
       <article className="document-content changelog-content">
+        <div className="release-entry" data-version="desktop-web-3.2-preview">
+          <div className="release-heading">
+            <span>功能同步预览 · Web v3.1 / v3.2</span>
+            <time dateTime="2026-09-01">2026-09-01</time>
+          </div>
+          <p className="release-lead">Tauri 开发分支已复现近期 Web 功能；Desktop v1.1.0 仍是最新已发布版本，本条暂不提前修改桌面版版本号。</p>
+          <section>
+            <h3>可选 AI 与安全转换</h3>
+            <ul>
+              <li>新增本机 AI 设置，支持 DeepSeek、百炼、Kimi、GLM、MiniMax 和自定义 OpenAI 兼容接口；API Key 不进入业务 JSON 或 Excel。</li>
+              <li>AI 笔记改写会保护内嵌表格；Task 草稿始终先跑本地规则，只有用户主动点击“使用 AI 解析”并确认后才发送笔记正文。</li>
+            </ul>
+          </section>
+          <section>
+            <h3>Excel 兼容笔记表格</h3>
+            <ul>
+              <li>支持从 Excel 粘贴含合并单元格的区域、工具栏新建表格、插删行列、合并单元格、矩形或整表选取，并可复制回 Excel。</li>
+              <li>表格结构操作支持撤销与重做；整表 Delete / Backspace 遵循操作系统习惯，嵌套表格菜单同时提供“删除整个表格”。</li>
+            </ul>
+          </section>
+          <section>
+            <h3>收藏与富文本</h3>
+            <ul>
+              <li>随手记新增星号收藏与收藏夹筛选，收藏状态会随 JSON 备份恢复。</li>
+              <li>笔记和进度记录新增 12/14/16/18/22 五档字号，并继续使用既有的预设字色与高亮色盘。</li>
+            </ul>
+          </section>
+        </div>
+
         <div className="release-entry" data-version="desktop-1.1.0">
           <div className="release-heading">
             <span>Weekflow Desktop v1.1.0</span>

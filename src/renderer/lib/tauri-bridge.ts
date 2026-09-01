@@ -17,6 +17,7 @@ import { openPath, openUrl, revealItemInDir } from "@tauri-apps/plugin-opener";
 import { makeEmptyData, validateData } from "../../shared/schema";
 import type { WeekflowData } from "../../shared/types";
 import type {
+  AiChatResult,
   LoadDataResult,
   OpenFileResult,
   SaveDataResult,
@@ -195,6 +196,15 @@ const api: WeekflowApi = {
       return { ok: false, error: `打开目录失败：${errorMessage(error)}` };
     }
   },
+
+  async aiChat(request): Promise<AiChatResult> {
+    return invoke<AiChatResult>("ai_chat", {
+      url: request.url,
+      apiKey: request.apiKey,
+      payload: request.payload,
+      timeoutMs: request.timeoutMs || 45_000,
+    });
+  },
 };
 
 /** 渲染前调用：把 Tauri 实现挂到 window.weekflow */
@@ -282,6 +292,31 @@ function createDevStub(): WeekflowApi {
     },
     async revealPath(): Promise<{ ok: boolean; error?: string }> {
       return { ok: false, error: "浏览器预览模式不支持打开目录" };
+    },
+    async aiChat(request): Promise<AiChatResult> {
+      const controller = new AbortController();
+      const timer = window.setTimeout(() => controller.abort(), request.timeoutMs || 45_000);
+      try {
+        const response = await fetch(request.url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${request.apiKey}` },
+          body: JSON.stringify(request.payload),
+          signal: controller.signal,
+        });
+        const text = await response.text();
+        let data: unknown;
+        try { data = text ? JSON.parse(text) : {}; }
+        catch { return { ok: false, status: response.status, code: "AI_INVALID_RESPONSE", error: "AI 服务返回了无法识别的内容。" }; }
+        return response.ok
+          ? { ok: true, status: response.status, data }
+          : { ok: false, status: response.status, code: "AI_REQUEST_FAILED", error: typeof data === "object" && data && "error" in data ? JSON.stringify((data as { error: unknown }).error) : `HTTP ${response.status}` };
+      } catch (error) {
+        return error instanceof DOMException && error.name === "AbortError"
+          ? { ok: false, code: "AI_TIMEOUT", error: "AI 请求超时，请检查网络后重试。" }
+          : { ok: false, code: "AI_REQUEST_FAILED", error: errorMessage(error) };
+      } finally {
+        window.clearTimeout(timer);
+      }
     }
   };
 }

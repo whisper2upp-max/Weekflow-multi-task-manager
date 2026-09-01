@@ -1060,6 +1060,7 @@ export interface DataStoreState {
 
   /* 随手记 */
   saveQuickNote(input: SaveQuickNoteInput): Promise<string | null>;
+  toggleQuickNoteFavorite(id: string): Promise<boolean>;
   deleteQuickNote(id: string): Promise<boolean>;
   convertNoteToProgress(noteId: string, taskId: string): Promise<boolean>;
   recordNoteTaskConversion(
@@ -1642,6 +1643,7 @@ export const useDataStore = create<DataStoreState>()((set, get) => {
         title,
         contentHtml,
         contentText,
+        favorite: existing?.favorite || false,
         conversions: existing?.conversions || [],
         createdAt: existing?.createdAt || stamp,
         updatedAt: stamp
@@ -1649,6 +1651,15 @@ export const useDataStore = create<DataStoreState>()((set, get) => {
       if (existing) data.notes[data.notes.indexOf(existing)] = note;
       else data.notes.push(note);
       return (await persist(existing ? "笔记已保存" : "笔记已创建")) ? note.id : null;
+    },
+
+    async toggleQuickNoteFavorite(id) {
+      const data = get().data;
+      const note = data ? findNote(data, id) : undefined;
+      if (!data || !note) return false;
+      note.favorite = !note.favorite;
+      note.updatedAt = new Date().toISOString();
+      return persist(note.favorite ? "已加入收藏夹" : "已取消收藏");
     },
 
     async deleteQuickNote(id) {

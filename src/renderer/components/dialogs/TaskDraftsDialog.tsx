@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import * as ai from "../../../shared/ai-provider";
 import type { RecurrenceCadence, TaskStatus, Urgency } from "../../../shared/types";
 import * as dates from "../../../shared/date-utils";
 import * as parser from "../../../shared/task-draft-parser";
@@ -39,6 +40,19 @@ function blankForm(groupId = ""): DraftForm {
   };
 }
 
+function candidatesFrom(items: parser.TaskDraftCandidate[], firstGroup: string): Candidate[] {
+  return items.map((item) => ({
+    id: crypto.randomUUID(), sourceText: item.sourceText, recognizedFields: item.recognizedFields,
+    suggestions: item.suggestions, status: "pending", taskId: null,
+    form: {
+      name: item.taskName, groupId: item.groupId || firstGroup, flowId: item.flowId, ddl: item.ddl,
+      recurrenceCadence: item.recurrenceCadence, recurrenceStart: item.recurrenceStart,
+      recurrenceEnd: item.recurrenceEnd, urgency: item.urgency, reportTo: item.reportTo,
+      managedObject: item.managedObject, deliverable: item.deliverable
+    }
+  }));
+}
+
 export default function TaskDraftsDialog() {
   const dialog = useUiStore((state) => state.dialog?.type === "taskDrafts" ? state.dialog : null);
   const closeDialog = useUiStore((state) => state.closeDialog);
@@ -46,6 +60,8 @@ export default function TaskDraftsDialog() {
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [index, setIndex] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [parsing, setParsing] = useState(false);
+  const [parserSource, setParserSource] = useState<"local" | "ai">("local");
 
   const requestClose = (): void => {
     if (candidates.length && !tConfirm("Task 草稿转换尚未完成，退出后已创建的 Task 会保留，但本次转换进度不会记录。仍要退出吗？")) return;
@@ -83,29 +99,11 @@ export default function TaskDraftsDialog() {
       referenceDate: new Date()
     });
     const firstGroup = currentData.groups.slice().sort((a, b) => Number(a.order) - Number(b.order))[0].id;
-    setCandidates(parsed.map((item) => ({
-      id: crypto.randomUUID(),
-      sourceText: item.sourceText,
-      recognizedFields: item.recognizedFields,
-      suggestions: item.suggestions,
-      status: "pending",
-      taskId: null,
-      form: {
-        name: item.taskName,
-        groupId: item.groupId || firstGroup,
-        flowId: item.flowId,
-        ddl: item.ddl,
-        recurrenceCadence: item.recurrenceCadence,
-        recurrenceStart: item.recurrenceStart,
-        recurrenceEnd: item.recurrenceEnd,
-        urgency: item.urgency,
-        reportTo: item.reportTo,
-        managedObject: item.managedObject,
-        deliverable: item.deliverable
-      }
-    })));
+    setCandidates(candidatesFrom(parsed, firstGroup));
     setIndex(0);
     setSaving(false);
+    setParsing(false);
+    setParserSource("local");
   }, [dialog, closeDialog]);
 
   if (!dialog || !note || !data || !current) return null;
@@ -120,6 +118,34 @@ export default function TaskDraftsDialog() {
     return -1;
   };
   const counts = candidates.reduce((result, item) => ({ ...result, [item.status]: result[item.status] + 1 }), { pending: 0, saved: 0, skipped: 0 });
+
+  const parseWithAi = async (): Promise<void> => {
+    const settings = ai.getSettings();
+    if (!ai.isEnabled(settings) || !settings.noteAiEnabled) {
+      useUiStore.getState().pushToast("请先在 AI 设置中接入并启用随手记 AI 转换。", "warning");
+      return;
+    }
+    if (candidates.some((candidate) => candidate.status === "saved")) {
+      useUiStore.getState().pushToast("已有 Task 被保存，不能再替换本轮草稿解析结果。", "warning");
+      return;
+    }
+    if (!tConfirm("将把当前笔记正文发送给已配置的 AI 服务，并用 AI 结果替换尚未保存的草稿列表。是否继续？")) return;
+    setParsing(true);
+    try {
+      const items = await ai.parseTasks(note.contentText, {
+        settings, groups: data.groups, flows: data.flows,
+        reportToValues: reportToOptions, managedObjectValues: managedObjectOptions,
+        referenceDate: new Date()
+      });
+      const firstGroup = data.groups.slice().sort((a, b) => Number(a.order) - Number(b.order))[0]?.id || "";
+      setCandidates(candidatesFrom(items, firstGroup));
+      setIndex(0);
+      setParserSource("ai");
+      useUiStore.getState().pushToast("AI 解析完成，请逐条复核后保存。");
+    } catch (error) {
+      useUiStore.getState().pushToast(`AI 解析失败，已保留本地规则结果：${ai.errorMessage(error)}`, "warning", 7000);
+    } finally { setParsing(false); }
+  };
 
   const saveCurrent = (event: React.FormEvent): void => {
     event.preventDefault();
@@ -202,8 +228,8 @@ export default function TaskDraftsDialog() {
       <form method="dialog" noValidate onSubmit={saveCurrent}>
           <div className="modal-head"><div><p className="eyebrow">Task draft</p><h2>{current.taskId ? "复核已创建 Task" : "确认 Task 草稿"}</h2></div><button className="icon-button" type="button" aria-label="关闭" onClick={requestClose}>×</button></div>
           <div className="task-draft-conversion-bar">
-            <div><strong>识别到 {candidates.length} 个潜在 Task，正在编辑第 {index + 1} 个</strong><span>{counts.pending} 个待处理 · {counts.saved} 个已保存 · {counts.skipped} 个已跳过</span></div>
-            <div className="task-draft-nav-actions"><button type="button" disabled={index === 0} onClick={() => setIndex(index - 1)}>← 上一个</button><button type="button" disabled={index === candidates.length - 1} onClick={() => setIndex(index + 1)}>下一个 →</button><button type="button" onClick={addCandidate}>＋ 增加 Task</button></div>
+            <div><strong>识别到 {candidates.length} 个潜在 Task，正在编辑第 {index + 1} 个</strong><span>{parserSource === "ai" ? "AI 解析" : "本地规则"} · {counts.pending} 个待处理 · {counts.saved} 个已保存 · {counts.skipped} 个已跳过</span></div>
+            <div className="task-draft-nav-actions"><button type="button" disabled={parsing || index === 0} onClick={() => setIndex(index - 1)}>← 上一个</button><button type="button" disabled={parsing || index === candidates.length - 1} onClick={() => setIndex(index + 1)}>下一个 →</button><button type="button" disabled={parsing} onClick={() => void parseWithAi()}>{parsing ? "AI 解析中…" : "✦ 使用 AI 解析"}</button><button type="button" disabled={parsing} onClick={addCandidate}>＋ 增加 Task</button></div>
           </div>
           <p className="task-draft-recognition">{recognition}{current.suggestions.map((suggestion) => ` · 可能的 ${suggestion.field}：${suggestion.value}`).join("")}</p>
           <div className="form-grid task-draft-form-grid">

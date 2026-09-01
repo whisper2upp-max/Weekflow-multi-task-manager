@@ -43,6 +43,7 @@ export type DialogState =
   | { type: "materialLayout" }
   | { type: "noteProgress"; noteId: string }
   | { type: "taskDrafts"; noteId: string }
+  | { type: "aiSettings" }
   | { type: "deleteGroup"; groupId: string }
   | {
       type: "excelImport";

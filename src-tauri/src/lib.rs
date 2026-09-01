@@ -10,8 +10,10 @@
 
 use base64::Engine;
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
 use std::fs;
 use std::path::PathBuf;
+use std::time::Duration;
 use tauri_plugin_dialog::DialogExt;
 
 /// 轮换备份保留份数上限
@@ -343,6 +345,119 @@ fn open_file_with_dialog(app: tauri::AppHandle, filters: Vec<FileFilter>) -> Ope
     }
 }
 
+/* ---------- AI OpenAI-compatible transport ---------- */
+
+#[derive(Serialize)]
+pub struct AiChatResult {
+    ok: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    status: Option<u16>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    data: Option<Value>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    error: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    code: Option<String>,
+}
+
+fn ai_error(code: &str, message: impl Into<String>, status: Option<u16>) -> AiChatResult {
+    AiChatResult {
+        ok: false,
+        status,
+        data: None,
+        error: Some(message.into()),
+        code: Some(code.to_string()),
+    }
+}
+
+#[tauri::command]
+async fn ai_chat(
+    url: String,
+    api_key: String,
+    payload: Value,
+    timeout_ms: u64,
+) -> AiChatResult {
+    let parsed = match reqwest::Url::parse(&url) {
+        Ok(value) => value,
+        Err(_) => return ai_error("AI_REQUEST_FAILED", "AI Base URL 无效。", None),
+    };
+    let host = parsed.host_str().unwrap_or_default();
+    let local_http = parsed.scheme() == "http"
+        && matches!(host, "localhost" | "127.0.0.1" | "::1");
+    if parsed.scheme() != "https" && !local_http {
+        return ai_error(
+            "AI_REQUEST_FAILED",
+            "AI 接口必须使用 HTTPS（本机 localhost 调试除外）。",
+            None,
+        );
+    }
+    if api_key.trim().is_empty() {
+        return ai_error("AI_REQUEST_FAILED", "API Key 不能为空。", None);
+    }
+    let timeout = timeout_ms.clamp(1_000, 120_000);
+    let client = match reqwest::Client::builder()
+        .timeout(Duration::from_millis(timeout))
+        .build()
+    {
+        Ok(value) => value,
+        Err(error) => return ai_error("AI_REQUEST_FAILED", error.to_string(), None),
+    };
+    let response = client
+        .post(parsed)
+        .bearer_auth(api_key.trim())
+        .json(&payload)
+        .send()
+        .await;
+    let response = match response {
+        Ok(value) => value,
+        Err(error) if error.is_timeout() => {
+            return ai_error(
+                "AI_TIMEOUT",
+                "AI 请求超时，请检查网络后重试。",
+                None,
+            )
+        }
+        Err(error) => return ai_error("AI_REQUEST_FAILED", error.to_string(), None),
+    };
+    let status = response.status().as_u16();
+    let success = response.status().is_success();
+    let text = match response.text().await {
+        Ok(value) => value,
+        Err(error) => return ai_error("AI_REQUEST_FAILED", error.to_string(), Some(status)),
+    };
+    let data = match serde_json::from_str::<Value>(&text) {
+        Ok(value) => value,
+        Err(_) => {
+            return ai_error(
+                "AI_INVALID_RESPONSE",
+                if success {
+                    "AI 服务返回了无法识别的内容。"
+                } else {
+                    "AI 服务请求失败，且响应不是有效 JSON。"
+                },
+                Some(status),
+            )
+        }
+    };
+    if !success {
+        let message = data
+            .get("error")
+            .and_then(|value| value.get("message").or_else(|| value.get("code")))
+            .and_then(Value::as_str)
+            .or_else(|| data.get("message").and_then(Value::as_str))
+            .map(str::to_string)
+            .unwrap_or_else(|| format!("AI 服务请求失败（HTTP {status}）。"));
+        return ai_error("AI_REQUEST_FAILED", message, Some(status));
+    }
+    AiChatResult {
+        ok: true,
+        status: Some(status),
+        data: Some(data),
+        error: None,
+        code: None,
+    }
+}
+
 /* ---------- 入口 ---------- */
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -356,6 +471,7 @@ pub fn run() {
             get_data_info,
             save_file_with_dialog,
             open_file_with_dialog,
+            ai_chat,
         ])
         .run(tauri::generate_context!())
         .expect("error while running Weekflow");

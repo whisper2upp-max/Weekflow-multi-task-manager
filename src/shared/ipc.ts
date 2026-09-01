@@ -38,6 +38,21 @@ export interface OpenFileResult {
   error?: string;
 }
 
+export interface AiChatRequest {
+  url: string;
+  apiKey: string;
+  payload: Record<string, unknown>;
+  timeoutMs?: number;
+}
+
+export interface AiChatResult {
+  ok: boolean;
+  status?: number;
+  data?: unknown;
+  error?: string;
+  code?: "AI_TIMEOUT" | "AI_INVALID_RESPONSE" | "AI_REQUEST_FAILED";
+}
+
 export interface WeekflowApi {
   /** 启动时读取 JSON 数据文件（含轮换备份/损坏备份逻辑） */
   loadData(): Promise<LoadDataResult>;
@@ -57,6 +72,8 @@ export interface WeekflowApi {
   getDataInfo(): Promise<{ dataFile: string; backupsDir: string; backupCount: number }>;
   /** 在系统文件管理器中显示指定路径（仅允许数据文件与备份目录） */
   revealPath(path: string): Promise<{ ok: boolean; error?: string }>;
+  /** 由 Rust 发起 OpenAI-compatible 请求，规避 WebView CORS；API Key 不落业务数据。 */
+  aiChat(request: AiChatRequest): Promise<AiChatResult>;
 }
 
 export const IPC = {
@@ -66,6 +83,7 @@ export const IPC = {
   openFileWithDialog: "weekflow:file:open",
   openExternal: "weekflow:shell:open-external",
   getDataInfo: "weekflow:data:info",
+  aiChat: "weekflow:ai:chat",
 } as const;
 
 declare global {

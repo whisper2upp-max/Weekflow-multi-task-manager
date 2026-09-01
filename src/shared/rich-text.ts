@@ -4,10 +4,13 @@ import type { ProgressEntry, Task } from "./types";
 export const MAX_NOTE_TEXT = 20_000;
 export const MAX_PROGRESS_TEXT = 12_000;
 export const MAX_HTML = 80_000;
+export const FONT_SIZE_PRESETS = [12, 14, 16, 18, 22] as const;
 
 const BLOCK_TAGS = new Set(["P", "DIV", "LI", "UL", "OL"]);
+const TABLE_CELL_TAGS = new Set(["TD", "TH"]);
 const ALLOWED_TAGS = new Set([
-  "P", "DIV", "BR", "STRONG", "B", "EM", "I", "U", "S", "SPAN", "FONT", "A", "UL", "OL", "LI"
+  "P", "DIV", "BR", "STRONG", "B", "EM", "I", "U", "S", "SPAN", "FONT", "A", "UL", "OL", "LI",
+  "TABLE", "THEAD", "TBODY", "TFOOT", "TR", "TH", "TD", "CAPTION"
 ]);
 
 export function escapeHtml(value: unknown): string {
@@ -32,6 +35,18 @@ export function normalizeColor(value: unknown): string {
   return "#" + values.map((part) => part.toString(16).padStart(2, "0")).join("").toUpperCase();
 }
 
+export function normalizeFontSize(value: unknown): string {
+  const source = String(value || "").trim().toLocaleLowerCase();
+  const legacy: Record<string, number> = { "1": 10, "2": 12, "3": 14, "4": 16, "5": 18, "6": 20, "7": 22 };
+  const number = legacy[source] || Number(source.replace(/px$/, ""));
+  return (FONT_SIZE_PRESETS as readonly number[]).includes(number) ? `${number}px` : "";
+}
+
+export function normalizeTableSpan(value: unknown): number {
+  const span = Number.parseInt(String(value || "1"), 10);
+  return Number.isInteger(span) && span >= 2 && span <= 100 ? span : 1;
+}
+
 export function validHttpUrl(value: unknown): boolean {
   try {
     const parsed = new URL(String(value || "").trim());
@@ -48,6 +63,11 @@ function safeStyle(value: unknown): string {
     if (separator < 0) return;
     const property = declaration.slice(0, separator).trim().toLowerCase();
     const raw = declaration.slice(separator + 1).trim();
+    if (property === "font-size") {
+      const fontSize = normalizeFontSize(raw);
+      if (fontSize) styles.push(`font-size: ${fontSize}`);
+      return;
+    }
     if (property !== "color" && property !== "background-color") return;
     const color = normalizeColor(raw);
     if (color) styles.push(`${property}: ${color}`);
@@ -66,6 +86,18 @@ function plainTextFromNode(node: ParentNode): string {
     const element = current as Element;
     if (element.tagName === "BR") {
       output.push("\n");
+      return;
+    }
+    if (element.tagName === "TABLE") {
+      if (output.length && output[output.length - 1] !== "\n") output.push("\n");
+      Array.from((element as HTMLTableElement).rows || []).forEach((row, rowIndex) => {
+        if (rowIndex && output[output.length - 1] !== "\n") output.push("\n");
+        Array.from(row.cells || []).forEach((cell, cellIndex) => {
+          if (cellIndex) output.push("\t");
+          output.push(plainTextFromNode(cell).replace(/\n+/g, " ").trim());
+        });
+        if (output[output.length - 1] !== "\n") output.push("\n");
+      });
       return;
     }
     const block = BLOCK_TAGS.has(element.tagName);
@@ -91,6 +123,9 @@ export function plainText(html: unknown): string {
   }
   return source
     .replace(/<\s*br\s*\/?>/gi, "\n")
+    .replace(/<\s*\/\s*(td|th)\s*>/gi, "\t")
+    .replace(/<\s*\/\s*tr\s*>/gi, "\n")
+    .replace(/<\s*\/\s*table\s*>/gi, "\n")
     .replace(/<\/(p|div|li|ul|ol)>/gi, "\n")
     .replace(/<[^>]+>/g, "")
     .replace(/&nbsp;/gi, " ")
@@ -139,6 +174,9 @@ function sanitizeWithDom(html: unknown): string {
       }
       let style = safeStyle(element.getAttribute("style"));
       const fontColor = element.tagName === "FONT" ? normalizeColor(element.getAttribute("color")) : "";
+      const fontSize = element.tagName === "FONT" ? normalizeFontSize(element.getAttribute("size")) : "";
+      const rowSpan = TABLE_CELL_TAGS.has(element.tagName) ? normalizeTableSpan(element.getAttribute("rowspan")) : 1;
+      const colSpan = TABLE_CELL_TAGS.has(element.tagName) ? normalizeTableSpan(element.getAttribute("colspan")) : 1;
       Array.from(element.attributes).forEach((attribute) => element.removeAttribute(attribute.name));
       if (element.tagName === "A") {
         let href = originalHrefs.get(element) || "";
@@ -150,12 +188,22 @@ function sanitizeWithDom(html: unknown): string {
         }
       }
       if (fontColor) style = `color: ${fontColor}${style ? `; ${style}` : ""}`;
+      if (fontSize && !/(^|;)\s*font-size\s*:/.test(style)) {
+        style = `${style ? `${style}; ` : ""}font-size: ${fontSize}`;
+      }
+      if (TABLE_CELL_TAGS.has(element.tagName)) {
+        if (rowSpan > 1) element.setAttribute("rowspan", String(rowSpan));
+        if (colSpan > 1) element.setAttribute("colspan", String(colSpan));
+      }
       if (style) element.setAttribute("style", style);
       clean(element);
     });
   }
   clean(template.content);
-  return template.innerHTML.slice(0, MAX_HTML);
+  const output = template.innerHTML;
+  return output.length <= MAX_HTML
+    ? output
+    : fromPlainText(plainTextFromNode(template.content).slice(0, MAX_NOTE_TEXT));
 }
 
 function sanitizeFallback(html: unknown): string {
@@ -174,6 +222,9 @@ function sanitizeFallback(html: unknown): string {
         const colorMatch = rawAttributes.match(/\scolor\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i);
         const color = normalizeColor(colorMatch?.[1] || colorMatch?.[2] || colorMatch?.[3] || "");
         if (color) style = `color: ${color}${style ? `; ${style}` : ""}`;
+        const sizeMatch = rawAttributes.match(/\ssize\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i);
+        const size = normalizeFontSize(sizeMatch?.[1] || sizeMatch?.[2] || sizeMatch?.[3] || "");
+        if (size && !/(^|;)\s*font-size\s*:/.test(style)) style = `${style ? `${style}; ` : ""}font-size: ${size}`;
       }
       const attributes: string[] = [];
       if (tag === "a") {
@@ -182,6 +233,14 @@ function sanitizeFallback(html: unknown): string {
         if (validHttpUrl(href)) {
           attributes.push(`href="${escapeHtml(href)}"`, 'target="_blank"', 'rel="noopener noreferrer"');
         }
+      }
+      if (tag === "td" || tag === "th") {
+        const rowSpanMatch = rawAttributes.match(/\srowspan\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i);
+        const colSpanMatch = rawAttributes.match(/\scolspan\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i);
+        const rowSpan = normalizeTableSpan(rowSpanMatch?.[1] || rowSpanMatch?.[2] || rowSpanMatch?.[3] || "");
+        const colSpan = normalizeTableSpan(colSpanMatch?.[1] || colSpanMatch?.[2] || colSpanMatch?.[3] || "");
+        if (rowSpan > 1) attributes.push(`rowspan="${rowSpan}"`);
+        if (colSpan > 1) attributes.push(`colspan="${colSpan}"`);
       }
       if (style) attributes.push(`style="${escapeHtml(style)}"`);
       return `<${tag}${attributes.length ? ` ${attributes.join(" ")}` : ""}>`;
@@ -217,6 +276,20 @@ export function fromPlainText(value: unknown): string {
   const text = String(value || "").replace(/\r\n/g, "\n");
   if (!text.trim()) return "";
   return text.split(/\n{2,}/).map((paragraph) => `<p>${linkifyEscapedText(paragraph).replace(/\n/g, "<br>")}</p>`).join("");
+}
+
+/** 从 Excel/Word 的 HTML 剪贴板中只提取并净化第一个表格。 */
+export function tableHtmlFromClipboard(html: unknown): string {
+  const source = String(html || "");
+  if (!/<table\b/i.test(source)) return "";
+  if (typeof document !== "undefined" && document.createElement) {
+    const template = document.createElement("template");
+    template.innerHTML = source.slice(0, MAX_HTML * 4);
+    const table = template.content.querySelector("table");
+    return table ? sanitizeHtml(table.outerHTML, MAX_NOTE_TEXT) : "";
+  }
+  const match = source.match(/<table\b[\s\S]*?<\/table\s*>/i);
+  return match ? sanitizeHtml(match[0], MAX_NOTE_TEXT) : "";
 }
 
 export function insertHtmlAtSelection(html: string, container?: HTMLElement | null): boolean {

@@ -197,6 +197,9 @@ export default function Header() {
       </div>
 
       <div id="header-actions" className="header-actions" hidden={simplifiedHeader}>
+        <button className="button button-quiet" type="button" onClick={() => openDialog({ type: "aiSettings" })}>
+          <span aria-hidden="true">✦</span> AI 设置
+        </button>
         <button className="button button-quiet" type="button" data-action="new-group" onClick={openNewGroup}>
           <span aria-hidden="true">＋</span> 新建分组
         </button>

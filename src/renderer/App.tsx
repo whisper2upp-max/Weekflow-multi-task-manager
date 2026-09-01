@@ -31,6 +31,7 @@ import ChangelogDialog from "./components/dialogs/ChangelogDialog";
 import MaterialLayoutDialog from "./components/dialogs/MaterialLayoutDialog";
 import NoteProgressDialog from "./components/dialogs/NoteProgressDialog";
 import TaskDraftsDialog from "./components/dialogs/TaskDraftsDialog";
+import AiSettingsDialog from "./components/dialogs/AiSettingsDialog";
 
 export default function App() {
   /* 等价 app.js:272 i18n.applyDocument()：首帧提交后整树翻译一次并启动 observer，
@@ -161,6 +162,7 @@ export default function App() {
       <MaterialLayoutDialog />
       <NoteProgressDialog />
       <TaskDraftsDialog />
+      <AiSettingsDialog />
       {/* DDL 提醒渲染在 #toast-region 容器内（与原 DOM 一致），由 ToastRegion 负责挂载 */}
       <ToastRegion />
     </>

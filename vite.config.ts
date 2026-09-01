@@ -4,7 +4,8 @@ import react from "@vitejs/plugin-react";
 
 // 仅开发模式生效：@vitejs/plugin-react 的 Fast Refresh preamble 是内联 <script>，
 // index.html 的 CSP（script-src 回落到 default-src 'self'）会拦截它，导致 dev 白屏；
-// vite HMR 的 WebSocket 也需要 connect-src 放行 ws:。这里在 serve 时放宽；
+// vite HMR 的 WebSocket 也需要 connect-src 放行 ws:；浏览器预览的 AI stub
+// 通过 fetch 调用用户配置的 http/https 兼容接口。两者仅在 serve 时放宽；
 // 生产构建不受影响，index.html 中的 CSP 保持原样。
 function devRelaxCspForHmr(): Plugin {
   return {
@@ -13,7 +14,7 @@ function devRelaxCspForHmr(): Plugin {
     transformIndexHtml(html) {
       return html.replace(
         'content="default-src \'self\'; connect-src ',
-        'content="script-src \'self\' \'unsafe-inline\'; default-src \'self\'; connect-src ws: ',
+        'content="script-src \'self\' \'unsafe-inline\'; default-src \'self\'; connect-src ws: http: https: ',
       );
     },
   };

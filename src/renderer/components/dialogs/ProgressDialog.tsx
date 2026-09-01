@@ -4,7 +4,7 @@ import { useDataStore } from "../../store/dataStore";
 import { useUiStore } from "../../store/uiStore";
 import { useModalDialog } from "../../lib/useModalDialog";
 import { isEnglish, tConfirm } from "../../lib/i18n";
-import RichTextEditor from "../RichTextEditor";
+import RichTextEditor from "../AdvancedRichTextEditor";
 
 function timeLabel(value: string): string {
   const parsed = new Date(value);

@@ -238,6 +238,7 @@ export function normalizeNote(note: unknown): QuickNote {
     title: String(source.title || "").trim().slice(0, 160),
     contentHtml,
     contentText: richText.plainText(contentHtml).slice(0, richText.MAX_NOTE_TEXT),
+    favorite: Boolean(source.favorite),
     conversions: (Array.isArray(source.conversions) ? source.conversions : []).map(normalizeConversion),
     createdAt: created,
     updatedAt: updated

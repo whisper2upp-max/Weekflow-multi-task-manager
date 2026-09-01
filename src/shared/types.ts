@@ -97,6 +97,8 @@ export interface QuickNote {
   title: string;
   contentHtml: string;
   contentText: string;
+  /** 用户收藏标记；随业务 JSON 一起备份/恢复。 */
+  favorite: boolean;
   conversions: NoteConversion[];
   createdAt: string;
   updatedAt: string;

@@ -1,5 +1,5 @@
 /* 使用说明弹窗：原生 <dialog> + useModalDialog。Weekflow Desktop v1.1.0 桌面版内容：
-   功能条目对齐 Web 版 v2.7；「数据保存位置」一节为 JSON 文件存储
+   当前开发分支功能同步至 Web v3.2；「数据保存位置」一节为 JSON 文件存储
    （window.weekflow.getDataInfo() 展示真实路径，backups/ 保留最近 30 份轮换备份、
    主文件损坏自动从备份恢复），并说明与 Web 版（浏览器 localStorage）的差异及迁移方法。
    英文模式按 isEnglish() 渲染英文 JSX（等价原版 englishGuideHtml 整篇替换机制；
@@ -90,7 +90,9 @@ export default function UserGuideDialog() {
               <li><b>People Summaries and Exports:</b> The Overall Dashboard summarizes completion rate and completed, incomplete, and overdue counts for each Managed Person and Report To, with one-click Task status export.</li>
               <li><b>Excel Bulk Import:</b> The 20-column Task template includes recurrence, date range, and completion history. Download a blank template or current data in the same format, validate the upload preview, then choose supplement import or complete replacement.</li>
               <li><b>Document Library:</b> Use List for the complete table and Type, Group, Flow, and Task filters, or Group for fixed-height document cards organized by Task Group. In Group layout, documents rank by opens in the current and previous natural week, then by name; choose one to four Groups per row and drag to reorder them.</li>
-              <li><b>Quick Notes:</b> Capture rich-text notes with preset text and highlight colors and SharePoint links. Append a note to a Task as a new timestamped progress record, or convert it into one or more reviewable Task drafts using bilingual local rules. Line breaks, numbered items, common date expressions, and weekly/monthly recurrence are recognized without an AI service.</li>
+              <li><b>Quick Notes:</b> Capture rich-text notes with 12/14/16/18/22 font sizes, 20 preset text colors, 20 preset highlights, SharePoint links, and starred Favorites. Paste an Excel range as an editable table, create a table from the toolbar, select rectangular or whole-table regions, and insert/delete rows or columns, merge cells, clear content, delete the table, undo, redo, and copy the result back to Excel while preserving merged cells.</li>
+              <li><b>Progress and Task Draft Conversion:</b> Append a note to a Task as a new timestamped progress record, or convert it into one or more reviewable Task drafts. Bilingual local rules always run first and recognize line breaks, numbered items, common date expressions, and weekly/monthly recurrence.</li>
+              <li><b>Optional AI:</b> AI Settings supports DeepSeek, DashScope, Kimi, GLM, MiniMax, and custom OpenAI-compatible endpoints. AI can rewrite a note while preserving tables, or replace unsaved local Task suggestions after an explicit confirmation. Notes are never sent merely by opening conversion; each AI request is user initiated. The API Key is stored only in the desktop WebView&apos;s local settings and is excluded from business JSON backups and Excel files.</li>
               <li><b>Recently Used:</b> In List, filter documents opened at least once during the current or previous natural week; Group ranks those documents automatically.</li>
               <li><b>Document Import and Cleanup:</b> Document Excel import supports supplement import or overwrite all. Duplicate URLs can be replaced or skipped, and bulk deletion requires two confirmations.</li>
               <li><b>Language Switch:</b> Use Chinese / EN at the top right to switch the interface language at any time; Excel exports (headers, sheet names, and filenames) follow the selected language.</li>
@@ -117,6 +119,7 @@ export default function UserGuideDialog() {
             </ol>
             <p>Export a JSON backup before bulk changes, migrating to another computer, or deleting the data file.</p>
             <p>The JSON backup includes Quick Notes, every progress-history record, and the Document Library List / Group mode, Groups per row, and Group order.</p>
+            <p>Starred-note state and note tables are part of the note data and therefore follow JSON backup and restore. AI provider settings and the API Key are local application preferences and are intentionally excluded.</p>
           </section>
           <section>
             <h3>Excel Bulk Import</h3>
@@ -143,7 +146,7 @@ export default function UserGuideDialog() {
             <h3>Development Team</h3>
             <p>Development team: Wesley Yan</p>
             <p>First desktop release (v1.0): August 14, 2026</p>
-            <p>Latest version (v1.1.0): August 15, 2026 · aligned with Web v2.7</p>
+            <p>Latest released version (v1.1.0): August 15, 2026 · this development branch previews feature alignment through Web v3.2</p>
           </section>
         </article>
       ) : (
@@ -163,7 +166,9 @@ export default function UserGuideDialog() {
             <li><b>对象汇总与导出：</b>整体看板按人员姓名分别汇总每个管理对象和汇报对象的完成率、已完成、未完成及逾期数量，并一键导出该人员的 Task 状态。</li>
             <li><b>Excel 批量录入：</b>20 列 Task 模板包含周期、周期起止和完成历史，可下载空白模板或按模板下载当前数据，上传后先校验预览，再选择补充导入或完整覆盖。</li>
             <li><b>资料库：</b>List 布局保留完整清单及类型、分组、Flow、Task 筛选；Group 布局按 Task 分组显示固定高度资料栏，按本周及上周打开次数、再按名称排序。可选择每行 1–4 个分组并拖动调整顺序。</li>
-            <li><b>随手记：</b>用富文本记录临时想法、预设字色/高亮和 SharePoint 链接；可追加为某 Task 的一条新进度，也可通过中英文纯本地规则转换为一个或多个待确认 Task 草稿。换行、编号、常见日期及每周/每月周期均可识别，不调用 AI 服务。</li>
+            <li><b>随手记：</b>支持 12/14/16/18/22 五档字号、20 种预设字色、20 种预设高亮、SharePoint 链接和星号收藏夹。可把 Excel 区域粘贴为可编辑表格，也可从工具栏新建；支持矩形/整表选取、插删行列、合并单元格、清空内容、删除整表、撤销/重做，并可复制回 Excel 保留合并效果。</li>
+            <li><b>进度与 Task 草稿转换：</b>笔记可追加为某 Task 的一条新进度，也可转换为一个或多个待确认 Task 草稿。中英文纯本地规则始终先运行，可识别换行、编号、常见日期及每周/每月周期。</li>
+            <li><b>可选 AI：</b>顶部“AI 设置”支持 DeepSeek、百炼、Kimi、GLM、MiniMax 和自定义 OpenAI 兼容接口。AI 可在完整保留表格的前提下改写笔记，也可在用户明确确认后替换尚未保存的本地 Task 建议；仅打开转换界面不会发送笔记。API Key 只保存在桌面 WebView 的本地设置中，不进入业务 JSON 备份或 Excel。</li>
             <li><b>最近常用：</b>List 可筛出本自然周或上个自然周至少打开过一次的资料；Group 会自动把近期打开次数更多的资料排在前面。</li>
             <li><b>资料导入与清理：</b>资料 Excel 可选择补充导入或全部覆盖；重复地址可替换或跳过，批量删除需连续确认两次。</li>
             <li><b>语言切换：</b>右上角 中文 / EN 可随时切换界面语言；Excel 导出的表头、工作表名和文件名均跟随当前语言。</li>
@@ -190,6 +195,7 @@ export default function UserGuideDialog() {
           </ol>
           <p>建议在批量修改、迁移到其他电脑或删除数据文件前先导出 JSON 备份。</p>
           <p>JSON 备份包含全部随手记、每条进度历史，以及资料库的 List / Group 模式、每行分组数和分组排列顺序。</p>
+          <p>笔记收藏状态和笔记表格属于笔记数据，会随 JSON 备份恢复；AI 服务商设置和 API Key 属于本机应用偏好，刻意不随业务数据导出。</p>
         </section>
         <section>
           <h3>Excel 批量导入</h3>
@@ -216,7 +222,7 @@ export default function UserGuideDialog() {
           <h3>开发团队</h3>
           <p>开发团队：Wesley Yan</p>
           <p>首个桌面版本（v1.0）：2026年8月14日</p>
-          <p>最新版本（v1.1.0）：2026年8月15日 · 对齐 Web 版 v2.7</p>
+          <p>最新已发布版本（v1.1.0）：2026年8月15日 · 当前开发分支预览同步至 Web v3.2 的功能</p>
         </section>
       </article>
       )}
