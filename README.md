@@ -2,7 +2,7 @@
 
 # Weekflow v3.2 · Task management
 
-> **试验分支 `codex/bulk-archive-actions`**：在 Task 看板直接复选后批量修改、归档，并提供已归档视图。[试用说明与功能边界](docs/bulk-archive-trial.md)。
+> **试验分支 `codex/bulk-archive-actions`**：在 Task 看板直接复选后批量修改、完成、删除、归档，并提供已归档视图。[试用说明与功能边界](docs/bulk-archive-trial.md)。
 
 <p>
   <img src="https://img.shields.io/badge/version-3.2-665CFF?style=flat-square" alt="version 3.2">

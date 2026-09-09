@@ -169,6 +169,8 @@
       "timeline-selection-clear",
       "timeline-selection-edit",
       "timeline-selection-archive",
+      "timeline-selection-complete",
+      "timeline-selection-delete",
       "bulk-view",
       "home-view",
       "timeline-view",
@@ -487,7 +489,7 @@
       ui.timelineSelectedIds = [];
       syncTimelineSelection();
     });
-    ["edit", "archive"].forEach(function (action) {
+    ["edit", "archive", "complete", "delete"].forEach(function (action) {
       dom["timeline-selection-" + action].addEventListener("click", function () {
         bulkWorkbench.openSelection(action, ui.timelineSelectionKind, ui.timelineSelectedIds);
       });
@@ -1602,11 +1604,13 @@
     dom["timeline-select-all"].indeterminate = selected.size > 0 && selected.size < inputs.length;
     dom["timeline-select-all"].disabled = !inputs.length;
     dom["timeline-selection-count"].textContent = (i18n.isEnglish() ? "Selected " : "已选 ") + selected.size;
-    dom["timeline-selection-edit"].disabled = dom["timeline-selection-archive"].disabled = !selected.size;
+    ["edit", "archive", "complete", "delete"].forEach(function (action) {
+      dom["timeline-selection-" + action].disabled = !selected.size;
+    });
     dom["timeline-selection-clear"].hidden = !selected.size;
     dom["timeline-selection-hint"].textContent = ui.timelineSelectionKind === "task"
       ? i18n.isEnglish() ? "Multi-select mode: checkboxes only select Tasks" : "多选模式：勾选仅选择任务"
-      : i18n.isEnglish() ? "Selected parents include all their active children" : "选中父级将处理其全部未归档子项";
+      : i18n.isEnglish() ? "Parent actions include child records; review the preview for scope" : "父级操作包含下级记录，具体范围请核对预览";
   }
 
   function createTimelineSelection(kind, item) {

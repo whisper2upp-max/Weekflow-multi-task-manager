@@ -16,6 +16,8 @@
   var englishDocumentFragments = null;
   var ENGLISH_DATE_PLACEHOLDER = "MM / DD / YYYY";
   var EN_TEXT = {
+    "批量完成": "Complete Selected",
+    "批量删除": "Delete Selected",
     "取消选择": "Clear Selection",
     "看板批量操作": "Board Bulk Actions",
     "复选层级": "Select Level",

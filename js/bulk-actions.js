@@ -1,11 +1,12 @@
 /* Pure, atomic plans for hierarchical archiving and bulk Task edits. */
 (function (root, factory) {
   var dates = root.App && root.App.dateUtils || (typeof require === "function" ? require("./date-utils.js") : null);
-  var api = factory(dates);
+  var automation = root.App && root.App.automation || (typeof require === "function" ? require("./automation.js") : null);
+  var api = factory(dates, automation);
   if (typeof module === "object" && module.exports) module.exports = api;
   root.App = root.App || {};
   root.App.bulkActions = api;
-})(typeof self !== "undefined" ? self : globalThis, function (dates) {
+})(typeof self !== "undefined" ? self : globalThis, function (dates, automation) {
   "use strict";
   var collections = { group: "groups", flow: "flows", task: "tasks" };
   function parentArchived(data, kind, item) {
@@ -109,8 +110,60 @@
     });
     return { type: "edit", changes: changes, source: sourceState(data) };
   }
+  function planComplete(data, kind, ids, now) {
+    now = now || new Date();
+    var targets = new Map();
+    selectedItems(data, kind, ids).forEach(function (item) {
+      if (isArchived(data, kind, item)) throw new Error("already-archived");
+      descendants(data, kind, item).forEach(function (record) {
+        if (record.kind === "task" && !isArchived(data, "task", record.item)) targets.set(record.item.id, record.item);
+      });
+    });
+    var changes = [], skipped = [];
+    targets.forEach(function (task) {
+      var recurring = dates.isRecurringTask(task);
+      var state = recurring ? dates.getTaskPeriodState(task, now) : null;
+      if (recurring ? state.completed : task.status === "completed") {
+        skipped.push({ name: task.name, reason: "completed" });
+        return;
+      }
+      if (recurring && !state.checkboxEnabled) {
+        skipped.push({ name: task.name, reason: "unavailable" });
+        return;
+      }
+      var next = JSON.parse(JSON.stringify(task));
+      if (recurring) automation.setCurrentPeriodCompleted(next, true, now);
+      else { next.status = "completed"; next.completedAt = dates.todayISO(now); }
+      next.updatedAt = now.toISOString();
+      changes.push({ kind: "task", id: task.id, name: task.name,
+        before: JSON.parse(JSON.stringify(task)), after: next,
+        recurring: recurring, occurrenceDdl: state && state.currentOccurrence.ddl });
+    });
+    return { type: "complete", changes: changes, skipped: skipped,
+      businessDate: dates.todayISO(now), source: sourceState(data) };
+  }
+
+  function planDelete(data, kind, ids) {
+    var records = new Map();
+    selectedItems(data, kind, ids).forEach(function (item) {
+      if (isArchived(data, kind, item)) throw new Error("already-archived");
+      // Removing a parent also removes its archived children, explicitly listed in the preview.
+      descendants(data, kind, item).forEach(function (record) {
+        var target = record.item;
+        records.set(record.kind + ":" + target.id, {
+          kind: record.kind, id: target.id, name: target.name,
+          before: JSON.parse(JSON.stringify(target)), after: null
+        });
+      });
+    });
+    return { type: "delete", changes: Array.from(records.values()),
+      source: sourceState(data), materialSource: JSON.stringify(data.materials) };
+  }
+
   function sourceState(data) { return JSON.stringify([data.groups, data.flows, data.tasks]); }
-  function applyPlan(data, plan) {
+  function applyPlan(data, plan, now) {
+    if (plan.type === "complete" && plan.businessDate !== dates.todayISO(now || new Date())) throw new Error("stale-preview");
+    if (plan.type === "delete" && plan.materialSource !== JSON.stringify(data.materials)) throw new Error("stale-preview");
     if (plan.source !== sourceState(data)) throw new Error("stale-preview");
     // The preview is only valid while every affected record is unchanged.
     plan.changes.forEach(function (change) {
@@ -120,10 +173,21 @@
     var next = JSON.parse(JSON.stringify(data));
     plan.changes.forEach(function (change) {
       var rows = next[collections[change.kind]];
-      rows[rows.findIndex(function (row) { return row.id === change.id; })] = JSON.parse(JSON.stringify(change.after));
+      var index = rows.findIndex(function (row) { return row.id === change.id; });
+      if (change.after === null) rows.splice(index, 1);
+      else rows[index] = JSON.parse(JSON.stringify(change.after));
     });
+    if (plan.type === "delete") {
+      var deleted = { group: new Set(), flow: new Set(), task: new Set() };
+      plan.changes.forEach(function (change) { deleted[change.kind].add(change.id); });
+      next.materials.forEach(function (material) {
+        ["group", "flow", "task"].forEach(function (kind) {
+          material[kind + "Ids"] = (material[kind + "Ids"] || []).filter(function (id) { return !deleted[kind].has(id); });
+        });
+      });
+    }
     return next;
   }
   return { isArchived: isArchived, parentArchived: parentArchived, activeData: activeData,
-    planArchive: planArchive, planEdit: planEdit, applyPlan: applyPlan };
+    planArchive: planArchive, planEdit: planEdit, planComplete: planComplete, planDelete: planDelete, applyPlan: applyPlan };
 });

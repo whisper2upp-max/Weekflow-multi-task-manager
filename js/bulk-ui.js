@@ -7,7 +7,7 @@
     var host = document.getElementById("bulk-view");
     var archived = false, kind = "task", selected = new Set(), rows = [];
     var search = "", groupId = "", status = "", recurrence = "";
-    var plan = null;
+    var plan = null, dialogBody = null;
     function t(zh, en) { return App.i18n.isEnglish() ? en : zh; }
     function el(tag, cls, text) { return utils.el(tag, cls || "", text); }
     function button(text, action, cls) {
@@ -129,28 +129,35 @@
         [["DDL", item.ddl], [t("汇报对象", "Report To"), item.reportTo], [t("管理对象", "Managed Person"), item.managedObject], [t("交付物", "Deliverable"), item.deliverable]].forEach(function (field) {
           fields.append(el("dt", "", field[0]), el("dd", "", field[1] || "—"));
         });
-        dialog.append(fields, el("h3", "", t("进度历史", "Progress History")));
+        dialogBody.append(fields, el("h3", "", t("进度历史", "Progress History")));
         (item.progressEntries || []).forEach(function (entry) {
           var content = el("div", "rich-text-content bulk-detail-progress");
           content.innerHTML = App.richText.sanitizeHtml(entry.contentHtml);
-          dialog.append(el("small", "bulk-meta", new Date(entry.updatedAt).toLocaleString(App.i18n.getLanguage())), content);
+          dialogBody.append(el("small", "bulk-meta", new Date(entry.updatedAt).toLocaleString(App.i18n.getLanguage())), content);
         });
       } else {
-        dialog.append(el("p", "bulk-help", t("下级 Task（包含此前单独归档的任务）", "Child Tasks (including previously archived Tasks)")));
+        dialogBody.append(el("p", "bulk-help", t("下级 Task（包含此前单独归档的任务）", "Child Tasks (including previously archived Tasks)")));
         data.tasks.filter(function (task) { return kind === "group" ? task.groupId === item.id : task.flowId === item.id; }).forEach(function (task) {
-          dialog.append(el("p", "", task.name + " · " + task.ddl));
+          dialogBody.append(el("p", "", task.name + " · " + task.ddl));
         });
       }
-      dialog.append(button(t("关闭", "Close"), function () { dialog.close(); }));
+      dialogBody.append(button(t("关闭", "Close"), function () { dialog.close(); }));
       dialog.showModal();
     }
     function resetDialog(text) {
       utils.clear(dialog); plan = null;
       var heading = el("div", "modal-head"), h = el("h2", "", text); h.id = "bulk-dialog-title";
-      heading.append(h, button("×", function () { dialog.close(); }, "icon-button")); heading.lastChild.setAttribute("aria-label", t("关闭", "Close")); dialog.append(heading);
+      heading.append(h, button("×", function () { dialog.close(); }, "icon-button")); heading.lastChild.setAttribute("aria-label", t("关闭", "Close"));
+      dialogBody = el("div", "bulk-dialog-body");
+      dialog.append(heading, dialogBody);
     }
     function preview(value, container, apply) {
       plan = value; utils.clear(container);
+      (plan.skipped || []).forEach(function (item) {
+        container.append(el("p", "bulk-help", item.name + " — " + (item.reason === "completed"
+          ? t("已完成，保持原完成日期", "Already completed; completion date preserved")
+          : t("当前无可完成周期，已跳过", "No completable period right now; skipped"))));
+      });
       if (!plan.changes.length) { container.append(el("p", "", t("没有需要修改的内容。", "No changes to apply."))); apply.disabled = true; return; }
       var counts = { group: 0, flow: 0, task: 0 }, pending = 0;
       plan.changes.forEach(function (c) { counts[c.kind]++; if (c.kind === "task" && c.before.status !== "completed") pending++; });
@@ -158,7 +165,7 @@
       if (plan.type === "archive" && pending) container.append(el("p", "bulk-preview-warning", t("其中有 ", "Includes ") + pending + t(" 条未完成 Task；归档不会将它们标记为完成。", " incomplete Tasks; archiving will not mark them completed.")));
       var wrap = el("div", "table-wrap bulk-preview-table"), table = el("table"), body = el("tbody");
       plan.changes.forEach(function (change) {
-        var row = el("tr"); row.append(el("th", "", change.name));
+        var row = el("tr"); row.append(el("th", "", change.kind + " · " + change.name));
         var details = el("td");
         if (plan.type === "edit") {
           [["ddl", "DDL"], ["urgency", t("紧急程度", "Urgency")], ["managedObject", t("管理对象", "Managed Person")]].forEach(function (field) {
@@ -167,6 +174,14 @@
             if (field[0] === "urgency") { a = App.i18n.urgencyLabels()[a]; b = App.i18n.urgencyLabels()[b]; }
             details.append(el("div", "", field[1] + ": " + (a || "—") + " → " + (b || "—")));
           });
+        } else if (plan.type === "complete") {
+          details.textContent = change.recurring
+            ? t("完成本期 DDL：", "Complete current DDL: ") + change.occurrenceDdl + t("（同时补齐此前各期）", " (including earlier periods)")
+            : t("未完成 → 已完成 · ", "Incomplete → Completed · ") + change.after.completedAt;
+        } else if (plan.type === "delete") {
+          details.textContent = (change.before.archivedAt ? t("已归档 · ", "Archived · ") : "") + (change.kind === "task"
+            ? t("永久删除 Task 及其进度记录", "Permanently delete Task and its progress history")
+            : t("永久删除此层级", "Permanently delete this level"));
         } else details.textContent = plan.type === "archive" ? t("当前工作 → 已归档", "Active → Archived") : t("已归档 → 当前工作", "Archived → Active");
         row.append(details); body.append(row);
       });
@@ -186,9 +201,35 @@
       resetDialog(archived ? t("预览批量恢复", "Preview Restore") : t("预览批量归档", "Preview Archive"));
       var content = el("div"), actions = el("div", "modal-actions");
       var apply = button(t("确认应用", "Apply Changes"), applyPreview, "button button-primary");
-      actions.append(button(t("取消", "Cancel"), function () { dialog.close(); }), apply); dialog.append(content, actions);
+      actions.append(button(t("取消", "Cancel"), function () { dialog.close(); }), apply); dialogBody.append(content); dialog.append(actions);
       try {
         preview(bulk.planArchive(options.getData(), kind, Array.from(selected), archived, new Date().toISOString(), utils.uid("archive")), content, apply); dialog.showModal();
+      } catch (error) { showError(error); }
+    }
+    function openTaskAction(action) {
+      var deleting = action === "delete";
+      resetDialog(deleting ? t("预览批量删除", "Preview Bulk Delete") : t("预览批量完成", "Preview Bulk Completion"));
+      var content = el("div"), actions = el("div", "modal-actions");
+      var apply = button(deleting ? t("确认永久删除", "Delete Permanently") : t("确认完成", "Confirm Completion"), applyPreview,
+        deleting ? "button button-danger" : "button button-primary");
+      var confirm = null;
+      if (deleting) {
+        dialogBody.append(el("p", "bulk-preview-warning", t(
+          "将永久删除以下记录及任务进度，无法撤销。删除分组或 Flow 会包括其全部下级任务（含已归档项）。资料库条目和随手记保留，仅移除已删除记录的资料关联。",
+          "These records and Task progress will be permanently deleted. Deleting a Group or Flow includes all its child Tasks, including archives. Document Library entries and Quick Notes are kept; links to deleted records are removed.")));
+        confirm = el("input"); confirm.type = "checkbox";
+        actions.append(label(t("我确认永久删除上述记录", "I confirm permanent deletion of these records"), confirm));
+        confirm.addEventListener("change", function () { apply.disabled = !confirm.checked || !plan || !plan.changes.length; });
+      }
+      actions.append(button(t("取消", "Cancel"), function () { dialog.close(); }), apply);
+      dialogBody.append(content); dialog.append(actions);
+      try {
+        var nextPlan = deleting
+          ? bulk.planDelete(options.getData(), kind, Array.from(selected))
+          : bulk.planComplete(options.getData(), kind, Array.from(selected), new Date());
+        preview(nextPlan, content, apply);
+        if (confirm) apply.disabled = true;
+        dialog.showModal();
       } catch (error) { showError(error); }
     }
     function openEdit() {
@@ -218,7 +259,7 @@
       function invalidate() { plan = null; apply.disabled = true; utils.clear(content); date.disabled = dateMode.value !== "set"; days.disabled = dateMode.value !== "shift"; person.disabled = personMode.value !== "set"; }
       fields.addEventListener("input", invalidate); fields.addEventListener("change", invalidate);
       actions.append(button(t("取消", "Cancel"), function () { dialog.close(); }), previewButton, apply);
-      dialog.append(fields, el("p", "bulk-help", t("周期 Task 可批量修改紧急程度和管理对象；DDL 请逐条编辑以核对周期与完成记录。", "Bulk edit urgency and managed person for recurring Tasks. Edit their DDL individually to review recurrence and completion history.")), content, actions); dialog.showModal();
+      dialogBody.append(fields, el("p", "bulk-help", t("周期 Task 可批量修改紧急程度和管理对象；DDL 请逐条编辑以核对周期与完成记录。", "Bulk edit urgency and managed person for recurring Tasks. Edit their DDL individually to review recurrence and completion history.")), content); dialog.append(actions); dialog.showModal();
     }
     return {
       openSelection: function (action, level, ids) {
@@ -227,6 +268,7 @@
         kind = level;
         selected = new Set(ids);
         if (action === "edit") openEdit();
+        else if (action === "complete" || action === "delete") openTaskAction(action);
         else openArchive();
       },
       render: function (view) {

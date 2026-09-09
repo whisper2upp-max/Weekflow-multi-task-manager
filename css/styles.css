@@ -7045,3 +7045,29 @@ html[data-language="en"] .urgency-badge {
 
 .timeline-heading-line { display: flex; align-items: center; gap: 12px; }
 .timeline-heading-line .button { min-height: 30px; padding: 5px 10px; }
+
+/* Keep the title and action buttons inside the viewport; only the body scrolls. */
+.bulk-dialog {
+  width: min(920px, calc(100vw - 32px));
+  max-width: calc(100vw - 32px);
+  max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
+  padding: 0;
+  overflow: hidden;
+}
+.bulk-dialog[open] { display: flex; flex-direction: column; }
+.bulk-dialog > .modal-head { flex: 0 0 auto; padding: 20px 24px 14px; margin: 0; border-bottom: 1px solid var(--line); }
+.bulk-dialog .modal-head h2 { min-width: 0; overflow-wrap: anywhere; }
+.bulk-dialog-body { flex: 1 1 auto; min-height: 0; padding: 20px 24px; overflow: auto; overscroll-behavior: contain; }
+.bulk-dialog > .modal-actions { flex: 0 0 auto; flex-wrap: wrap; margin: 0; padding: 14px 24px; background: var(--paper); }
+.bulk-dialog .bulk-field { min-width: 0; }
+.bulk-dialog .bulk-field input:not([type="checkbox"]), .bulk-dialog .bulk-field select { box-sizing: border-box; min-width: 0; width: 100%; }
+.bulk-dialog .bulk-preview-table { max-height: none; }
+.bulk-dialog .bulk-preview-table th, .bulk-dialog .bulk-preview-table td { overflow-wrap: anywhere; }
+.bulk-dialog .modal-actions .bulk-field { margin-right: auto; }
+@media (max-width: 760px) { .bulk-dialog .bulk-edit-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 520px) {
+  .bulk-dialog .bulk-edit-fields { grid-template-columns: minmax(0, 1fr); }
+  .bulk-dialog > .modal-head, .bulk-dialog > .modal-actions, .bulk-dialog-body { padding: 14px 16px; }
+  .bulk-dialog .modal-actions .bulk-field { flex-basis: 100%; }
+}

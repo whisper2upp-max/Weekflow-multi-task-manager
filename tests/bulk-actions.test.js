@@ -122,3 +122,82 @@ test("English and Chinese re-importable Excel retain archive metadata", async ()
     assert.equal(row.archive.specified, true);
   }
 });
+
+test("bulk completion preserves completed dates, progress, archives and unrelated Tasks", () => {
+  const now = new Date(2026, 8, 10, 12), data = fixture();
+  Object.assign(data.tasks[1], { status: "completed", completedAt: "2026-09-08" });
+  const original = JSON.stringify(data);
+  const plan = bulk.planComplete(data, "group", ["g1", "g1"], now);
+  assert.equal(JSON.stringify(data), original);
+  assert.equal(plan.changes.length, 1);
+  assert.equal(plan.skipped[0].reason, "completed");
+  const next = bulk.applyPlan(data, plan, now);
+  assert.equal(next.tasks[0].status, "completed");
+  assert.equal(next.tasks[0].completedAt, "2026-09-10");
+  assert.deepEqual(next.tasks[0].progressEntries, data.tasks[0].progressEntries);
+  assert.deepEqual(next.tasks.slice(1), data.tasks.slice(1));
+  assert.deepEqual(next.materials, data.materials);
+  assert.equal(bulk.planComplete(archive(data, "task", ["t1"], "old"), "group", ["g1"], now).changes.length, 0);
+  assert.throws(() => bulk.applyPlan(data, plan, new Date(2026, 8, 11, 12)), /stale-preview/);
+});
+
+test("recurring bulk completion uses the single-Task rules and skips future schedules", () => {
+  const now = new Date(2026, 8, 10, 12), data = fixture();
+  Object.assign(data.tasks[0], { recurrenceCadence: "weekly", recurrenceStart: "2026-09-01", recurrenceEnd: "2026-10-31", recurrenceCompletions: [] });
+  Object.assign(data.tasks[1], { ddl: "2026-10-02", recurrenceCadence: "weekly", recurrenceStart: "2026-10-01", recurrenceEnd: "2026-10-31", recurrenceCompletions: [] });
+  const expected = JSON.parse(JSON.stringify(data.tasks[0]));
+  automation.setCurrentPeriodCompleted(expected, true, now);
+  expected.updatedAt = now.toISOString();
+  const plan = bulk.planComplete(data, "group", ["g1"], now);
+  assert.equal(plan.changes.length, 1);
+  assert.equal(plan.skipped[0].reason, "unavailable");
+  assert.deepEqual(plan.changes[0].after, expected);
+  assert.ok(expected.recurrenceCompletions.length >= 2);
+  const next = bulk.applyPlan(data, plan, now);
+  assert.deepEqual(next.tasks[1], data.tasks[1]);
+  assert.equal(bulk.planComplete(next, "task", ["t1"], now).skipped[0].reason, "completed");
+  assert.equal(storage.validateData(next).valid, true);
+});
+
+test("bulk Task deletion keeps documents, notes and surviving associations", () => {
+  const data = fixture();
+  data.materials[0].taskIds.push("t3");
+  data.notes = [{ id: "n1", contentText: "保留的随手记", convertedTaskIds: ["t1"] }];
+  const original = JSON.stringify(data), plan = bulk.planDelete(data, "task", ["t1", "t2"]);
+  assert.equal(JSON.stringify(data), original);
+  const next = bulk.applyPlan(data, plan);
+  assert.deepEqual(next.tasks, [data.tasks[2]]);
+  assert.deepEqual(next.groups, data.groups);
+  assert.deepEqual(next.flows, data.flows);
+  assert.deepEqual(next.notes, data.notes);
+  assert.equal(next.materials.length, 1);
+  assert.deepEqual(next.materials[0].taskIds, ["t3"]);
+  assert.deepEqual(next.materials[0].flowIds, ["f1"]);
+  assert.deepEqual(next.materials[0].groupIds, ["g1"]);
+});
+
+test("parent deletion previews and removes archived descendants without dangling document links", () => {
+  const data = archive(fixture(), "task", ["t1"], "old");
+  for (const kind of ["flow", "group"]) {
+    const plan = bulk.planDelete(data, kind, [kind === "group" ? "g1" : "f1"]);
+    assert.ok(plan.changes.some(c => c.id === "t1" && c.before.archivedAt));
+    const next = bulk.applyPlan(data, plan);
+    assert.equal(next.flows.length, 0);
+    assert.deepEqual(next.materials[0].taskIds, []);
+    assert.deepEqual(next.materials[0].flowIds, []);
+    assert.deepEqual(next.materials[0].groupIds, kind === "group" ? [] : ["g1"]);
+    assert.deepEqual(next.tasks.map(t => t.id), kind === "group" ? ["t3"] : ["t2", "t3"]);
+    assert.equal(storage.validateData(next).valid, true);
+  }
+});
+
+test("stale deletion previews reject changes to Tasks and document associations atomically", () => {
+  for (const field of ["task", "material"]) {
+    const data = fixture(), plan = bulk.planDelete(data, "group", ["g1"]);
+    if (field === "task") data.tasks[0].name = "刚编辑的任务";
+    else data.materials[0].taskIds.push("t3");
+    const original = JSON.stringify(data);
+    assert.throws(() => bulk.applyPlan(data, plan), /stale-preview/);
+    assert.equal(JSON.stringify(data), original);
+  }
+});
