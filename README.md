@@ -2,6 +2,8 @@
 
 # Weekflow v3.2 · Task management
 
+> **试验分支 `codex/bulk-archive-actions`**：增加批量修改、批量归档和已归档视图。[试用说明与功能边界](docs/bulk-archive-trial.md)。
+
 <p>
   <img src="https://img.shields.io/badge/version-3.2-665CFF?style=flat-square" alt="version 3.2">
   <img src="https://img.shields.io/badge/platforms-macOS%20%7C%20Windows-18213F?style=flat-square" alt="platforms macOS and Windows">

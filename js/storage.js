@@ -94,6 +94,8 @@
     var created = String((group && group.createdAt) || nowISO());
     return {
       id: safeId(group && group.id, "group"),
+      archivedAt: isValidTimestamp(group && group.archivedAt) ? String(group.archivedAt) : null,
+      archiveBatchId: group && group.archivedAt && group.archiveBatchId ? String(group.archiveBatchId).slice(0, 100) : null,
       name: String((group && group.name) || "").trim().slice(0, 80),
       color: utils.isHexColor(group && group.color) ? group.color.toUpperCase() : COLORS[index % COLORS.length],
       order: Number.isFinite(Number(group && group.order)) ? Number(group.order) : index + 1,
@@ -107,6 +109,8 @@
     var created = String((flow && flow.createdAt) || nowISO());
     return {
       id: safeId(flow && flow.id, "flow"),
+      archivedAt: isValidTimestamp(flow && flow.archivedAt) ? String(flow.archivedAt) : null,
+      archiveBatchId: flow && flow.archivedAt && flow.archiveBatchId ? String(flow.archiveBatchId).slice(0, 100) : null,
       groupId: String((flow && flow.groupId) || ""),
       name: String((flow && flow.name) || "").trim().slice(0, 80),
       color: utils.isHexColor(flow && flow.color)
@@ -301,6 +305,8 @@
       : "none";
     return {
       id: safeId(task && task.id, "task"),
+      archivedAt: isValidTimestamp(task && task.archivedAt) ? String(task.archivedAt) : null,
+      archiveBatchId: task && task.archivedAt && task.archiveBatchId ? String(task.archiveBatchId).slice(0, 100) : null,
       groupId: String((task && task.groupId) || ""),
       flowId: task && task.flowId ? String(task.flowId) : null,
       flowOrder: Number.isFinite(rawFlowOrder) && rawFlowOrder >= 1 ? rawFlowOrder : null,

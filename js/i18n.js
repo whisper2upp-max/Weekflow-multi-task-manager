@@ -16,6 +16,8 @@
   var englishDocumentFragments = null;
   var ENGLISH_DATE_PLACEHOLDER = "MM / DD / YYYY";
   var EN_TEXT = {
+    "已归档": "Archived",
+    "批量操作": "Bulk Actions",
     "主页": "Home",
     "时间轴看板": "Timeline",
     "整体看板": "Overall Dashboard",

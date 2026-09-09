@@ -39,6 +39,9 @@
           <button class="nav-tab" type="button" data-view="notes">
             <span aria-hidden="true">✎</span> 随手记
           </button>
+          <button class="nav-tab" type="button" data-view="archived">
+            <span aria-hidden="true">▣</span> 已归档
+          </button>
         </nav>
 
         <div class="language-switch" role="group" aria-label="语言切换">
@@ -393,6 +396,7 @@
               </div>
             </div>
             <div class="timeline-range-controls">
+              <button class="button button-quiet" type="button" data-view="bulk">批量操作</button>
               <span id="range-label" class="range-label"></span>
               <div class="group-bulk-controls" aria-label="分组与 Flow 展开折叠控制">
                 <button type="button" data-action="groups-expand-all" title="展开所有分组与 Flow">
@@ -894,6 +898,7 @@
             </section>
           </div>
         </section>
+        <section id="bulk-view" class="view-panel bulk-view" hidden></section>
       </main>
     </div>
 
@@ -2046,6 +2051,8 @@
     <script src="./js/excel-import.js"></script>
     <script src="./js/material-excel.js"></script>
     <script src="./js/ai-provider.js"></script>
+    <script src="./js/bulk-actions.js"></script>
+    <script src="./js/bulk-ui.js"></script>
     <script src="./js/app.js"></script>
   </body>
 </html>

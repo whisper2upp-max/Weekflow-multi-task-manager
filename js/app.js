@@ -68,6 +68,8 @@
     ]
   };
   var data = storage.load();
+  var bulkWorkbench;
+  function activeData() { return App.bulkActions.activeData(data); }
   var ui = {
     view: "home",
     filters: {
@@ -155,6 +157,7 @@
 
   function cacheDom() {
     [
+      "bulk-view",
       "home-view",
       "timeline-view",
       "dashboard-view",
@@ -407,12 +410,32 @@
 
   function initialize() {
     cacheDom();
+    bulkWorkbench = App.bulkUi.mount({
+      getData: function () { return data; },
+      switchView: switchView,
+      toast: toast,
+      openItem: function (kind, id) {
+        if (kind === "task") openEditTask(id);
+        else if (kind === "flow") openEditFlow(id);
+        else openEditGroup(id);
+      },
+      openProgress: openProgressManager,
+      openDocuments: openLinkManager,
+      commit: function (next, message) {
+        var previous = data;
+        data = next;
+        if (persistAndRender(message)) { closeDdlReminder(); return true; }
+        data = previous;
+        renderAll();
+        return false;
+      }
+    });
     updateAiUi();
     renderPresetColorPalettes();
     renderNoteTableSizePicker();
     bindEvents();
     syncLanguageAssets();
-    var recurrenceSync = automation.syncRecurringTaskStates(data, new Date());
+    var recurrenceSync = automation.syncRecurringTaskStates(activeData(), new Date());
     if (recurrenceSync.changed) {
       try {
         data = storage.save(data);
@@ -671,7 +694,9 @@
       if (ui.view === "home" || ui.view === "dashboard") switchView("timeline");
       requestAnimationFrame(function () {
         var search =
-          ui.view === "materials"
+          ui.view === "bulk" || ui.view === "archived"
+            ? query("input[type=search]", dom["bulk-view"])
+            : ui.view === "materials"
             ? dom["material-filter-name"]
             : ui.view === "notes"
               ? dom["note-search"]
@@ -990,7 +1015,7 @@
 
   function persistAndRender(message) {
     try {
-      automation.syncRecurringTaskStates(data, new Date());
+      automation.syncRecurringTaskStates(activeData(), new Date());
       data = storage.save(data);
       sanitizeUiState();
       renderAll();
@@ -1068,12 +1093,12 @@
       })
     );
     ui.filters.groupIds = ui.filters.groupIds.filter(function (id) {
-      return validGroupIds.has(id);
+      return validGroupIds.has(id) && !getGroup(id).archivedAt;
     });
     if (
       ui.filters.flowId !== "all" &&
       ui.filters.flowId !== "none" &&
-      !getFlow(ui.filters.flowId)
+      (!getFlow(ui.filters.flowId) || App.bulkActions.isArchived(data, "flow", getFlow(ui.filters.flowId)))
     ) {
       ui.filters.flowId = "all";
     }
@@ -1138,17 +1163,17 @@
   }
 
   function renderHeaderSummary() {
-    var summary = stats.summarize(data.tasks, new Date());
+    var summary = stats.summarize(activeData().tasks, new Date());
     dom["header-pending"].textContent = summary.pending;
     dom["header-overdue"].textContent = summary.overdue;
   }
 
   function renderHomeSummary() {
-    var summary = stats.summarize(data.tasks, new Date());
+    var summary = stats.summarize(activeData().tasks, new Date());
     dom["home-task-total"].textContent = summary.total;
     dom["home-completion-rate"].textContent = summary.completionRate + "%";
-    dom["home-group-total"].textContent = data.groups.length;
-    dom["home-flow-total"].textContent = data.flows.length;
+    dom["home-group-total"].textContent = activeData().groups.length;
+    dom["home-flow-total"].textContent = activeData().flows.length;
     dom["home-material-total"].textContent = data.materials.length;
     dom["home-note-total"].textContent = data.notes.length;
   }
@@ -1347,14 +1372,14 @@
     toast("筛选已清空");
   }
 
-  function getSortedGroups() {
-    return data.groups.slice().sort(function (a, b) {
+  function getSortedGroups(includeArchived) {
+    return (includeArchived ? data : activeData()).groups.slice().sort(function (a, b) {
       return Number(a.order || 0) - Number(b.order || 0);
     });
   }
 
-  function getSortedFlows(groupId) {
-    return data.flows
+  function getSortedFlows(groupId, includeArchived) {
+    return (includeArchived ? data : activeData()).flows
       .filter(function (flow) {
         return !groupId || flow.groupId === groupId;
       })
@@ -1433,7 +1458,7 @@
   }
 
   function getVisibleTasks() {
-    var visible = stats.filterTasks(data.tasks, ui.filters, new Date(), data.flows);
+    var visible = stats.filterTasks(activeData().tasks, ui.filters, new Date(), data.flows);
     if (!ui.filters.search) return scopeTasksToTimelineGranularity(visible);
     var materialTaskIds = new Set();
     var needle = utils.normalizeText(ui.filters.search);
@@ -1449,7 +1474,7 @@
       });
     });
     var filtersWithoutSearch = Object.assign({}, ui.filters, { search: "" });
-    var base = stats.filterTasks(data.tasks, filtersWithoutSearch, new Date(), data.flows);
+    var base = stats.filterTasks(activeData().tasks, filtersWithoutSearch, new Date(), data.flows);
     var visibleIds = new Set(
       visible.map(function (task) {
         return task.id;
@@ -1466,7 +1491,7 @@
 
   function getTimelineWeeks() {
     if (ui.timelineMode === "all") {
-      return excelExport.timelineWeeks(data.tasks, new Date());
+      return excelExport.timelineWeeks(activeData().tasks, new Date());
     }
     var start = dates.addWeeksFriday(ui.timelineAnchor, -ui.windowPastWeeks);
     var end = dates.addWeeksFriday(ui.timelineAnchor, ui.windowFutureWeeks);
@@ -1521,7 +1546,16 @@
     syncTimelineGranularityChrome(columns);
     dom["visible-result-count"].textContent = visibleTasks.length + " 条可见 Task";
 
-    if (!data.groups.length) {
+    if (!activeData().groups.length && data.groups.length) {
+      board.appendChild(createEmptyState(
+        i18n.isEnglish() ? "All Groups Are Archived" : "当前分组均已归档",
+        i18n.isEnglish() ? "Review or restore them from Archived." : "可前往已归档视图查看或恢复。",
+        i18n.isEnglish() ? "View Archived" : "查看已归档",
+        function () { switchView("archived"); }
+      ));
+      return;
+    }
+    if (!activeData().groups.length) {
       board.appendChild(
         createEmptyState(
           i18n.isEnglish() ? "Create Your First Group" : "先建立第一个分组",
@@ -2253,20 +2287,20 @@
   }
 
   function setAllGroupsCollapsed(collapsed) {
-    if (!data.groups.length) {
+    if (!activeData().groups.length) {
       toast("当前没有可" + (collapsed ? "折叠" : "展开") + "的分组", "warning");
       return;
     }
     var changed = false;
     var stamp = new Date().toISOString();
-    data.groups.forEach(function (group) {
+    activeData().groups.forEach(function (group) {
       if (group.collapsed !== collapsed) {
         group.collapsed = collapsed;
         group.updatedAt = stamp;
         changed = true;
       }
     });
-    data.flows.forEach(function (flow) {
+    activeData().flows.forEach(function (flow) {
       if (flow.collapsed !== collapsed) {
         flow.collapsed = collapsed;
         flow.updatedAt = stamp;
@@ -2366,7 +2400,7 @@
   }
 
   function renderDashboard() {
-    var summary = stats.summarize(data.tasks, new Date());
+    var summary = stats.summarize(activeData().tasks, new Date());
     renderMetricCards(summary);
     renderGroupDashboard();
     renderFlowDashboard();
@@ -2386,7 +2420,9 @@
       emblem: "汇",
       color: "#665CFF"
     });
-    dom["dashboard-scope"].textContent = "统计全部 " + summary.total + " 条 Task（不受时间轴筛选影响）";
+    dom["dashboard-scope"].textContent = i18n.isEnglish()
+      ? "Statistics for all " + summary.total + " active Tasks (archives and timeline filters excluded)"
+      : "统计全部 " + summary.total + " 条未归档 Task（不受时间轴筛选影响）";
     syncDashboardModuleView();
   }
 
@@ -2398,7 +2434,7 @@
       {
         label: "Task 总数",
         value: summary.total,
-        note: data.groups.length + " 个分组 · " + data.flows.length + " 个 Flow",
+        note: activeData().groups.length + " 个分组 · " + activeData().flows.length + " 个 Flow",
         className: "total",
         icon: "▦",
         color: "#665CFF",
@@ -2473,7 +2509,7 @@
   function renderGroupDashboard() {
     var cardContainer = utils.clear(dom["group-dashboard"]);
     var tableBody = utils.clear(dom["group-summary-body"]);
-    var summaries = stats.summarizeByGroup(data.groups, data.tasks, new Date());
+    var summaries = stats.summarizeByGroup(activeData().groups, activeData().tasks, new Date());
     if (!summaries.length) {
       cardContainer.appendChild(
         createEmptyState("还没有分组", "建立分组后，这里会显示精确统计和完成进度。", "新建分组", openNewGroup)
@@ -2494,7 +2530,7 @@
   function renderFlowDashboard() {
     var cardContainer = utils.clear(dom["flow-dashboard"]);
     var tableBody = utils.clear(dom["flow-summary-body"]);
-    var summaries = stats.summarizeByFlow(data.flows, data.groups, data.tasks, new Date());
+    var summaries = stats.summarizeByFlow(activeData().flows, activeData().groups, activeData().tasks, new Date());
     if (!summaries.length) {
       cardContainer.appendChild(
         createEmptyState(
@@ -2549,7 +2585,7 @@
     var cardContainer = utils.clear(dom[config.cardContainerId]);
     var tableBody = utils.clear(dom[config.tableBodyId]);
     var summaries = stats.summarizeByTaskField(
-      data.tasks,
+      activeData().tasks,
       field,
       new Date(),
       config.emptyLabel
@@ -2859,7 +2895,7 @@
   }
 
   function defaultMaterialGroupOrder() {
-    return getSortedGroups()
+    return getSortedGroups(true)
       .map(function (group) {
         return group.id;
       })
@@ -3161,7 +3197,7 @@
     setMaterialFilterLabel("material-filter-task-label", ui.materialFilters.taskIds.length);
 
     var flowContainer = utils.clear(dom["material-filter-flows"]);
-    getSortedFlows().forEach(function (flow) {
+    getSortedFlows(null, true).forEach(function (flow) {
       var group = getGroup(flow.groupId);
       appendMaterialFilterOption(flowContainer, {
         value: flow.id,
@@ -3177,7 +3213,7 @@
     setMaterialFilterLabel("material-filter-flow-label", ui.materialFilters.flowIds.length);
 
     var groupContainer = utils.clear(dom["material-filter-groups"]);
-    getSortedGroups().forEach(function (group) {
+    getSortedGroups(true).forEach(function (group) {
       appendMaterialFilterOption(groupContainer, {
         value: group.id,
         label: group.name,
@@ -3654,7 +3690,7 @@
   }
 
   function switchView(view) {
-    var nextView = ["home", "timeline", "dashboard", "materials", "notes"].includes(view)
+    var nextView = ["home", "timeline", "dashboard", "materials", "notes", "bulk", "archived"].includes(view)
       ? view
       : "home";
     if (
@@ -3689,6 +3725,9 @@
   }
 
   function syncView() {
+    var bulkVisible = ui.view === "bulk" || ui.view === "archived";
+    dom["bulk-view"].hidden = !bulkVisible;
+    if (bulkVisible && bulkWorkbench) bulkWorkbench.render(ui.view);
     dom["home-view"].hidden = ui.view !== "home";
     dom["timeline-view"].hidden = ui.view !== "timeline";
     dom["dashboard-view"].hidden = ui.view !== "dashboard";
@@ -3698,7 +3737,7 @@
     dom["materials-filter-bar"].hidden = ui.view !== "materials";
     dom["materials-layout-controls"].hidden = ui.view !== "materials";
     var simplifiedHeader =
-      ui.view === "dashboard" || ui.view === "materials" || ui.view === "notes";
+      ui.view === "dashboard" || ui.view === "materials" || ui.view === "notes" || bulkVisible;
     dom["header-summary"].hidden = simplifiedHeader;
     dom["header-actions"].hidden = simplifiedHeader;
     queryAll("[data-view]").forEach(function (button) {
@@ -5250,7 +5289,7 @@
     var groupId = dom["note-progress-group"].value;
     var flowId = dom["note-progress-flow"].value || "all";
     var select = utils.clear(dom["note-progress-task"]);
-    var tasks = data.tasks
+    var tasks = activeData().tasks
       .filter(function (task) {
         if (task.groupId !== groupId) return false;
         if (flowId === "none") return !task.flowId;
@@ -5720,7 +5759,7 @@
   function startNoteTaskConversion() {
     var note = ensureCurrentNoteSaved();
     if (!note) return;
-    if (!data.groups.length) {
+    if (!activeData().groups.length) {
       toast(i18n.isEnglish() ? "Create a Group before converting the note." : "请先创建分组，再转换 Task 草稿。", "warning");
       return;
     }
@@ -6223,7 +6262,7 @@
   }
 
   function openNewFlow(groupId, returnToTask) {
-    if (!data.groups.length) {
+    if (!activeData().groups.length) {
       toast("请先新建一个分组，再创建 Flow。", "warning");
       openNewGroup();
       return;
@@ -6242,7 +6281,7 @@
         ? activeFlow.groupId
         : ui.filters.groupIds.length === 1
           ? ui.filters.groupIds[0]
-          : data.groups[0].id);
+          : activeData().groups[0].id);
     populateFlowGroupSelect(selectedGroupId);
     syncFlowColorWithSelectedGroup();
     dom["flow-delete-button"].hidden = true;
@@ -6898,7 +6937,7 @@
 
   function openNewTask() {
     if (ui.taskDraftConversion) resetTaskDraftConversionUi();
-    if (!data.groups.length) {
+    if (!activeData().groups.length) {
       toast("请先新建一个分组，再创建 Task。", "warning");
       openNewGroup();
       return;
@@ -6912,7 +6951,7 @@
       ? filteredFlow.groupId
       : ui.filters.groupIds.length === 1
         ? ui.filters.groupIds[0]
-        : data.groups[0].id;
+        : activeData().groups[0].id;
     populateTaskGroupSelect(initialGroupId);
     populateTaskFlowSelect(initialGroupId, filteredFlow ? filteredFlow.id : null);
     dom["task-ddl"].value = dates.todayISO();
@@ -7278,6 +7317,8 @@
     }
     var task = {
       id: existing ? existing.id : utils.uid("task"),
+      archivedAt: existing ? existing.archivedAt : null,
+      archiveBatchId: existing ? existing.archiveBatchId : null,
       groupId: groupId,
       flowId: flowId,
       flowOrder: flowOrder,
@@ -7754,13 +7795,13 @@
     renderRelationOptions(
       dom["material-group-options"],
       "group",
-      getSortedGroups(),
+      getSortedGroups(true),
       selectedGroupIds,
       "还没有可选分组"
     );
 
     var availableFlows = hasSelectedGroups
-      ? getSortedFlows().filter(function (flow) {
+      ? getSortedFlows(null, true).filter(function (flow) {
           return selectedGroupIds.includes(flow.groupId);
         })
       : [];
@@ -8928,6 +8969,8 @@
       }
       nextTasks.push({
         id: existing ? existing.id : utils.uid("task"),
+        archivedAt: existing ? existing.archivedAt : null,
+        archiveBatchId: existing ? existing.archiveBatchId : null,
         groupId: group.id,
         flowId: flow ? flow.id : null,
         flowOrder: flowOrder,
@@ -9005,11 +9048,57 @@
   }
 
   function applyExcelRows(rows, mode) {
-    if (mode === "replace") {
-      replaceExcelRows(rows);
-      return;
+    var previous = utils.clone(data);
+    var oldGroups = new Map(previous.groups.map(function (g) { return [normalizeImportName(g.name), g]; }));
+    var oldFlows = new Map(previous.flows.map(function (f) {
+      var g = previous.groups.find(function (g) { return g.id === f.groupId; });
+      return [importFlowKey(g.name, f.name), f];
+    }));
+    var archiveByParent = new Map();
+    function incoming(row, prefix, fallback) {
+      var fields = row.archive || {};
+      return fields.specified ? {
+        archivedAt: fields[prefix + "ArchivedAt"] || null,
+        archiveBatchId: fields[prefix + "ArchiveBatchId"] || null
+      } : { archivedAt: fallback && fallback.archivedAt || null, archiveBatchId: fallback && fallback.archiveBatchId || null };
     }
-    appendExcelRows(rows);
+    rows.forEach(function (row) {
+      [["group", normalizeImportName(row.groupName), oldGroups], ["flow", importFlowKey(row.groupName, row.flowName), oldFlows]].forEach(function (entry) {
+        if (entry[0] === "flow" && !row.flowName) return;
+        var existing = entry[2].get(entry[1]);
+        var value = incoming(row, entry[0], mode === "replace" ? existing : null);
+        var key = entry[0] + ":" + entry[1];
+        if (archiveByParent.has(key) && JSON.stringify(archiveByParent.get(key)) !== JSON.stringify(value)) {
+          throw new Error(i18n.isEnglish() ? "Archive metadata differs between rows for the same Group or Flow." : "同一分组或 Flow 的归档信息在不同行中不一致。");
+        }
+        if (mode !== "replace" && existing && (Boolean(existing.archivedAt) !== Boolean(value.archivedAt) || (existing.archivedAt && existing.archiveBatchId !== value.archiveBatchId))) {
+          throw new Error(i18n.isEnglish() ? "The matching Group or Flow has a different archive state. Restore it or rename the imported hierarchy first." : "匹配分组或 Flow 的归档状态不同，请先恢复归档或修改导入的层级名称。");
+        }
+        archiveByParent.set(key, value);
+      });
+    });
+    if (mode === "replace") replaceExcelRows(rows);
+    else appendExcelRows(rows);
+    var oldTaskIds = new Set(previous.tasks.map(function (task) { return task.id; }));
+    var candidates = data.tasks.filter(function (task) { return mode === "replace" || !oldTaskIds.has(task.id); });
+    var used = new Set();
+    rows.forEach(function (row) {
+      var group = data.groups.find(function (g) { return normalizeImportName(g.name) === normalizeImportName(row.groupName); });
+      var flow = row.flowName ? data.flows.find(function (f) { return f.groupId === group.id && normalizeImportName(f.name) === normalizeImportName(row.flowName); }) : null;
+      Object.assign(group, archiveByParent.get("group:" + normalizeImportName(row.groupName)));
+      if (flow) Object.assign(flow, archiveByParent.get("flow:" + importFlowKey(row.groupName, row.flowName)));
+      var task = candidates.find(function (task) { return !used.has(task.id) && task.groupId === group.id && task.flowId === (flow ? flow.id : null) && task.name === row.taskName; });
+      if (!task) return;
+      used.add(task.id);
+      var original = previous.tasks.find(function (old) { return old.id === task.id; });
+      Object.assign(task, incoming(row, "task", original));
+      // Added children of archived parents join the parent's archive batch.
+      if (!task.archivedAt && (group.archivedAt || flow && flow.archivedAt)) {
+        var parent = group.archivedAt ? group : flow;
+        task.archivedAt = parent.archivedAt;
+        task.archiveBatchId = parent.archiveBatchId;
+      }
+    });
   }
 
   function confirmExcelImport() {
@@ -9119,7 +9208,7 @@
     button.textContent = "正在导出…";
     window.setTimeout(function () {
       excelExport
-        .exportWorkbook(data, window.JSZip, new Date())
+        .exportWorkbook(activeData(), window.JSZip, new Date())
         .then(function (result) {
           utils.downloadBlob(result.blob, result.filename);
           toast("看板报告已导出：" + result.filename);
@@ -9153,7 +9242,7 @@
     button.textContent = "导出中…";
     window.setTimeout(function () {
       excelExport
-        .exportTaskStatusWorkbook(data, window.JSZip, config, new Date())
+        .exportTaskStatusWorkbook(activeData(), window.JSZip, config, new Date())
         .then(function (result) {
           utils.downloadBlob(result.blob, result.filename);
           toast("Task 状态已导出：" + result.filename);
@@ -9260,7 +9349,7 @@
       2
     );
     ui.recurrenceRefreshTimer = window.setTimeout(function () {
-      var result = automation.syncRecurringTaskStates(data, new Date());
+      var result = automation.syncRecurringTaskStates(activeData(), new Date());
       if (result.changed) {
         try {
           data = storage.save(data);
@@ -9284,7 +9373,7 @@
   function showDdlReminder() {
     closeDdlReminder();
     var today = dates.todayISO();
-    var tasks = automation.getDueSoonTasks(data, new Date(), 7);
+    var tasks = automation.getDueSoonTasks(activeData(), new Date(), 7);
     var list = utils.clear(dom["ddl-reminder-list"]);
     dom["ddl-reminder-summary"].textContent = tasks.length
       ? tasks.length + " 条未完成 Task 即将到期"
