@@ -7005,3 +7005,37 @@ html[data-language="en"] .urgency-badge {
   html[data-language="en"] .app-header { gap: 8px; }
   html[data-language="en"] .nav-tab { padding-right: 6px; padding-left: 6px; }
 }
+
+/* Selection stays on the weekly/day board, independently of completion. */
+.timeline-selection-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding: 10px 14px;
+  margin-bottom: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+  font-size: 12px;
+}
+.timeline-selection-scope, .timeline-select-all-label { display: inline-flex; align-items: center; gap: 8px; }
+.timeline-selection-scope select { padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--paper); font: inherit; color: var(--ink); }
+.timeline-selection-hint { flex: 1; color: var(--ink-soft); font-size: 11px; }
+.timeline-selection-bar .button { min-height: 32px; padding: 6px 12px; font-size: 12px; }
+.timeline-row-select, #timeline-select-all { width: 16px; height: 16px; flex: 0 0 16px; accent-color: var(--indigo); cursor: pointer; margin: 0; }
+.timeline-board .is-bulk-selected > .task-info,
+.timeline-board .is-bulk-selected > .group-left,
+.timeline-board .is-bulk-selected > .flow-left { background: #eeecff; box-shadow: inset 3px 0 0 var(--indigo); }
+@media (max-width: 1100px) { .timeline-selection-hint { flex-basis: 200px; } }
+.complete-check input {
+  appearance: none;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid #9ca9ba;
+  border-radius: 50%;
+  background: #fff;
+  cursor: pointer;
+}
+.complete-check input:checked { border-color: var(--emerald); background: var(--emerald); }
+.complete-check input:checked::after { content: "✓"; color: #fff; font: 700 10px/1 var(--font-body); }

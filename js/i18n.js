@@ -16,6 +16,13 @@
   var englishDocumentFragments = null;
   var ENGLISH_DATE_PLACEHOLDER = "MM / DD / YYYY";
   var EN_TEXT = {
+    "取消选择": "Clear Selection",
+    "看板批量操作": "Board Bulk Actions",
+    "复选层级": "Select Level",
+    "全选可见行": "Select Visible Rows",
+    "方框用于复选，圆圈用于完成 Task": "Squares select rows; circles complete Tasks",
+    "批量修改": "Bulk Edit",
+    "批量归档": "Archive Selected",
     "已归档": "Archived",
     "批量操作": "Bulk Actions",
     "主页": "Home",

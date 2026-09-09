@@ -72,6 +72,8 @@
   function activeData() { return App.bulkActions.activeData(data); }
   var ui = {
     view: "home",
+    timelineSelectionKind: "task",
+    timelineSelectedIds: [],
     filters: {
       search: "",
       groupIds: [],
@@ -157,6 +159,13 @@
 
   function cacheDom() {
     [
+      "timeline-selection-kind",
+      "timeline-selection-count",
+      "timeline-selection-hint",
+      "timeline-select-all",
+      "timeline-selection-clear",
+      "timeline-selection-edit",
+      "timeline-selection-archive",
       "bulk-view",
       "home-view",
       "timeline-view",
@@ -421,6 +430,10 @@
       },
       openProgress: openProgressManager,
       openDocuments: openLinkManager,
+      onApplied: function () {
+        ui.timelineSelectedIds = [];
+        syncTimelineSelection();
+      },
       commit: function (next, message) {
         var previous = data;
         data = next;
@@ -452,6 +465,28 @@
   }
 
   function bindEvents() {
+    dom["timeline-selection-kind"].addEventListener("change", function () {
+      ui.timelineSelectionKind = dom["timeline-selection-kind"].value;
+      ui.timelineSelectedIds = [];
+      var viewport = captureTimelineViewport("task", "");
+      renderTimeline();
+      restoreTimelineViewport(viewport);
+    });
+    dom["timeline-select-all"].addEventListener("change", function () {
+      ui.timelineSelectedIds = dom["timeline-select-all"].checked
+        ? queryAll("[data-timeline-select]", dom["timeline-board"]).map(function (input) { return input.dataset.timelineSelect; })
+        : [];
+      syncTimelineSelection();
+    });
+    dom["timeline-selection-clear"].addEventListener("click", function () {
+      ui.timelineSelectedIds = [];
+      syncTimelineSelection();
+    });
+    ["edit", "archive"].forEach(function (action) {
+      dom["timeline-selection-" + action].addEventListener("click", function () {
+        bulkWorkbench.openSelection(action, ui.timelineSelectionKind, ui.timelineSelectedIds);
+      });
+    });
     document.addEventListener("click", handleActionClick);
     document.addEventListener("click", closeOtherPopoverMenus);
     document.addEventListener("mousedown", preserveRichTextSelectionBeforeToolbarAction, true);
@@ -694,7 +729,7 @@
       if (ui.view === "home" || ui.view === "dashboard") switchView("timeline");
       requestAnimationFrame(function () {
         var search =
-          ui.view === "bulk" || ui.view === "archived"
+          ui.view === "archived"
             ? query("input[type=search]", dom["bulk-view"])
             : ui.view === "materials"
             ? dom["material-filter-name"]
@@ -1158,6 +1193,7 @@
   }
 
   function renderFilteredViews() {
+    ui.timelineSelectedIds = [];
     renderFilterControls();
     renderTimeline();
   }
@@ -1535,7 +1571,49 @@
     dom["range-label"].title = rangeText;
   }
 
+  function syncTimelineSelection() {
+    var inputs = queryAll("[data-timeline-select]", dom["timeline-board"]);
+    var visibleIds = new Set(inputs.map(function (input) { return input.dataset.timelineSelect; }));
+    ui.timelineSelectedIds = ui.timelineSelectedIds.filter(function (id) { return visibleIds.has(id); });
+    var selected = new Set(ui.timelineSelectedIds);
+    inputs.forEach(function (input) {
+      input.checked = selected.has(input.dataset.timelineSelect);
+      input.closest(".task-row, .flow-row, .group-row").classList.toggle("is-bulk-selected", input.checked);
+    });
+    dom["timeline-select-all"].checked = inputs.length > 0 && selected.size === inputs.length;
+    dom["timeline-select-all"].indeterminate = selected.size > 0 && selected.size < inputs.length;
+    dom["timeline-select-all"].disabled = !inputs.length;
+    dom["timeline-selection-count"].textContent = (i18n.isEnglish() ? "Selected " : "已选 ") + selected.size;
+    dom["timeline-selection-edit"].disabled = dom["timeline-selection-archive"].disabled = !selected.size;
+    dom["timeline-selection-clear"].hidden = !selected.size;
+    dom["timeline-selection-hint"].textContent = ui.timelineSelectionKind === "task"
+      ? i18n.isEnglish() ? "Squares select rows; circles complete Tasks" : "方框用于复选，圆圈用于完成 Task"
+      : i18n.isEnglish() ? "Selected parents include all their active children" : "选中父级将处理其全部未归档子项";
+  }
+
+  function createTimelineSelection(kind, item) {
+    if (ui.timelineSelectionKind !== kind) return null;
+    var input = utils.el("input", "timeline-row-select");
+    input.type = "checkbox";
+    input.dataset.timelineSelect = item.id;
+    input.setAttribute("aria-label", (i18n.isEnglish() ? "Select " : "复选 ") + kind + ": " + item.name);
+    input.title = input.getAttribute("aria-label");
+    input.addEventListener("change", function () {
+      var ids = new Set(ui.timelineSelectedIds);
+      if (input.checked) ids.add(item.id);
+      else ids.delete(item.id);
+      ui.timelineSelectedIds = Array.from(ids);
+      syncTimelineSelection();
+    });
+    return input;
+  }
+
   function renderTimeline() {
+    renderTimelineContent();
+    syncTimelineSelection();
+  }
+
+  function renderTimelineContent() {
     var visibleTasks = getVisibleTasks();
     var columns = getTimelineColumns();
     var dayMode = ui.timelineGranularity === "day";
@@ -1778,6 +1856,8 @@
     applyGroupVariables(row, group);
 
     var left = utils.el("div", "group-left");
+    var selection = createTimelineSelection("group", group);
+    if (selection) left.appendChild(selection);
     var collapse = utils.el("button", "collapse-button", "⌄");
     collapse.type = "button";
     collapse.setAttribute("aria-label", group.collapsed ? "展开分组" : "收起分组");
@@ -1841,6 +1921,8 @@
     applyFlowVariables(row, flow);
 
     var left = utils.el("div", "flow-left");
+    var selection = createTimelineSelection("flow", flow);
+    if (selection) left.appendChild(selection);
     var hierarchy = utils.el("span", "flow-hierarchy", "↳");
     hierarchy.setAttribute("aria-hidden", "true");
     var collapse = utils.el("button", "collapse-button flow-collapse", "⌄");
@@ -1961,6 +2043,8 @@
 
     var info = utils.el("div", "task-info");
     var main = utils.el("div", "task-main");
+    var selection = createTimelineSelection("task", task);
+    if (selection) main.appendChild(selection);
     var checkLabel = utils.el("label", "complete-check");
     var checkbox = utils.el("input");
     checkbox.type = "checkbox";
@@ -3690,7 +3774,7 @@
   }
 
   function switchView(view) {
-    var nextView = ["home", "timeline", "dashboard", "materials", "notes", "bulk", "archived"].includes(view)
+    var nextView = ["home", "timeline", "dashboard", "materials", "notes", "archived"].includes(view)
       ? view
       : "home";
     if (
@@ -3725,7 +3809,7 @@
   }
 
   function syncView() {
-    var bulkVisible = ui.view === "bulk" || ui.view === "archived";
+    var bulkVisible = ui.view === "archived";
     dom["bulk-view"].hidden = !bulkVisible;
     if (bulkVisible && bulkWorkbench) bulkWorkbench.render(ui.view);
     dom["home-view"].hidden = ui.view !== "home";

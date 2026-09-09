@@ -2,7 +2,7 @@
 
 # Weekflow v3.2 · Bilingual Task Management
 
-> **Trial branch `codex/bulk-archive-actions`**: adds bulk Task edits, hierarchical archiving, and an Archived view. [Trial notes (Chinese)](docs/bulk-archive-trial.md). Recurring DDLs remain individually editable; urgency and managed person support bulk edits.
+> **Trial branch `codex/bulk-archive-actions`**: adds direct multi-selection on the Task board for bulk edits and hierarchical archiving, plus an Archived view. [Trial notes (Chinese)](docs/bulk-archive-trial.md). Recurring DDLs remain individually editable; urgency and managed person support bulk edits.
 
 <p>
   <img src="https://img.shields.io/badge/version-3.2-665CFF?style=flat-square" alt="version 3.2">

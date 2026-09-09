@@ -396,7 +396,6 @@
               </div>
             </div>
             <div class="timeline-range-controls">
-              <button class="button button-quiet" type="button" data-view="bulk">批量操作</button>
               <span id="range-label" class="range-label"></span>
               <div class="group-bulk-controls" aria-label="分组与 Flow 展开折叠控制">
                 <button type="button" data-action="groups-expand-all" title="展开所有分组与 Flow">
@@ -426,6 +425,24 @@
                 ← 返回 Task by Week
               </button>
             </div>
+          </div>
+
+          <div id="timeline-selection-bar" class="timeline-selection-bar" role="region" aria-label="看板批量操作">
+            <label class="timeline-selection-scope">复选层级
+              <select id="timeline-selection-kind">
+                <option value="task">Task</option>
+                <option value="flow">Flow</option>
+                <option value="group">分组</option>
+              </select>
+            </label>
+            <label class="timeline-select-all-label">
+              <input id="timeline-select-all" type="checkbox" /> 全选可见行
+            </label>
+            <strong id="timeline-selection-count" aria-live="polite"></strong>
+            <span id="timeline-selection-hint" class="timeline-selection-hint">方框用于复选，圆圈用于完成 Task</span>
+            <button id="timeline-selection-clear" class="text-button" type="button">取消选择</button>
+            <button id="timeline-selection-edit" class="button button-quiet" type="button" disabled>批量修改</button>
+            <button id="timeline-selection-archive" class="button button-primary" type="button" disabled>批量归档</button>
           </div>
 
           <div id="timeline-scroll" class="timeline-scroll" tabindex="0">

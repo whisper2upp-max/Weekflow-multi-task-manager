@@ -24,12 +24,8 @@
     }
     var title = el("h1");
     var toolbar = el("div", "view-toolbar");
-    var intro = el("div"); intro.append(title, el("p", "bulk-help", t("选择 Task、Flow 或分组，预览后统一处理。", "Select Tasks, Flows or Groups, then preview and apply changes.")));
-    var tabs = el("div", "segmented");
-    [["bulk", t("当前工作", "Active Work")], ["archived", t("已归档", "Archived")]].forEach(function (item) {
-      var node = button(item[1], function () { options.switchView(item[0]); }); node.dataset.view = item[0]; tabs.append(node);
-    });
-    toolbar.append(intro, tabs, button(t("返回时间轴", "Back to Timeline"), function () { options.switchView("timeline"); }));
+    var intro = el("div"); intro.append(title, el("p", "bulk-help", t("查看归档的 Task、Flow 或分组，也可复选后批量恢复。", "Review archived Tasks, Flows or Groups, and select records to restore.")));
+    toolbar.append(intro, button(t("返回 Task 看板复选", "Select on Task Board"), function () { options.switchView("timeline"); }));
     var filterBar = el("div", "bulk-filters");
     var kindInput = select([["task", "Task"], ["flow", "Flow"], ["group", t("分组", "Group")]], kind, function (v) { kind = v; });
     var searchInput = el("input"); searchInput.type = "search"; searchInput.placeholder = t("搜索名称、人员、进度或资料", "Search names, people, progress or documents");
@@ -68,7 +64,7 @@
         "stale-preview": t("数据已变化，请关闭并重新预览。", "Data changed. Close this dialog and preview again.")
       };
       var text = messages[error.message];
-      if (error.message.indexOf("recurring-ddl:") === 0) text = t("周期 Task 的 DDL 请逐条编辑，以核对周期范围和完成记录。请筛选非周期 Task 后再批量改期：", "Edit recurring DDLs individually to review their schedule and completion history. Filter non-recurring Tasks before changing dates: ") + error.message.slice(14);
+      if (error.message.indexOf("recurring-ddl:") === 0) text = t("周期 Task 的 DDL 请逐条编辑，以核对周期范围和完成记录。请取消所选周期 Task 后再批量改期：", "Edit recurring DDLs individually to review their schedule and completion history. Deselect recurring Tasks before changing dates: ") + error.message.slice(14);
       options.toast(text || error.message, "warning", 7000);
     }
     function selectable(item) { return !archived || !bulk.parentArchived(options.getData(), kind, item); }
@@ -181,7 +177,9 @@
       try {
         var next = bulk.applyPlan(options.getData(), plan);
         if (!options.commit(next, t("批量操作已保存。", "Bulk changes saved."))) return;
-        dialog.close(); selected.clear(); renderRows();
+        dialog.close(); selected.clear();
+        if (options.onApplied) options.onApplied();
+        renderRows();
       } catch (error) { showError(error); }
     }
     function openArchive() {
@@ -223,10 +221,19 @@
       dialog.append(fields, el("p", "bulk-help", t("周期 Task 可批量修改紧急程度和管理对象；DDL 请逐条编辑以核对周期与完成记录。", "Bulk edit urgency and managed person for recurring Tasks. Edit their DDL individually to review recurrence and completion history.")), content, actions); dialog.showModal();
     }
     return {
+      openSelection: function (action, level, ids) {
+        if (!ids.length || dialog.open) return;
+        archived = false;
+        kind = level;
+        selected = new Set(ids);
+        if (action === "edit") openEdit();
+        else openArchive();
+      },
       render: function (view) {
         var nextArchived = view === "archived";
         if (archived !== nextArchived) { selected.clear(); search = ""; searchInput.value = ""; groupId = ""; status = ""; statusInput.value = ""; recurrence = ""; recurrenceInput.value = ""; }
         archived = nextArchived;
+        kindInput.value = kind;
         title.textContent = archived ? t("已归档", "Archived") : t("批量操作", "Bulk Actions");
         var previousGroup = groupId; utils.clear(groupInput);
         [["", t("全部分组", "All Groups")]].concat(options.getData().groups.map(function (g) { return [g.id, g.name]; })).forEach(function (item) { var option = el("option", "", item[1]); option.value = item[0]; groupInput.append(option); });

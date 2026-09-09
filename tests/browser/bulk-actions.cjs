@@ -1,9 +1,8 @@
 /* Run with Playwright available on NODE_PATH; uses a fresh browser context. */
 const { chromium } = require('playwright');
 const assert = require('node:assert/strict');
-const path = require('node:path');
 const storage = require('../../js/storage.js');
-const url = process.env.WEEKFLOW_TEST_URL || 'http://127.0.0.1:8766/Weekflow.html';
+const url = process.env.WEEKFLOW_TEST_URL || 'http://127.0.0.1:8765/Weekflow.html';
 const dataKey = 'weekflow-v2.4:data:v4';
 const stamp = '2026-09-09T08:00:00.000Z';
 const fixture = storage.validateData({ version: 4,
@@ -24,21 +23,43 @@ const fixture = storage.validateData({ version: 4,
   const stored = () => page.evaluate(key => JSON.parse(localStorage.getItem(key)), dataKey);
   const bulkView = page.locator('#bulk-view');
   const dialog = page.locator('.bulk-dialog');
-  const choose = name => bulkView.getByRole('checkbox', { name: '选择 ' + name, exact: true }).check();
-  const action = name => bulkView.getByRole('button', { name, exact: true }).click();
+  const board = page.locator('#timeline-board');
+  const bar = page.locator('#timeline-selection-bar');
+  let selectionKind = 'task';
+  const choose = async name => {
+    if (await bulkView.isVisible()) await bulkView.getByRole('checkbox', { name: '选择 ' + name, exact: true }).check();
+    else await board.getByRole('checkbox', { name: '复选 ' + selectionKind + ': ' + name, exact: true }).check();
+  };
+  const action = async name => (await bulkView.isVisible() ? bulkView : bar).getByRole('button', { name, exact: true }).click();
   const modal = name => dialog.getByRole('button', { name, exact: true }).first().click();
-  const kind = value => bulkView.locator('.bulk-filters select').nth(0).selectOption(value);
+  const kind = async value => {
+    selectionKind = value;
+    if (await bulkView.isVisible()) await bulkView.locator('.bulk-filters select').nth(0).selectOption(value);
+    else await page.locator('#timeline-selection-kind').selectOption(value);
+  };
   const goArchive = () => page.locator('nav [data-view="archived"]').click();
   try {
     await page.goto(url);
     await page.evaluate(({ fixture, dataKey }) => { localStorage.setItem(dataKey, JSON.stringify(fixture)); localStorage.setItem('weekflow-v2.4:language', 'zh-CN'); }, { fixture, dataKey });
     await page.reload();
     await page.locator('nav [data-view="timeline"]').click();
-    await page.locator('#timeline-view [data-view="bulk"]').click();
+    assert.equal(await bulkView.isVisible(), false);
     await choose('检查');
-    await bulkView.locator('input[type="search"]').fill('交付');
-    assert.match(await bulkView.locator('.bulk-action-bar strong').innerText(), /已选 0/);
-    await bulkView.locator('input[type="search"]').fill('');
+    assert.equal((await stored()).tasks[0].status, 'pending');
+    assert.equal(await page.locator('#timeline-select-all').evaluate(el => el.indeterminate), true);
+    await board.locator('.flow-row[data-flow-id="f1"] .collapse-button').click();
+    assert.equal(await page.locator('#timeline-selection-count').innerText(), '已选 0');
+    await page.locator('#timeline-select-all').check();
+    assert.deepEqual(await board.locator('[data-timeline-select]:checked').evaluateAll(nodes => nodes.map(n => n.dataset.timelineSelect).sort()), ['t2', 't3']);
+    await page.locator('#timeline-select-all').uncheck();
+    await board.locator('.flow-row[data-flow-id="f1"] .collapse-button').click();
+    await choose('检查');
+    await page.locator('#filter-search').fill('验收');
+    await page.waitForFunction(() => document.querySelector('#timeline-selection-count').textContent === '已选 0');
+    await page.locator('#timeline-select-all').check();
+    assert.deepEqual(await board.locator('[data-timeline-select]:checked').evaluateAll(nodes => nodes.map(n => n.dataset.timelineSelect)), ['t3']);
+    await page.locator('#filter-search').fill('');
+    await page.waitForFunction(() => document.querySelectorAll('[data-timeline-select]').length === 3);
     await choose('检查');
     await action('批量修改');
     await dialog.locator('select').nth(0).selectOption('shift');
@@ -96,15 +117,22 @@ const fixture = storage.validateData({ version: 4,
     await page.locator('[data-language="en"]').click();
     await page.waitForLoadState('load');
     await page.locator('nav [data-view="timeline"]').click();
-    await page.locator('#timeline-view [data-view="bulk"]').click();
-    assert.match(await bulkView.innerText(), /Bulk Actions/);
-    await bulkView.getByRole('checkbox', { name: 'Select All Results', exact: true }).check();
-    assert.match(await bulkView.locator('.bulk-action-bar strong').innerText(), /Selected 3 \/ 3/);
+    await kind('task');
+    assert.match(await bar.innerText(), /Select Level/);
+    await page.locator('#timeline-select-all').check();
+    assert.equal(await page.locator('#timeline-selection-count').innerText(), 'Selected 3');
+    await board.locator('.week-head[data-week="2026-09-11"]').dblclick();
+    assert.equal(await page.locator('#timeline-heading').innerText(), 'Task by Day');
+    assert.equal(await page.locator('#timeline-selection-count').innerText(), 'Selected 2');
+    assert.deepEqual(await board.locator('[data-timeline-select]').evaluateAll(nodes => nodes.map(n => n.dataset.timelineSelect).sort()), ['t2', 't3']);
+    await page.locator('#timeline-week-return').click();
+    await page.locator('#timeline-select-all').check();
+    assert.equal(await page.locator('#timeline-selection-count').innerText(), 'Selected 3');
     await page.screenshot({ path: '/tmp/weekflow-bulk-en.png', fullPage: true });
     // Exercise complete-replacement Excel import via the UI, including archive metadata.
     await kind('group');
-    await bulkView.getByRole('checkbox', { name: 'Select All Results', exact: true }).check();
-    await bulkView.getByRole('button', { name: 'Archive Selected', exact: true }).click();
+    await page.locator('#timeline-select-all').check();
+    await bar.getByRole('button', { name: 'Archive Selected', exact: true }).click();
     await dialog.getByRole('button', { name: 'Apply Changes', exact: true }).click();
     const beforeImport = await stored();
     const bytes = await page.evaluate(async () => Array.from(new Uint8Array(await App.excelImport.buildXlsxPackage(App.storage.load(), JSZip, 'arraybuffer', { language: 'en' }))));
@@ -119,6 +147,6 @@ const fixture = storage.validateData({ version: 4,
     assert.deepEqual(afterImport.flows.map(f => [f.id, f.archivedAt, f.archiveBatchId]), beforeImport.flows.map(f => [f.id, f.archivedAt, f.archiveBatchId]));
     assert.equal(afterImport.materials[0].taskIds[0], 't1');
     assert.deepEqual(errors, []);
-    console.log('PASS: bulk preview/apply/cancel, selection reset, archive hierarchy/restore, active stats, document and progress retention, reload, Chinese/English, Excel replace round-trip; no page errors.');
+    console.log('PASS: direct board checkboxes, completion independence, collapsed/filtered selection scope, bulk preview/apply/cancel, selection reset, archive hierarchy/restore, active stats, document and progress retention, reload, Chinese/English, Excel replace round-trip; no page errors.');
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });
