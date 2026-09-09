@@ -26,16 +26,21 @@ const fixture = storage.validateData({ version: 4,
   const board = page.locator('#timeline-board');
   const bar = page.locator('#timeline-selection-bar');
   let selectionKind = 'task';
+  const enterSelection = async () => {
+    if (await page.locator('#timeline-selection-toggle').getAttribute('aria-pressed') === 'false') {
+      await page.locator('#timeline-selection-toggle').click();
+    }
+  };
   const choose = async name => {
     if (await bulkView.isVisible()) await bulkView.getByRole('checkbox', { name: '选择 ' + name, exact: true }).check();
-    else await board.getByRole('checkbox', { name: '复选 ' + selectionKind + ': ' + name, exact: true }).check();
+    else { await enterSelection(); await board.getByRole('checkbox', { name: '复选 ' + selectionKind + ': ' + name, exact: true }).check(); }
   };
   const action = async name => (await bulkView.isVisible() ? bulkView : bar).getByRole('button', { name, exact: true }).click();
   const modal = name => dialog.getByRole('button', { name, exact: true }).first().click();
   const kind = async value => {
     selectionKind = value;
     if (await bulkView.isVisible()) await bulkView.locator('.bulk-filters select').nth(0).selectOption(value);
-    else await page.locator('#timeline-selection-kind').selectOption(value);
+    else { await enterSelection(); await page.locator('#timeline-selection-kind').selectOption(value); }
   };
   const goArchive = () => page.locator('nav [data-view="archived"]').click();
   try {
@@ -44,6 +49,15 @@ const fixture = storage.validateData({ version: 4,
     await page.reload();
     await page.locator('nav [data-view="timeline"]').click();
     assert.equal(await bulkView.isVisible(), false);
+    assert.equal(await bar.isVisible(), false);
+    assert.equal(await board.locator('[data-timeline-select]').count(), 0);
+    assert.equal(await board.locator('.complete-check:visible').count(), 3);
+    await choose('检查');
+    assert.equal(await board.locator('.complete-check:visible').count(), 0);
+    await page.locator('#timeline-selection-toggle').click();
+    assert.equal(await bar.isVisible(), false);
+    assert.equal(await board.locator('.complete-check:visible').count(), 3);
+    assert.equal((await stored()).tasks[0].status, 'pending');
     await choose('检查');
     assert.equal((await stored()).tasks[0].status, 'pending');
     assert.equal(await page.locator('#timeline-select-all').evaluate(el => el.indeterminate), true);
@@ -74,6 +88,8 @@ const fixture = storage.validateData({ version: 4,
     assert.equal(await dialog.getByRole('button', { name: '确认应用', exact: true }).isDisabled(), true);
     await modal('预览修改');
     await modal('确认应用');
+    assert.equal(await bar.isVisible(), false);
+    assert.equal(await board.locator('[data-timeline-select]').count(), 0);
     let saved = await stored();
     assert.equal(saved.tasks[0].ddl, '2026-09-18');
     assert.equal(saved.tasks[0].managedObject, 'Amy');
@@ -147,6 +163,6 @@ const fixture = storage.validateData({ version: 4,
     assert.deepEqual(afterImport.flows.map(f => [f.id, f.archivedAt, f.archiveBatchId]), beforeImport.flows.map(f => [f.id, f.archivedAt, f.archiveBatchId]));
     assert.equal(afterImport.materials[0].taskIds[0], 't1');
     assert.deepEqual(errors, []);
-    console.log('PASS: direct board checkboxes, completion independence, collapsed/filtered selection scope, bulk preview/apply/cancel, selection reset, archive hierarchy/restore, active stats, document and progress retention, reload, Chinese/English, Excel replace round-trip; no page errors.');
+    console.log('PASS: mutually exclusive completion/selection modes, mode exit preserves completion, auto-exit after applying, direct board checkboxes, completion independence, collapsed/filtered selection scope, bulk preview/apply/cancel, selection reset, archive hierarchy/restore, active stats, document and progress retention, reload, Chinese/English, Excel replace round-trip; no page errors.');
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

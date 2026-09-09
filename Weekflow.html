@@ -384,7 +384,10 @@
           <div class="view-toolbar timeline-toolbar">
             <div class="timeline-title-group">
               <div class="timeline-title-copy">
-                <h1 id="timeline-heading">Task by Week</h1>
+                <div class="timeline-heading-line">
+                  <h1 id="timeline-heading">Task by Week</h1>
+                  <button id="timeline-selection-toggle" class="button button-quiet" type="button" aria-pressed="false" aria-controls="timeline-selection-bar">批量选择</button>
+                </div>
                 <span id="timeline-subtitle">周一至周日 · 表头显示周五 · 双击周表头查看每天</span>
               </div>
               <div class="timeline-legend" aria-label="图例">
@@ -427,7 +430,7 @@
             </div>
           </div>
 
-          <div id="timeline-selection-bar" class="timeline-selection-bar" role="region" aria-label="看板批量操作">
+          <div id="timeline-selection-bar" class="timeline-selection-bar" role="region" aria-label="看板批量操作" hidden>
             <label class="timeline-selection-scope">复选层级
               <select id="timeline-selection-kind">
                 <option value="task">Task</option>
@@ -439,7 +442,7 @@
               <input id="timeline-select-all" type="checkbox" /> 全选可见行
             </label>
             <strong id="timeline-selection-count" aria-live="polite"></strong>
-            <span id="timeline-selection-hint" class="timeline-selection-hint">方框用于复选，圆圈用于完成 Task</span>
+            <span id="timeline-selection-hint" class="timeline-selection-hint">多选模式：勾选仅选择任务</span>
             <button id="timeline-selection-clear" class="text-button" type="button">取消选择</button>
             <button id="timeline-selection-edit" class="button button-quiet" type="button" disabled>批量修改</button>
             <button id="timeline-selection-archive" class="button button-primary" type="button" disabled>批量归档</button>

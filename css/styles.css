@@ -7039,3 +7039,9 @@ html[data-language="en"] .urgency-badge {
 }
 .complete-check input:checked { border-color: var(--emerald); background: var(--emerald); }
 .complete-check input:checked::after { content: "✓"; color: #fff; font: 700 10px/1 var(--font-body); }
+
+.timeline-selection-bar { border-color: #d5ceff; background: #f4f1ff; }
+#timeline-selection-toggle[aria-pressed="true"] { border-color: var(--indigo); color: var(--indigo); background: #eeecff; }
+
+.timeline-heading-line { display: flex; align-items: center; gap: 12px; }
+.timeline-heading-line .button { min-height: 30px; padding: 5px 10px; }

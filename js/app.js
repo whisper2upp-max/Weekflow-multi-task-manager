@@ -72,6 +72,7 @@
   function activeData() { return App.bulkActions.activeData(data); }
   var ui = {
     view: "home",
+    timelineSelecting: false,
     timelineSelectionKind: "task",
     timelineSelectedIds: [],
     filters: {
@@ -159,6 +160,8 @@
 
   function cacheDom() {
     [
+      "timeline-selection-toggle",
+      "timeline-selection-bar",
       "timeline-selection-kind",
       "timeline-selection-count",
       "timeline-selection-hint",
@@ -431,8 +434,7 @@
       openProgress: openProgressManager,
       openDocuments: openLinkManager,
       onApplied: function () {
-        ui.timelineSelectedIds = [];
-        syncTimelineSelection();
+        setTimelineSelectionMode(false);
       },
       commit: function (next, message) {
         var previous = data;
@@ -465,6 +467,9 @@
   }
 
   function bindEvents() {
+    dom["timeline-selection-toggle"].addEventListener("click", function () {
+      setTimelineSelectionMode(!ui.timelineSelecting);
+    });
     dom["timeline-selection-kind"].addEventListener("change", function () {
       ui.timelineSelectionKind = dom["timeline-selection-kind"].value;
       ui.timelineSelectedIds = [];
@@ -1571,7 +1576,20 @@
     dom["range-label"].title = rangeText;
   }
 
+  function setTimelineSelectionMode(enabled) {
+    var viewport = captureTimelineViewport("task", "");
+    ui.timelineSelecting = enabled;
+    ui.timelineSelectedIds = [];
+    renderTimeline();
+    restoreTimelineViewport(viewport);
+  }
+
   function syncTimelineSelection() {
+    dom["timeline-selection-bar"].hidden = !ui.timelineSelecting;
+    dom["timeline-selection-toggle"].textContent = ui.timelineSelecting
+      ? i18n.isEnglish() ? "Exit Multi-select" : "退出多选"
+      : i18n.isEnglish() ? "Select Multiple" : "批量选择";
+    dom["timeline-selection-toggle"].setAttribute("aria-pressed", String(ui.timelineSelecting));
     var inputs = queryAll("[data-timeline-select]", dom["timeline-board"]);
     var visibleIds = new Set(inputs.map(function (input) { return input.dataset.timelineSelect; }));
     ui.timelineSelectedIds = ui.timelineSelectedIds.filter(function (id) { return visibleIds.has(id); });
@@ -1587,12 +1605,12 @@
     dom["timeline-selection-edit"].disabled = dom["timeline-selection-archive"].disabled = !selected.size;
     dom["timeline-selection-clear"].hidden = !selected.size;
     dom["timeline-selection-hint"].textContent = ui.timelineSelectionKind === "task"
-      ? i18n.isEnglish() ? "Squares select rows; circles complete Tasks" : "方框用于复选，圆圈用于完成 Task"
+      ? i18n.isEnglish() ? "Multi-select mode: checkboxes only select Tasks" : "多选模式：勾选仅选择任务"
       : i18n.isEnglish() ? "Selected parents include all their active children" : "选中父级将处理其全部未归档子项";
   }
 
   function createTimelineSelection(kind, item) {
-    if (ui.timelineSelectionKind !== kind) return null;
+    if (!ui.timelineSelecting || ui.timelineSelectionKind !== kind) return null;
     var input = utils.el("input", "timeline-row-select");
     input.type = "checkbox";
     input.dataset.timelineSelect = item.id;
@@ -2046,6 +2064,7 @@
     var selection = createTimelineSelection("task", task);
     if (selection) main.appendChild(selection);
     var checkLabel = utils.el("label", "complete-check");
+    checkLabel.hidden = ui.timelineSelecting;
     var checkbox = utils.el("input");
     checkbox.type = "checkbox";
     checkbox.checked = completed;
@@ -3788,6 +3807,9 @@
     if (ui.view === "notes" && nextView !== "notes") {
       ui.noteDirty = false;
       ui.noteIsNew = false;
+    }
+    if (ui.view === "timeline" && nextView !== "timeline" && ui.timelineSelecting) {
+      setTimelineSelectionMode(false);
     }
     var resetDayTimeline =
       nextView === "timeline" &&
