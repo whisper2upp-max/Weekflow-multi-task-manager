@@ -1,5 +1,12 @@
-Weekflow v3.2
-Release date: 2026-08-29
+Weekflow v3.3
+Release date: 2026-09-10
+
+Board bulk actions and archives release: 2026-09-10
+- Select Tasks, Flows, and Groups directly on Week/Day boards in a dedicated multi-select mode.
+- Preview bulk edits, completion, permanent deletion, and archives before applying; preserve existing completion dates and follow current-period recurrence rules.
+- Search and restore archived work, retaining progress and documents while excluding it from active statistics and reminders.
+- Preserve archive metadata in JSON and re-importable Excel, with older data/template compatibility.
+- Keep dialog actions visible in small windows and version static resources to prevent stale cached code and styles.
 
 Quick Note tables and favorites release: 2026-08-29
 - Adds star favorites and a Favorites filter for saved Quick Notes; JSON backup and restore preserve the favorite state.
@@ -91,7 +98,7 @@ This is the clean release build.
 - Document search and filters live in a dedicated bar above the table; document names edit in place and URLs open directly.
 - The document editor uses a compact two-row details area so Group, Flow, and Task relations keep most of the dialog space.
 - Document table headers, type, Flow, Group, and notes use the same 12px primary size as document names; URLs and related Tasks stay compact.
-- The in-app changelog shows the full v3.2, v3.1, v3.0, v2.6, v2.5, v2.4, v2.3, v2.2, v2.1, v2.0, v1.1, and v1.0 history in descending version order.
+- The in-app changelog shows the full v3.3, v3.2, v3.1, v3.0, v2.6, v2.5, v2.4, v2.3, v2.2, v2.1, v2.0, v1.1, and v1.0 history in descending version order.
 - The user guide identifies Weekflow as a Multi-task management cockpit and records the Wesley Yan development attribution plus first/latest release dates.
 - Urgency, report-to, and deliverable are required for new or edited Tasks.
 - Start with: open Weekflow.html directly, or run npm run serve and visit /Weekflow.html

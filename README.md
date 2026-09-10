@@ -1,11 +1,11 @@
 <p align="right"><strong>中文</strong> · <a href="README_EN.md">English</a></p>
 
-# Weekflow v3.2 · Task management
+# Weekflow v3.3 · Task management
 
-> **试验分支 `codex/bulk-archive-actions`**：在 Task 看板直接复选后批量修改、完成、删除、归档，并提供已归档视图。[试用说明与功能边界](docs/bulk-archive-trial.md)。
+> **v3.3 新增**：在 Task 看板直接复选后批量修改、完成、删除、归档，并提供已归档视图。[批量操作与归档使用说明](docs/bulk-archive-trial.md)。
 
 <p>
-  <img src="https://img.shields.io/badge/version-3.2-665CFF?style=flat-square" alt="version 3.2">
+  <img src="https://img.shields.io/badge/version-3.3-665CFF?style=flat-square" alt="version 3.3">
   <img src="https://img.shields.io/badge/platforms-macOS%20%7C%20Windows-18213F?style=flat-square" alt="platforms macOS and Windows">
   <img src="https://img.shields.io/badge/runtime-HTML%20%7C%20CSS%20%7C%20JavaScript-16A8B8?style=flat-square" alt="runtime HTML, CSS and JavaScript">
   <img src="https://img.shields.io/badge/languages-%E4%B8%AD%E6%96%87%20%7C%20English-2F80ED?style=flat-square" alt="languages Chinese and English">
@@ -39,7 +39,7 @@ http://localhost:8080/Weekflow.html
 
 ### 主页与导航
 
-![Weekflow v3.2 主页与 AI 设置入口](readme配图/主页.png)
+![Weekflow 主页与 AI 设置入口](readme配图/主页.png)
 
 - 主页显示 Task、分组、Flow、资料数量和完成率。
 - 提供时间轴看板、整体看板、资料库、随手记、使用说明和更新日志入口。
@@ -167,7 +167,7 @@ http://localhost:8080/Weekflow.html
 weekflow-v2.4:data:v4
 ```
 
-v3.2 继续沿用 v2.4 数据命名空间；内部结构自 v3.0 起为 v4。这只是兼容性存储键，不代表当前程序版本仍是 v2.4。
+v3.3 继续沿用 v2.4 数据命名空间；内部结构自 v3.0 起为 v4。这只是兼容性存储键，不代表当前程序版本仍是 v2.4。
 
 相关迁移与安全备份键：
 
@@ -299,24 +299,26 @@ Weekflow_资料库_YYYYMMDD_HHmm.xlsx
 
 - 开发团队：Wesley Yan
 - 首个正式版本（v1.0）：2026年7月30日
-- 最新版本（v3.2）更新时间：2026年8月29日
+- 最新版本（v3.3）更新时间：2026年9月10日
 
 ## 程序文件
 
-- 本文件夹是 Weekflow v3.2 空白正式发布版。
+- 本文件夹是 Weekflow v3.3 空白正式发布版。
 - 程序需要保留整个文件夹结构，不能只移动 `Weekflow.html`；页面依赖 `css、js、templates、vendor` 子目录。
-- 如果收到 `Weekflow v3.2.zip`，请完整解压后再使用。
+- 如果收到 `Weekflow v3.3.zip`，请完整解压后再使用。
 
 ## 文件结构
 
 ```text
-Weekflow v3.2/
+Weekflow v3.3/
 ├── Weekflow.html
 ├── css/styles.css
 ├── js/
 │   ├── app.js
 │   ├── ai-provider.js
 │   ├── automation.js
+│   ├── bulk-actions.js
+│   ├── bulk-ui.js
 │   ├── date-utils.js
 │   ├── excel-export.js
 │   ├── excel-import.js
@@ -329,6 +331,9 @@ Weekflow v3.2/
 │   ├── task-draft-parser.js
 │   ├── xlsx-safe.js
 │   └── utils.js
+├── docs/
+├── scripts/
+├── tests/
 ├── templates/
 │   ├── Weekflow_Task导入模板.xlsx
 │   └── Weekflow_资料库导入模板.xlsx

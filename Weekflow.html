@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Weekflow v3.2 中英双语本地 Task 管理工具，支持周/日双时间轴、可收藏随手记、Excel 兼容表格、多条进度历史、可选 AI 改写与 Task 草稿解析、资料库、看板和本地备份。"
+      content="Weekflow v3.3 中英双语本地 Task 管理工具，支持周/日双时间轴、可收藏随手记、Excel 兼容表格、多条进度历史、可选 AI 改写与 Task 草稿解析、资料库、看板和本地备份。"
     />
-    <title>Weekflow v3.2 · Task management</title>
+    <title>Weekflow v3.3 · Task management</title>
     <link rel="stylesheet" href="./css/styles.css?v=5cab0c206a66" />
   </head>
   <body>
@@ -277,7 +277,7 @@
         <section id="home-view" class="view-panel home-view" aria-labelledby="home-heading">
           <div class="home-hero">
             <div class="home-hero-copy">
-              <p class="eyebrow">Weekflow v3.2</p>
+              <p class="eyebrow">Weekflow v3.3</p>
               <h1 id="home-heading">把工作拆成清晰的下一步</h1>
               <p>
                 用分组建立工作版图，用 Flow 串起执行步骤，再用周时间轴看清每一个 DDL。
@@ -373,7 +373,7 @@
               <span class="home-entry-copy">
                 <small>WHAT'S NEW</small>
                 <strong>更新日志</strong>
-                <span>查看 Weekflow v3.2 的发布内容</span>
+                <span>查看 Weekflow v3.3 的发布内容</span>
               </span>
               <span class="home-entry-arrow" aria-hidden="true">↗</span>
             </button>
@@ -1018,10 +1018,15 @@
           </ul>
         </section>
         <section>
+          <h3>看板批量操作与归档</h3>
+          <p>在 Task by Week / Task by Day 点击“批量选择”，复选任务或切换到 Flow / 分组层级，再选择批量修改、完成、删除或归档。多选时隐藏日常完成按钮；“全选可见行”只包含筛选后已展开的行。</p>
+          <p>批量操作先预览影响范围。永久删除父级包含已归档子项，保留资料库条目和随手记；归档则保留任务进度与关联，并从日常统计、提醒中排除。进入“已归档”可查看和批量恢复。</p>
+        </section>
+        <section>
           <h3>数据保存位置</h3>
           <p>数据保存在当前浏览器、当前页面来源的 <code>localStorage</code> 中，主数据键为：</p>
           <pre>weekflow-v2.4:data:v4</pre>
-          <p>v3.2 继续沿用 v2.4 兼容命名空间；内部结构自 v3.0 起为 v4，旧单条进度会自动迁移为一条历史记录。</p>
+          <p>v3.3 继续沿用 v2.4 兼容命名空间；内部结构自 v3.0 起为 v4，旧单条进度会自动迁移为一条历史记录。</p>
           <p>清除浏览器网站数据、使用无痕窗口、更换浏览器或更换启动地址，都会影响可见数据。</p>
         </section>
         <section>
@@ -1060,7 +1065,7 @@
           <h3>开发团队</h3>
           <p>开发团队：Wesley Yan</p>
           <p>首个正式版本（v1.0）：2026年7月30日</p>
-          <p>最新版本（v3.2）更新时间：2026年8月29日</p>
+          <p>最新版本（v3.3）更新时间：2026年9月10日</p>
         </section>
       </article>
       <div class="modal-actions">
@@ -1077,6 +1082,25 @@
         <button class="icon-button" type="button" data-action="close-changelog" aria-label="关闭">×</button>
       </div>
       <article class="document-content changelog-content">
+        <div class="release-entry" data-version="3.3">
+          <div class="release-heading">
+            <span>v3.3 看板批量操作与归档版</span>
+            <time datetime="2026-09-10">2026-09-10</time>
+          </div>
+          <p class="release-lead">在 Task 看板直接复选，统一修改、完成、删除或归档任务，并通过已归档视图查看和恢复历史工作。</p>
+          <section>
+            <h3>新增与调整</h3>
+            <ul>
+              <li>周/日看板提供独立多选模式，复选框与完成按钮分开显示；支持 Task、Flow、分组和全选可见行。</li>
+              <li>批量修改 DDL、紧急程度和管理对象，确认前预览逐项变化；周期 Task 的 DDL 仍需逐条编辑。</li>
+              <li>批量完成保留已有完成日期，周期任务沿用当期及此前各期完成规则；批量删除先列出影响范围并确认，保留资料库条目和随手记。</li>
+              <li>归档内容退出日常看板、统计和提醒，可在已归档视图搜索、查看进度与资料、批量恢复；此前单独归档的子项保持归档。</li>
+              <li>JSON 和可回导 Excel 保留归档信息，继续兼容旧版数据和模板。</li>
+              <li>修复批量弹窗显示不全，内容区可滚动、底部操作保持可见；资源内容版本标识避免更新后加载旧脚本和样式。</li>
+            </ul>
+          </section>
+        </div>
+
         <div class="release-entry" data-version="3.2">
           <div class="release-heading">
             <span>v3.2 笔记表格与收藏版</span>
@@ -2059,7 +2083,7 @@
 
     <script src="./vendor/jszip.min.js?v=acc7e41455a8"></script>
     <script src="./vendor/xlsx.full.min.js?v=cc015130aa85"></script>
-    <script src="./js/i18n.js?v=6e1a342c6efa"></script>
+    <script src="./js/i18n.js?v=d6db04c0d4c8"></script>
     <script src="./js/xlsx-safe.js?v=dbdd78bec0da"></script>
     <script src="./js/utils.js?v=1a526f5ee512"></script>
     <script src="./js/rich-text.js?v=61d5fbbcb102"></script>
@@ -2070,8 +2094,8 @@
     <script src="./js/automation.js?v=db996259d519"></script>
     <script src="./js/storage.js?v=7858d325bc6b"></script>
     <script src="./js/excel-export.js?v=5f52838c1ee1"></script>
-    <script src="./js/excel-import.js?v=8a2e165c4658"></script>
-    <script src="./js/material-excel.js?v=8fcedfd7bf9d"></script>
+    <script src="./js/excel-import.js?v=42b1b4ba4775"></script>
+    <script src="./js/material-excel.js?v=ee9d72f7b6e5"></script>
     <script src="./js/ai-provider.js?v=64438dc255d0"></script>
     <script src="./js/bulk-actions.js?v=a34f38a65b6b"></script>
     <script src="./js/bulk-ui.js?v=798c7df9f432"></script>
