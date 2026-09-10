@@ -174,9 +174,35 @@
       .toLocaleLowerCase();
   }
 
+  var ARCHIVE_COLUMNS = [
+    ["groupArchivedAt", "分组归档时间", "Group Archived At"],
+    ["groupArchiveBatchId", "分组归档批次", "Group Archive Batch"],
+    ["flowArchivedAt", "Flow归档时间", "Flow Archived At"],
+    ["flowArchiveBatchId", "Flow归档批次", "Flow Archive Batch"],
+    ["taskArchivedAt", "Task归档时间", "Task Archived At"],
+    ["taskArchiveBatchId", "Task归档批次", "Task Archive Batch"]
+  ];
+  ARCHIVE_COLUMNS.forEach(function (column) {
+    COLUMNS.push([column[0], column[1], false]);
+    EN_COLUMNS.push([column[0], column[2], false]);
+    COLUMN_WIDTHS.push(26);
+  });
+
+  function archiveFields(raw, errors) {
+    var result = { specified: Object.prototype.hasOwnProperty.call(raw, "taskArchivedAt") };
+    ARCHIVE_COLUMNS.forEach(function (column) {
+      var value = String(raw[column[0]] || "").trim();
+      if (column[0].endsWith("ArchivedAt") && value && Number.isNaN(new Date(value).getTime())) {
+        errors.push(column[1] + " / " + column[2] + ": invalid timestamp");
+      }
+      result[column[0]] = value || null;
+    });
+    return result;
+  }
+
   function headerAliases() {
     var aliases = {};
-    COLUMNS.forEach(function (column) {
+    COLUMNS.concat(EN_COLUMNS).forEach(function (column) {
       aliases[normalizeHeader(column[1])] = column[0];
     });
     [
@@ -410,6 +436,7 @@
 
   function normalizeRow(raw, sourceRow) {
     var errors = [];
+    var archive = archiveFields(raw, errors);
     var groupName = cleanText(raw.groupName, 80);
     var flowName = cleanText(raw.flowName, 80);
     var taskName = cleanText(raw.taskName, 160);
@@ -507,6 +534,7 @@
       sourceRow: sourceRow,
       errors: errors,
       value: {
+        archive: archive,
         groupName: groupName,
         groupColor: groupColor || "",
         flowName: flowName,
@@ -964,7 +992,10 @@
         task.deliverable || "",
         progressAggregate(task, options),
         exportLinkText(materials, task.id, "document"),
-        exportLinkText(materials, task.id, "deliverable")
+        exportLinkText(materials, task.id, "deliverable"),
+        group && group.archivedAt || "", group && group.archiveBatchId || "",
+        flow && flow.archivedAt || "", flow && flow.archiveBatchId || "",
+        task.archivedAt || "", task.archiveBatchId || ""
       ];
     });
   }
@@ -1040,8 +1071,8 @@
       { s: { r: 1, c: 0 }, e: { r: 1, c: COLUMNS.length - 1 } },
       { s: { r: 2, c: 0 }, e: { r: 2, c: COLUMNS.length - 1 } }
     ];
-    taskSheet["!cols"] = COLUMN_WIDTHS.map(function (width) {
-      return { wch: width };
+    taskSheet["!cols"] = COLUMN_WIDTHS.map(function (width, index) {
+      return { wch: width, hidden: index >= 20 };
     });
     taskSheet["!autofilter"] = {
       ref:
@@ -1122,7 +1153,7 @@
       Title: english(options)
         ? isTemplate ? "Weekflow Task Import Template" : "Weekflow Current Task Data"
         : isTemplate ? "Weekflow Task 导入模板" : "Weekflow Task 当前数据",
-      Subject: "Weekflow v3.2 re-importable Task data",
+      Subject: "Weekflow v3.3 re-importable Task data",
       Author: "Wesley Yan",
       Comments: english(options)
         ? isTemplate ? "Blank Task import template." : "Matches the Weekflow Task import template and can be imported again."

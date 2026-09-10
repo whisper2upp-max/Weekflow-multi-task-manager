@@ -1,5 +1,14 @@
 # Weekflow Changelog
 
+## v3.3 Board Bulk Actions and Archives — 2026-09-10
+
+- Added a dedicated multi-selection mode on Week/Day boards for Tasks, Flows, and Groups. Selection and completion controls are shown separately; select-all respects visible expanded rows.
+- Preview and apply bulk deadline, urgency, and managed-person edits. Recurring deadlines remain individually editable.
+- Added bulk completion using existing recurring-period rules and preserving already-completed dates, plus permanent bulk deletion with an explicit impact preview and confirmation. Document Library entries and Quick Notes are retained.
+- Added hierarchical archiving and an Archived view with search, progress/document access, and bulk restore. Archived work leaves active boards, statistics, and reminders; independently archived children stay archived when a parent is restored.
+- Preserve archive metadata in JSON and re-importable Excel while accepting older data and templates.
+- Fixed clipped bulk dialogs with padded headers, a scrolling body, and visible footer actions. Content-versioned CSS/JS URLs prevent mixing new markup with stale cached assets.
+
 ## v3.2 Note Tables and Favorites — 2026-08-29
 
 Added starred Quick Note favorites and Excel-compatible tables with complete selection, AI protection, and native undo behavior.
