@@ -21,7 +21,12 @@ const emptyData = {
 };
 
 async function writeTemplate(filename, bytes) {
-  fs.writeFileSync(path.join(outputDir, filename), Buffer.from(bytes));
+  // Bundled artifacts use the confirmed repository identity.
+  const archive = await JSZip.loadAsync(bytes);
+  const corePath = "docProps/core.xml";
+  const core = await archive.file(corePath).async("string");
+  archive.file(corePath, core.replace(/<dc:creator>[^<]*<\/dc:creator>/, "<dc:creator>whisper2upp-max</dc:creator>"));
+  fs.writeFileSync(path.join(outputDir, filename), await archive.generateAsync({ type: "nodebuffer", compression: "DEFLATE" }));
 }
 
 (async () => {

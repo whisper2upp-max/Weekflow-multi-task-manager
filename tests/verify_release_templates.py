@@ -1,3 +1,4 @@
+import json
 import zipfile
 from pathlib import Path
 from xml.etree import ElementTree as ET
@@ -27,7 +28,10 @@ def verify_package(path, sheetnames):
         assert "<DocSecurity>0</DocSecurity>" in app_xml, path
     workbook = load_workbook(path, read_only=False, data_only=False, keep_links=False)
     assert workbook.sheetnames == sheetnames, (path, workbook.sheetnames)
-    assert workbook.properties.creator == "Wesley Yan", (path, workbook.properties.creator)
+    assert workbook.properties.creator == "whisper2upp-max", (path, workbook.properties.creator)
+    if path == TASK_TEMPLATE:
+        version = json.loads((ROOT / "package.json").read_text())["version"].rsplit(".", 1)[0]
+        assert workbook.properties.subject == f"Weekflow v{version} re-importable Task data"
     workbook.close()
 
 
