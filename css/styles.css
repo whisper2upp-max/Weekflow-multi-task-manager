@@ -5690,8 +5690,8 @@ html[data-language="en"] .urgency-badge {
 
 .notes-workspace {
   display: grid;
-  min-height: 620px;
-  height: calc(100vh - 154px);
+  min-height: 0;
+  flex: 1;
   grid-template-columns: 292px minmax(0, 1fr);
   overflow: hidden;
   border: 1px solid var(--line);
@@ -5946,9 +5946,11 @@ html[data-language="en"] .urgency-badge {
 }
 
 .note-editor-shell {
+  --note-gutter: 22px;
   display: grid;
   height: 100%;
-  grid-template-rows: auto auto minmax(0, 1fr) auto auto auto;
+  min-height: 0;
+  grid-template-rows: minmax(0, 1fr) auto;
   padding: 19px 22px;
 }
 
@@ -6865,7 +6867,7 @@ html[data-language="en"] .urgency-badge {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 0;
-  min-height: 260px;
+  min-height: 0;
 }
 
 .note-table-select-handle {
@@ -7070,4 +7072,83 @@ html[data-language="en"] .urgency-badge {
   .bulk-dialog .bulk-edit-fields { grid-template-columns: minmax(0, 1fr); }
   .bulk-dialog > .modal-head, .bulk-dialog > .modal-actions, .bulk-dialog-body { padding: 14px 16px; }
   .bulk-dialog .modal-actions .bulk-field { flex-basis: 100%; }
+}
+
+/* Notes fit the viewport; editing content scrolls independently of its actions. */
+html:has(#notes-view:not([hidden])) { min-width: 0; }
+body:has(#notes-view:not([hidden])) .app-shell {
+  display: grid;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+}
+body:has(#notes-view:not([hidden])) .app-header {
+  min-width: 0;
+  overflow-x: auto;
+}
+body:has(#notes-view:not([hidden])) main {
+  display: flex;
+  min-height: 0;
+  min-width: 0;
+  padding-bottom: 12px;
+}
+.notes-view:not([hidden]) {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+.notes-toolbar { flex: 0 0 auto; }
+.notes-workspace { grid-template-columns: clamp(160px, 23vw, 292px) minmax(0, 1fr); }
+.notes-sidebar, .note-editor-panel { min-height: 0; }
+.note-editor-content {
+  margin-inline: calc(-1 * var(--note-gutter));
+  padding-inline: var(--note-gutter);
+  display: grid;
+  min-height: 0;
+  min-width: 0;
+  grid-template-rows: auto auto minmax(120px, 1fr) auto auto;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.note-editor-comparison > .note-editor, .note-ai-original-panel { min-height: 0; }
+.note-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  background: var(--paper);
+}
+.note-actions > span:empty { display: none; }
+.note-actions [data-action="delete-note"] { margin-right: auto; }
+@media (max-width: 800px) {
+  body:has(#notes-view:not([hidden])) main { padding: 8px; }
+  .notes-sidebar { padding: 8px; }
+  .note-editor-shell { --note-gutter: 10px; padding: 10px; }
+  .note-title-row { gap: 6px; }
+  .note-title-row input { font-size: 18px; }
+  .note-actions { gap: 6px; margin-top: 8px; padding-top: 8px; }
+}
+@media (max-width: 600px) {
+  .notes-workspace { grid-template-columns: 120px minmax(0, 1fr); }
+  .note-scope-tabs { grid-template-columns: minmax(0, 1fr); }
+  .notes-toolbar p { display: none; }
+}
+/* Notifications must not cover the persistent note actions. */
+body:has(#notes-view:not([hidden])) .toast-region {
+  top: 12px;
+  bottom: auto;
+  max-height: min(320px, 35dvh);
+  overflow-y: auto;
+}
+
+.task-dialog-head-actions { display: flex; align-items: center; gap: 8px; }
+
+#task-copy-hint {
+  padding: 10px 12px;
+  border: 1px solid var(--indigo);
+  border-radius: var(--radius-small);
+  background: var(--indigo-soft);
+  color: var(--indigo-dark);
 }

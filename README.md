@@ -1,11 +1,11 @@
 <p align="right"><strong>中文</strong> · <a href="README_EN.md">English</a></p>
 
-# Weekflow v3.3 · Task management
+# Weekflow v3.4 · Task management
 
-> **v3.3 新增**：在 Task 看板直接复选后批量修改、完成、删除、归档，并提供已归档视图。[批量操作与归档使用说明](docs/bulk-archive-trial.md)。
+> **v3.4 新增**：复制 Task 并以副本名称和提示区分，修改后保存为独立任务；修复随手记底部按钮遮挡，中间编辑区独立滚动。继续支持 [批量操作与归档](docs/bulk-archive-trial.md)。
 
 <p>
-  <img src="https://img.shields.io/badge/version-3.3-665CFF?style=flat-square" alt="version 3.3">
+  <img src="https://img.shields.io/badge/version-3.4-665CFF?style=flat-square" alt="version 3.4">
   <img src="https://img.shields.io/badge/platforms-macOS%20%7C%20Windows-18213F?style=flat-square" alt="platforms macOS and Windows">
   <img src="https://img.shields.io/badge/runtime-HTML%20%7C%20CSS%20%7C%20JavaScript-16A8B8?style=flat-square" alt="runtime HTML, CSS and JavaScript">
   <img src="https://img.shields.io/badge/languages-%E4%B8%AD%E6%96%87%20%7C%20English-2F80ED?style=flat-square" alt="languages Chinese and English">
@@ -69,6 +69,7 @@ http://localhost:8080/Weekflow.html
 ![新建 Task](readme配图/新建task.png)
 
 - Task 支持创建、编辑、删除、完成/恢复、DDL、紧急程度、汇报对象、管理对象、交付物和多条自由文本进度记录；汇报对象和管理对象均填写人员姓名。
+- 打开已有 Task，点击右上角“复制 Task”，即可预填新任务表单。名称自动添加“（副本）”（重名时编号），窗口显示副本提示；修改后保存才会创建新任务，取消不会新增。完成状态、周期完成记录和进度历史重置，相关资料另存为独立条目，不影响原任务。
 - 每个 Task 可通过“＋ 新建记录”持续追加进度。每条记录独立保存创建时间和最后编辑时间；打开时默认显示最新一条，也可选择、编辑或双重确认删除历史记录。进度正文支持加粗、斜体、HTTP/HTTPS 链接，以及类似 Excel 的 20 色字色和 20 色底色预设盘，无需手动调取色值。
 
 ![多条 Task 进度记录](readme配图/task进度记录编辑界面.png)
@@ -167,7 +168,7 @@ http://localhost:8080/Weekflow.html
 weekflow-v2.4:data:v4
 ```
 
-v3.3 继续沿用 v2.4 数据命名空间；内部结构自 v3.0 起为 v4。这只是兼容性存储键，不代表当前程序版本仍是 v2.4。
+v3.4 继续沿用 v2.4 数据命名空间；内部结构自 v3.0 起为 v4。这只是兼容性存储键，不代表当前程序版本仍是 v2.4。
 
 相关迁移与安全备份键：
 
@@ -299,18 +300,18 @@ Weekflow_资料库_YYYYMMDD_HHmm.xlsx
 
 - 开发团队：Wesley Yan
 - 首个正式版本（v1.0）：2026年7月30日
-- 最新版本（v3.3）更新时间：2026年9月10日
+- 最新版本（v3.4）更新时间：2026年10月19日
 
 ## 程序文件
 
-- 本文件夹是 Weekflow v3.3 空白正式发布版。
+- 本文件夹是 Weekflow v3.4 空白正式发布版。
 - 程序需要保留整个文件夹结构，不能只移动 `Weekflow.html`；页面依赖 `css、js、templates、vendor` 子目录。
-- 如果收到 `Weekflow v3.3.zip`，请完整解压后再使用。
+- 如果收到 `Weekflow v3.4.zip`，请完整解压后再使用。
 
 ## 文件结构
 
 ```text
-Weekflow v3.3/
+Weekflow v3.4/
 ├── Weekflow.html
 ├── css/styles.css
 ├── js/

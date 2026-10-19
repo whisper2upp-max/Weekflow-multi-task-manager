@@ -1,5 +1,12 @@
 # Weekflow Changelog
 
+## v3.4 Task Copying and Quick Notes Layout Fix — 2026-10-19
+
+- Added Copy Task to the edit dialog, prefilling the current form with a distinct copy suffix, numbered when needed, and a prominent copy banner.
+- Saving creates a new Task; cancelling creates nothing. Completion, recurring completion records, progress, and archive state reset. Related documents become independent entries without changing the source.
+- Fixed Quick Notes footer actions being pushed outside the viewport. The editing area scrolls independently, buttons wrap in narrow windows, and notifications no longer cover footer actions.
+- Preserved existing JSON storage and Excel schemas.
+
 ## v3.3 Board Bulk Actions and Archives — 2026-09-10
 
 - Added a dedicated multi-selection mode on Week/Day boards for Tasks, Flows, and Groups. Selection and completion controls are shown separately; select-all respects visible expanded rows.
