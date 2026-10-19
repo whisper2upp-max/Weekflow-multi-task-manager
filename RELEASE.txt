@@ -1,5 +1,11 @@
-Weekflow v3.3
-Release date: 2026-09-10
+Weekflow v3.4
+Release date: 2026-10-19
+
+Task copying and Quick Notes layout release: 2026-10-19
+- Copy existing Tasks with clear copy names, numbered duplicates, and an editing banner.
+- Save independent Tasks and documents; reset completion, progress, and archive records. Cancelling leaves data unchanged.
+- Keep Quick Notes footer actions visible with an independently scrolling editing area.
+- Retain existing JSON and Excel compatibility.
 
 Board bulk actions and archives release: 2026-09-10
 - Select Tasks, Flows, and Groups directly on Week/Day boards in a dedicated multi-select mode.

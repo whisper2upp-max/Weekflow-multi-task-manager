@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Weekflow v3.3 中英双语本地 Task 管理工具，支持周/日双时间轴、可收藏随手记、Excel 兼容表格、多条进度历史、可选 AI 改写与 Task 草稿解析、资料库、看板和本地备份。"
+      content="Weekflow v3.4 中英双语本地 Task 管理工具，支持周/日双时间轴、可收藏随手记、Excel 兼容表格、多条进度历史、可选 AI 改写与 Task 草稿解析、资料库、看板和本地备份。"
     />
-    <title>Weekflow v3.3 · Task management</title>
+    <title>Weekflow v3.4 · Task management</title>
     <link rel="stylesheet" href="./css/styles.css?v=a00db28af0a5" />
   </head>
   <body>
@@ -277,7 +277,7 @@
         <section id="home-view" class="view-panel home-view" aria-labelledby="home-heading">
           <div class="home-hero">
             <div class="home-hero-copy">
-              <p class="eyebrow">Weekflow v3.3</p>
+              <p class="eyebrow">Weekflow v3.4</p>
               <h1 id="home-heading">把工作拆成清晰的下一步</h1>
               <p>
                 用分组建立工作版图，用 Flow 串起执行步骤，再用周时间轴看清每一个 DDL。
@@ -373,7 +373,7 @@
               <span class="home-entry-copy">
                 <small>WHAT'S NEW</small>
                 <strong>更新日志</strong>
-                <span>查看 Weekflow v3.3 的发布内容</span>
+                <span>查看 Weekflow v3.4 的发布内容</span>
               </span>
               <span class="home-entry-arrow" aria-hidden="true">↗</span>
             </button>
@@ -1028,7 +1028,7 @@
           <h3>数据保存位置</h3>
           <p>数据保存在当前浏览器、当前页面来源的 <code>localStorage</code> 中，主数据键为：</p>
           <pre>weekflow-v2.4:data:v4</pre>
-          <p>v3.3 继续沿用 v2.4 兼容命名空间；内部结构自 v3.0 起为 v4，旧单条进度会自动迁移为一条历史记录。</p>
+          <p>v3.4 继续沿用 v2.4 兼容命名空间；内部结构自 v3.0 起为 v4，旧单条进度会自动迁移为一条历史记录。</p>
           <p>清除浏览器网站数据、使用无痕窗口、更换浏览器或更换启动地址，都会影响可见数据。</p>
         </section>
         <section>
@@ -1067,7 +1067,7 @@
           <h3>开发团队</h3>
           <p>开发团队：Wesley Yan</p>
           <p>首个正式版本（v1.0）：2026年7月30日</p>
-          <p>最新版本（v3.3）更新时间：2026年9月10日</p>
+          <p>最新版本（v3.4）更新时间：2026年10月19日</p>
         </section>
       </article>
       <div class="modal-actions">
@@ -1084,6 +1084,23 @@
         <button class="icon-button" type="button" data-action="close-changelog" aria-label="关闭">×</button>
       </div>
       <article class="document-content changelog-content">
+        <div class="release-entry" data-version="3.4">
+          <div class="release-heading">
+            <span>v3.4 Task 复制与随手记布局修复版</span>
+            <time datetime="2026-10-19">2026-10-19</time>
+          </div>
+          <p class="release-lead">复制已有 Task 快速创建相似任务，并让随手记的保存等按钮始终位于可见区域。</p>
+          <section>
+            <h3>新增与修复</h3>
+            <ul>
+              <li>Task 编辑窗口新增“复制 Task”，预填当前表单；名称自动添加副本后缀及重名编号，显示醒目的副本提示。</li>
+              <li>保存后创建独立 Task，取消不新增；完成状态、周期完成记录、进度和归档状态重置，相关资料另存为独立条目。</li>
+              <li>随手记按视口高度布局，底部操作栏保持可见，中间编辑区域独立滚动，窄窗口下按钮自动换行。</li>
+              <li>继续兼容既有 JSON 数据、Excel 模板和导入导出结构。</li>
+            </ul>
+          </section>
+        </div>
+
         <div class="release-entry" data-version="3.3">
           <div class="release-heading">
             <span>v3.3 看板批量操作与归档版</span>
@@ -2089,7 +2106,7 @@
 
     <script src="./vendor/jszip.min.js?v=acc7e41455a8"></script>
     <script src="./vendor/xlsx.full.min.js?v=cc015130aa85"></script>
-    <script src="./js/i18n.js?v=8ddb2bff774f"></script>
+    <script src="./js/i18n.js?v=e7bb5d0a0dd3"></script>
     <script src="./js/xlsx-safe.js?v=dbdd78bec0da"></script>
     <script src="./js/utils.js?v=1a526f5ee512"></script>
     <script src="./js/rich-text.js?v=61d5fbbcb102"></script>
@@ -2100,8 +2117,8 @@
     <script src="./js/automation.js?v=db996259d519"></script>
     <script src="./js/storage.js?v=7858d325bc6b"></script>
     <script src="./js/excel-export.js?v=5f52838c1ee1"></script>
-    <script src="./js/excel-import.js?v=42b1b4ba4775"></script>
-    <script src="./js/material-excel.js?v=ee9d72f7b6e5"></script>
+    <script src="./js/excel-import.js?v=9436b6b9cda2"></script>
+    <script src="./js/material-excel.js?v=d3ada4169ae5"></script>
     <script src="./js/ai-provider.js?v=64438dc255d0"></script>
     <script src="./js/bulk-actions.js?v=a34f38a65b6b"></script>
     <script src="./js/bulk-ui.js?v=798c7df9f432"></script>

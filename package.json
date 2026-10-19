@@ -1,8 +1,8 @@
 {
   "name": "weekflow-task-manager",
-  "version": "3.3.0",
+  "version": "3.4.0",
   "private": true,
-  "description": "Weekflow v3.3 bilingual local Task management with board multi-selection, bulk edits, completion, deletion, hierarchical archives, Quick Notes, timelines, and a Document Library",
+  "description": "Weekflow v3.4 bilingual local Task management with independent Task copies, viewport-aware Quick Notes, board bulk actions, hierarchical archives, timelines, and a Document Library",
   "scripts": {
     "serve": "python3 -m http.server 8080",
     "test": "node --test tests/*.test.js",
