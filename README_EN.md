@@ -67,6 +67,7 @@ Both English and Chinese import headers and supported field values remain accept
 ![Create a Task](readme-images-en/create-task.png)
 
 - Tasks support create, edit, delete, complete/reopen, DDL, Urgency, Report To, Managed Person, Deliverable, multi-entry progress history, and related documents.
+- Open an existing Task and choose **Copy Task** in the dialog header. The prefilled name gets a **(Copy)** suffix (numbered if already used), and a banner identifies the copy. Edit and save to create a new Task; cancelling creates nothing. Completion, recurring completion records, and progress history reset. Related documents become independent entries, leaving the original unchanged.
 - Use **+ New Record** to append progress. Every entry keeps its own created and last-edited timestamps; the dialog opens on the latest entry and lets users select, edit, or double-confirm deletion of earlier entries. Rich text supports bold, italic, HTTP/HTTPS links, plus Excel-like 20-color preset palettes for text and highlight colors—no manual color picker is required.
 
 ![Manage Task progress history](readme-images-en/progress-history.png)

@@ -8,7 +8,7 @@
       content="Weekflow v3.3 中英双语本地 Task 管理工具，支持周/日双时间轴、可收藏随手记、Excel 兼容表格、多条进度历史、可选 AI 改写与 Task 草稿解析、资料库、看板和本地备份。"
     />
     <title>Weekflow v3.3 · Task management</title>
-    <link rel="stylesheet" href="./css/styles.css?v=e7849a7fb016" />
+    <link rel="stylesheet" href="./css/styles.css?v=a00db28af0a5" />
   </head>
   <body>
     <div class="app-shell">
@@ -1550,7 +1550,10 @@
             <p class="eyebrow">Task details</p>
             <h2 id="task-dialog-title">新建 Task</h2>
           </div>
-          <button class="icon-button" type="button" data-action="close-task-dialog" aria-label="关闭">×</button>
+          <div class="task-dialog-head-actions">
+            <button id="task-copy-button" class="button button-quiet button-small" type="button" data-action="copy-task" hidden>复制 Task</button>
+            <button class="icon-button" type="button" data-action="close-task-dialog" aria-label="关闭">×</button>
+          </div>
         </div>
 
         <section id="task-draft-conversion-bar" class="task-draft-conversion-bar" hidden>
@@ -1566,6 +1569,7 @@
         </section>
         <div id="task-draft-recognition" class="task-draft-recognition" hidden></div>
 
+        <p id="task-copy-hint" class="modal-context" hidden>正在编辑副本，保存后会新增 Task，原 Task 不会改变。完成状态和进度已重置，相关资料将另存为独立条目。</p>
         <input id="task-id" type="hidden" />
         <div class="form-grid">
           <label class="form-field form-field-wide">
@@ -2085,7 +2089,7 @@
 
     <script src="./vendor/jszip.min.js?v=acc7e41455a8"></script>
     <script src="./vendor/xlsx.full.min.js?v=cc015130aa85"></script>
-    <script src="./js/i18n.js?v=d6db04c0d4c8"></script>
+    <script src="./js/i18n.js?v=8ddb2bff774f"></script>
     <script src="./js/xlsx-safe.js?v=dbdd78bec0da"></script>
     <script src="./js/utils.js?v=1a526f5ee512"></script>
     <script src="./js/rich-text.js?v=61d5fbbcb102"></script>
@@ -2101,6 +2105,6 @@
     <script src="./js/ai-provider.js?v=64438dc255d0"></script>
     <script src="./js/bulk-actions.js?v=a34f38a65b6b"></script>
     <script src="./js/bulk-ui.js?v=798c7df9f432"></script>
-    <script src="./js/app.js?v=91bb354d821c"></script>
+    <script src="./js/app.js?v=aff462220421"></script>
   </body>
 </html>

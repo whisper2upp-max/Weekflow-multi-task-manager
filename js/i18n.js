@@ -16,6 +16,8 @@
   var englishDocumentFragments = null;
   var ENGLISH_DATE_PLACEHOLDER = "MM / DD / YYYY";
   var EN_TEXT = {
+    "复制 Task": "Copy Task",
+    "正在编辑副本，保存后会新增 Task，原 Task 不会改变。完成状态和进度已重置，相关资料将另存为独立条目。": "You are editing a copy. Saving creates a new Task and leaves the original unchanged. Completion and progress are reset; related documents will be saved as independent entries.",
     "批量完成": "Complete Selected",
     "批量删除": "Delete Selected",
     "取消选择": "Clear Selection",

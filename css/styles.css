@@ -7142,3 +7142,13 @@ body:has(#notes-view:not([hidden])) .toast-region {
   max-height: min(320px, 35dvh);
   overflow-y: auto;
 }
+
+.task-dialog-head-actions { display: flex; align-items: center; gap: 8px; }
+
+#task-copy-hint {
+  padding: 10px 12px;
+  border: 1px solid var(--indigo);
+  border-radius: var(--radius-small);
+  background: var(--indigo-soft);
+  color: var(--indigo-dark);
+}

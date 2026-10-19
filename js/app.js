@@ -305,6 +305,8 @@
       "task-dialog",
       "task-form",
       "task-dialog-title",
+      "task-copy-button",
+      "task-copy-hint",
       "task-dialog-cancel-button",
       "task-draft-source-pane",
       "task-draft-source-title",
@@ -928,6 +930,7 @@
       "close-group-dialog": function () {
         dom["group-dialog"].close();
       },
+      "copy-task": copyCurrentTask,
       "close-task-dialog": function () {
         requestCloseTaskDialog();
       },
@@ -5998,6 +6001,8 @@
     var candidate = currentTaskDraftCandidate();
     var source = taskDraftFormSource(candidate);
     clearFieldErrors(dom["task-form"]);
+    dom["task-copy-button"].hidden = true;
+    dom["task-copy-hint"].hidden = true;
     dom["task-dialog-title"].textContent = candidate.taskId
       ? i18n.isEnglish()
         ? "Review Created Task"
@@ -7054,6 +7059,8 @@
       return;
     }
     clearFieldErrors(dom["task-form"]);
+    dom["task-copy-button"].hidden = true;
+    dom["task-copy-hint"].hidden = true;
     dom["task-dialog-title"].textContent = "新建 Task";
     dom["task-id"].value = "";
     dom["task-name"].value = "";
@@ -7090,6 +7097,8 @@
     var task = getTask(taskId);
     if (!task) return;
     clearFieldErrors(dom["task-form"]);
+    dom["task-copy-button"].hidden = false;
+    dom["task-copy-hint"].hidden = true;
     dom["task-dialog-title"].textContent = "编辑 Task";
     dom["task-id"].value = task.id;
     dom["task-name"].value = task.name;
@@ -7114,6 +7123,40 @@
       dom["task-name"].focus();
       dom["task-name"].select();
     }, 0);
+  }
+
+  function copyCurrentTask() {
+    if (ui.taskDraftConversion || !getTask(dom["task-id"].value)) return;
+    clearFieldErrors(dom["task-form"]);
+    var baseName = dom["task-name"].value.trim();
+    var copyNumber = 1;
+    var copyName;
+    do {
+      var suffix = i18n.isEnglish()
+        ? " (Copy" + (copyNumber > 1 ? " " + copyNumber : "") + ")"
+        : "（副本" + (copyNumber > 1 ? " " + copyNumber : "") + "）";
+      copyName = baseName.slice(0, 160 - suffix.length) + suffix;
+      copyNumber += 1;
+    } while (data.tasks.some(function (task) { return task.name === copyName; }));
+    dom["task-name"].value = copyName;
+    dom["task-id"].value = "";
+    dom["task-status"].value = "pending";
+    dom["task-completed-at"].value = "";
+    syncTaskRecurrenceFields();
+    // Independent document drafts prevent edits to a copy from changing the source's documents.
+    ui.taskDraftMaterials = ui.taskDraftMaterials.map(function (material) {
+      return materialTools.normalizeMaterial({
+        id: utils.uid("material"), title: material.title, url: material.url,
+        type: material.type, note: material.note
+      });
+    });
+    renderDraftMaterials();
+    dom["task-dialog-title"].textContent = i18n.isEnglish() ? "Copy as New Task" : "复制为新 Task";
+    dom["task-copy-button"].hidden = true;
+    dom["task-copy-hint"].hidden = false;
+    dom["task-delete-button"].hidden = true;
+    dom["task-name"].focus();
+    dom["task-name"].select();
   }
 
   function syncCompletedDate() {
