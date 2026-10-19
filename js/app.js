@@ -4538,7 +4538,8 @@
     }
     handle.hidden = false;
     var wrapperBounds = wrapper.getBoundingClientRect();
-    var left = Math.max(-20, tableBounds.left - wrapperBounds.left - handle.offsetWidth - 4);
+    var contentBounds = wrapper.parentElement.getBoundingClientRect();
+    var left = Math.max(contentBounds.left - wrapperBounds.left + 3, tableBounds.left - wrapperBounds.left - handle.offsetWidth - 4);
     var top = Math.max(
       3,
       Math.min(
