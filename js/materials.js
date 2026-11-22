@@ -108,6 +108,7 @@
       flowIds: uniqueIds(material && material.flowIds),
       groupIds: uniqueIds(material && material.groupIds),
       note: cleanText(material && material.note, 2000),
+      favorite: Boolean(material && material.favorite),
       openEvents: normalizeOpenEvents(material && material.openEvents),
       createdAt: created,
       updatedAt: cleanText(material && material.updatedAt, 80) || created

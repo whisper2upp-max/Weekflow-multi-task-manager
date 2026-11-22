@@ -135,7 +135,7 @@
     pendingExcelImport: null,
     pendingMaterialImport: null,
     isImportingMaterials: false,
-    ddlReminderTimer: null,
+    agendaDate: null,
     recurrenceRefreshTimer: null,
     aiConverting: false,
     aiRewriting: false,
@@ -333,9 +333,7 @@
       "task-status-help",
       "task-completed-at",
       "task-report-to",
-      "task-report-to-options",
       "task-managed-object",
-      "task-managed-object-options",
       "task-deliverable",
       "task-materials",
       "task-links-error",
@@ -402,7 +400,10 @@
       "excel-import-preview",
       "excel-import-confirm",
       "json-file-input",
-      "ddl-reminder",
+      "agenda-reminder",
+      "agenda-reminder-summary",
+      "agenda-reminder-date",
+      "daily-agenda-toggle",
       "ddl-reminder-summary",
       "ddl-reminder-list",
       "ai-settings-dialog",
@@ -426,6 +427,13 @@
 
   function initialize() {
     cacheDom();
+    [["task-report-to", "reportTo"], ["task-managed-object", "managedObject"]].forEach(function (pair) {
+      var input = dom[pair[0]];
+      input.after(utils.personPicker(input, function () { return collectTaskSuggestionValues(pair[1]); }, i18n.isEnglish()));
+    });
+    dom["task-dialog"].addEventListener("close", function () {
+      dom["task-dialog"].querySelectorAll(".person-picker").forEach(function (picker) { picker.open = false; });
+    });
     bulkWorkbench = App.bulkUi.mount({
       getData: function () { return data; },
       switchView: switchView,
@@ -443,7 +451,7 @@
       commit: function (next, message) {
         var previous = data;
         data = next;
-        if (persistAndRender(message)) { closeDdlReminder(); return true; }
+        if (persistAndRender(message)) return true;
         data = previous;
         renderAll();
         return false;
@@ -464,13 +472,16 @@
     }
     renderAll();
     i18n.applyDocument();
+    showStartupAgendaReminder();
     var warning = storage.getLastWarning();
     if (warning) toast(warning, "warning", 7000);
-    showDdlReminder();
     scheduleNextPeriodRefresh();
   }
 
   function bindEvents() {
+    dom["daily-agenda-toggle"].addEventListener("click", function () {
+      setAgendaExpanded(dom["ddl-reminder-list"].hidden);
+    });
     dom["timeline-selection-toggle"].addEventListener("click", function () {
       setTimelineSelectionMode(!ui.timelineSelecting);
     });
@@ -958,7 +969,6 @@
       "task-draft-add": addTaskDraftCandidate,
       "task-draft-skip": skipTaskDraftCandidate,
       "task-draft-complete": completeTaskDraftConversion,
-      "close-ddl-reminder": closeDdlReminder,
       "delete-group": requestDeleteCurrentGroup,
       "delete-flow": requestDeleteCurrentFlow,
       "delete-task": requestDeleteCurrentTask,
@@ -1193,7 +1203,7 @@
     sanitizeUiState();
     renderHeaderSummary();
     renderHomeSummary();
-    renderTaskSuggestionOptions();
+    renderDailyAgenda();
     renderFilterControls();
     renderTimeline();
     renderDashboard();
@@ -3406,6 +3416,41 @@
     cell.appendChild(wrap);
   }
 
+  function updateMaterialStar(button, material) {
+    var favorite = material.favorite;
+    var label = i18n.isEnglish()
+      ? (favorite ? "Unstar document" : "Star document")
+      : (favorite ? "取消资料星标" : "标星资料");
+    button.textContent = favorite ? "★" : "☆";
+    button.classList.toggle("is-favorite", favorite);
+    button.setAttribute("aria-pressed", String(favorite));
+    button.title = label;
+    button.setAttribute("aria-label", label + " · " + material.title);
+  }
+
+  function createMaterialStar(material) {
+    var button = utils.el("button", "note-favorite-button material-star");
+    button.type = "button";
+    button.dataset.materialStar = material.id;
+    updateMaterialStar(button, material);
+    button.addEventListener("click", function () {
+      var current = getMaterial(material.id);
+      if (!current) return;
+      current.favorite = !current.favorite;
+      try {
+        data = storage.save(data);
+      } catch (error) {
+        current.favorite = !current.favorite;
+        toast(error.message, "error");
+        return;
+      }
+      queryAll("[data-material-star]", dom["materials-view"]).forEach(function (star) {
+        if (star.dataset.materialStar === current.id) updateMaterialStar(star, current);
+      });
+    });
+    return button;
+  }
+
   function createMaterialTableRow(material) {
     var row = utils.el("tr");
     row.dataset.materialId = material.id;
@@ -3424,7 +3469,9 @@
     nameButton.addEventListener("click", function () {
       openMaterialDialog(material.id);
     });
-    nameCell.appendChild(nameButton);
+    var nameWrap = utils.el("div", "material-starred-name");
+    nameWrap.append(createMaterialStar(material), nameButton);
+    nameCell.appendChild(nameWrap);
 
     var urlCell = utils.el("td");
     var urlButton = utils.el("button", "material-url-button", material.url);
@@ -3555,7 +3602,7 @@
         goButton.addEventListener("click", function () {
           openMaterialLink(material.id);
         });
-        row.append(select, nameButton, goButton);
+        row.append(select, createMaterialStar(material), nameButton, goButton);
         list.appendChild(row);
       });
     }
@@ -6935,17 +6982,11 @@
     });
   }
 
-  function normalizeTaskSuggestionValue(value) {
-    return String(value || "")
-      .trim()
-      .replace(/\s+/g, " ");
-  }
-
   function collectTaskSuggestionValues(fieldName) {
     var seen = new Set();
     return data.tasks
-      .map(function (task) {
-        return normalizeTaskSuggestionValue(task[fieldName]);
+      .flatMap(function (task) {
+        return utils.personNames(task[fieldName]);
       })
       .filter(function (value) {
         if (!value) return false;
@@ -6959,29 +7000,13 @@
       });
   }
 
-  function renderTaskSuggestionOptions() {
-    [
-      ["task-report-to-options", "reportTo"],
-      ["task-managed-object-options", "managedObject"]
-    ].forEach(function (config) {
-      var list = utils.clear(dom[config[0]]);
-      collectTaskSuggestionValues(config[1]).forEach(function (value) {
-        var option = utils.el("option");
-        option.value = value;
-        list.appendChild(option);
-      });
-    });
-  }
-
   function canonicalTaskSuggestionValue(fieldName, value) {
-    var normalized = normalizeTaskSuggestionValue(value);
-    if (!normalized) return "";
-    var key = normalized.toLocaleLowerCase();
-    return (
-      collectTaskSuggestionValues(fieldName).find(function (existing) {
-        return existing.toLocaleLowerCase() === key;
-      }) || normalized
-    );
+    var history = collectTaskSuggestionValues(fieldName);
+    return utils.personNames(value).map(function (name) {
+      return history.find(function (existing) {
+        return existing.toLocaleLowerCase() === name.toLocaleLowerCase();
+      }) || name;
+    }).join("; ");
   }
 
   function populateTaskFlowSelect(groupId, selectedFlowId) {
@@ -7428,7 +7453,7 @@
       setFieldError("task-urgency", "请选择紧急程度。");
       isValid = false;
     }
-    if (!reportTo) {
+    if (!utils.personNames(reportTo).length) {
       setFieldError("task-report-to", "请输入或选择汇报对象。");
       isValid = false;
     }
@@ -8126,6 +8151,7 @@
       flowIds: compactRelations.flowIds,
       groupIds: compactRelations.groupIds,
       note: dom["material-note"].value,
+      favorite: existing ? existing.favorite : false,
       openEvents: existing ? existing.openEvents : [],
       createdAt: existing ? existing.createdAt : stamp,
       updatedAt: stamp
@@ -8473,6 +8499,7 @@
         var replacement = materialTools.makeMaterial(
           Object.assign({}, details, {
             id: duplicate.id,
+            favorite: duplicate.favorite,
             openEvents: duplicate.openEvents,
             createdAt: duplicate.createdAt,
             updatedAt: stamp
@@ -9481,14 +9508,6 @@
     });
   }
 
-  function closeDdlReminder() {
-    if (ui.ddlReminderTimer) {
-      window.clearTimeout(ui.ddlReminderTimer);
-      ui.ddlReminderTimer = null;
-    }
-    dom["ddl-reminder"].hidden = true;
-  }
-
   function scheduleNextPeriodRefresh() {
     if (ui.recurrenceRefreshTimer) {
       window.clearTimeout(ui.recurrenceRefreshTimer);
@@ -9512,46 +9531,114 @@
         }
       }
       renderAll();
-      showDdlReminder();
       scheduleNextPeriodRefresh();
     }, Math.max(1000, nextDay.getTime() - now.getTime()));
   }
 
-  function dueReminderLabel(ddl, today) {
-    var days = dates.daysBetween(today, ddl);
-    if (days === 0) return "今天";
-    if (days === 1) return "明天";
-    return days + " 天后";
+  function showStartupAgendaReminder() {
+    var dialog = dom["agenda-reminder"];
+    var today = dates.todayISO();
+    var key = "weekflow:agenda:dismissed";
+    if (!dom["ddl-reminder-list"].querySelector(".agenda-task")) return;
+    try {
+      if (localStorage.getItem(key) === today) return;
+    } catch (_error) { /* Still show the reminder when storage is unavailable. */ }
+    setAgendaExpanded(true);
+    dom["agenda-reminder-date"].textContent = new Intl.DateTimeFormat(i18n.locale(), {
+      month: "long", day: "numeric", weekday: "long"
+    }).format(new Date());
+    function acknowledge() {
+      try { localStorage.setItem(key, today); } catch (_error) { /* Storage is optional. */ }
+    }
+    dialog.addEventListener("submit", acknowledge);
+    dialog.addEventListener("cancel", acknowledge);
+    dialog.addEventListener("close", function () {
+      dom["daily-agenda-toggle"].focus();
+    }, { once: true });
+    dialog.showModal();
   }
 
-  function showDdlReminder() {
-    closeDdlReminder();
-    var today = dates.todayISO();
-    var tasks = automation.getDueSoonTasks(activeData(), new Date(), 7);
-    var list = utils.clear(dom["ddl-reminder-list"]);
-    dom["ddl-reminder-summary"].textContent = tasks.length
-      ? tasks.length + " 条未完成 Task 即将到期"
-      : "当前没有临期未完成 Task";
-    if (!tasks.length) {
-      list.appendChild(utils.el("p", "ddl-reminder-empty", "未来 7 天可以从容安排。"));
+  function setAgendaExpanded(expanded) {
+    dom["ddl-reminder-list"].hidden = !expanded;
+    dom["daily-agenda-toggle"].setAttribute("aria-expanded", String(expanded));
+  }
+
+  function showAgendaTaskOnTimeline(entry) {
+    var task = entry.task;
+    var group = getGroup(task.groupId);
+    var flow = getFlow(task.flowId);
+    if (group) group.collapsed = false;
+    if (flow) flow.collapsed = false;
+    ui.timelineGranularity = "week";
+    ui.timelineMode = "window";
+    ui.timelineAnchor = dates.getWeekFriday(entry.ddl);
+    switchView("timeline");
+    if (hasActiveFilters() && !getVisibleTasks().some(function (item) { return item.id === task.id; })) {
+      clearFilters();
     } else {
-      tasks.slice(0, 5).forEach(function (entry) {
-        var task = entry.task;
-        var item = utils.el("div", "ddl-reminder-item");
-        item.append(
-          utils.el("span", "", task.name),
-          utils.el("time", "", entry.ddl + " · " + dueReminderLabel(entry.ddl, today))
-        );
-        list.appendChild(item);
-      });
-      if (tasks.length > 5) {
-        list.appendChild(
-          utils.el("p", "ddl-reminder-empty", "另有 " + (tasks.length - 5) + " 条未显示")
-        );
-      }
+      renderFilteredViews();
     }
-    dom["ddl-reminder"].hidden = false;
-    ui.ddlReminderTimer = window.setTimeout(closeDdlReminder, 10000);
+    var row = findTimelineAnchorRow("task", task.id);
+    if (row) {
+      var title = row.querySelector(".task-title");
+      title.focus({ preventScroll: true });
+      title.scrollIntoView({ block: "center", inline: "nearest" });
+      row.classList.add("agenda-target");
+    }
+  }
+
+  function renderDailyAgenda() {
+    var now = new Date();
+    var today = dates.todayISO(now);
+    var sunday = dates.endOfWeek(today);
+    var entries = automation.getDueSoonTasks(activeData(), now, dates.daysBetween(today, sunday));
+    var dueToday = entries.filter(function (entry) { return entry.ddl === today; });
+    var later = entries.slice(dueToday.length);
+    var en = i18n.isEnglish();
+    var list = utils.clear(dom["ddl-reminder-list"]);
+    var todayLabel = en ? "Due today" : "今天到期";
+    var laterLabel = en ? "Later this week" : "本周稍后";
+    var summary = utils.clear(dom["ddl-reminder-summary"]);
+    [[todayLabel, dueToday.length], [laterLabel, later.length]].forEach(function (pair) {
+      var metric = utils.el("span", "agenda-metric");
+      metric.append(utils.el("span", "", pair[0]), utils.el("b", "", String(pair[1])));
+      summary.appendChild(metric);
+    });
+    dom["agenda-reminder-summary"].replaceChildren(...Array.from(summary.children, function (metric) {
+      return metric.cloneNode(true);
+    }));
+    [[todayLabel, dueToday], [laterLabel, later]].forEach(function (group) {
+      if (!group[1].length) return;
+      var section = utils.el("section", group[1] === dueToday ? "agenda-group is-today" : "agenda-group");
+      section.appendChild(utils.el("h3", group[1] === dueToday ? "agenda-today" : "", group[0]));
+      group[1].forEach(function (entry) {
+        var item = utils.el("button", "agenda-task");
+        var taskGroup = getGroup(entry.task.groupId);
+        if (taskGroup) applyGroupVariables(item, taskGroup);
+        item.type = "button";
+        var name = utils.el("span", "", entry.task.name);
+        name.setAttribute("data-user-content", "");
+        var ddl = utils.el("time", "", entry.ddl.slice(5));
+        ddl.dateTime = entry.ddl;
+        var arrow = utils.el("span", "home-entry-arrow", "→");
+        arrow.setAttribute("aria-hidden", "true");
+        item.append(ddl, name, arrow);
+        item.addEventListener("click", function () { showAgendaTaskOnTimeline(entry); });
+        section.appendChild(item);
+      });
+      list.appendChild(section);
+    });
+    if (!entries.length) list.appendChild(utils.el("p", "", en ? "No deadlines through Sunday." : "今天至本周日没有待到期的 Task。"));
+    if (ui.agendaDate !== today) {
+      ui.agendaDate = today;
+      var firstVisit = true;
+      try {
+        var key = "weekflow:agenda:last-visit";
+        firstVisit = localStorage.getItem(key) !== today;
+        localStorage.setItem(key, today);
+      } catch (_error) { /* The list remains usable without browser storage. */ }
+      setAgendaExpanded(firstVisit && entries.length > 0);
+    }
   }
 
   function toast(message, type, duration) {

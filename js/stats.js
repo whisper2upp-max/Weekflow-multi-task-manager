@@ -6,11 +6,11 @@
       : typeof require === "function"
         ? require("./date-utils.js")
         : null;
-  var api = factory(dates);
+  var api = factory(dates, root.App && root.App.utils || require("./utils.js"));
   if (typeof module === "object" && module.exports) module.exports = api;
   root.App = root.App || {};
   root.App.stats = api;
-})(typeof self !== "undefined" ? self : globalThis, function (dates) {
+})(typeof self !== "undefined" ? self : globalThis, function (dates, utils) {
   "use strict";
 
   function normalized(value) {
@@ -174,11 +174,14 @@
     if (!["managedObject", "reportTo"].includes(field)) return [];
     var buckets = new Map();
     (Array.isArray(tasks) ? tasks : []).forEach(function (task) {
-      var value = String((task && task[field]) || "").trim();
-      if (!buckets.has(value)) buckets.set(value, []);
-      buckets.get(value).push(task);
+      var names = utils.personNames(task && task[field]);
+      (names.length ? names : [""]).forEach(function (name) {
+        var key = name.toLocaleLowerCase();
+        if (!buckets.has(key)) buckets.set(key, { name: name, tasks: [] });
+        buckets.get(key).tasks.push(task);
+      });
     });
-    return Array.from(buckets.entries())
+    return Array.from(buckets.values()).map(function (bucket) { return [bucket.name, bucket.tasks]; })
       .sort(function (left, right) {
         if (!left[0] && right[0]) return 1;
         if (left[0] && !right[0]) return -1;
@@ -196,6 +199,7 @@
   }
 
   return {
+    personNames: utils.personNames,
     filterTasks: filterTasks,
     sortTasks: sortTasks,
     sortFlowTasks: sortFlowTasks,

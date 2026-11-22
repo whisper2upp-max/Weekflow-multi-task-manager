@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="Weekflow v3.4 中英双语本地 Task 管理工具，支持周/日双时间轴、可收藏随手记、Excel 兼容表格、多条进度历史、可选 AI 改写与 Task 草稿解析、资料库、看板和本地备份。"
+      content="Weekflow v3.5 中英双语本地 Task 管理工具，支持周/日双时间轴、可收藏随手记、Excel 兼容表格、多条进度历史、可选 AI 改写与 Task 草稿解析、资料库、看板和本地备份。"
     />
-    <title>Weekflow v3.4 · Task management</title>
-    <link rel="stylesheet" href="./css/styles.css?v=a00db28af0a5" />
+    <title>Weekflow v3.5 · Task management</title>
+    <link rel="stylesheet" href="./css/styles.css?v=162708628d8d" />
   </head>
   <body>
     <div class="app-shell">
@@ -275,9 +275,18 @@
 
       <main>
         <section id="home-view" class="view-panel home-view" aria-labelledby="home-heading">
+          <section class="daily-agenda" aria-labelledby="daily-agenda-title">
+            <button id="daily-agenda-toggle" class="daily-agenda-toggle" type="button" aria-expanded="false" aria-controls="ddl-reminder-list">
+              <span class="home-entry-icon agenda-calendar" aria-hidden="true"></span>
+              <strong id="daily-agenda-title">本周待办</strong>
+              <span id="ddl-reminder-summary"></span>
+              <span aria-hidden="true" class="agenda-chevron"></span>
+            </button>
+            <div id="ddl-reminder-list" class="agenda-list" hidden></div>
+          </section>
           <div class="home-hero">
             <div class="home-hero-copy">
-              <p class="eyebrow">Weekflow v3.4</p>
+              <p class="eyebrow">Weekflow v3.5</p>
               <h1 id="home-heading">把工作拆成清晰的下一步</h1>
               <p>
                 用分组建立工作版图，用 Flow 串起执行步骤，再用周时间轴看清每一个 DDL。
@@ -373,7 +382,7 @@
               <span class="home-entry-copy">
                 <small>WHAT'S NEW</small>
                 <strong>更新日志</strong>
-                <span>查看 Weekflow v3.4 的发布内容</span>
+                <span>查看 Weekflow v3.5 的发布内容</span>
               </span>
               <span class="home-entry-arrow" aria-hidden="true">↗</span>
             </button>
@@ -1009,7 +1018,7 @@
             <li><b>草稿识别规则：</b>支持 Task/任务/待办、Group/分组、Flow/流程、DDL/Deadline/截止日期、Urgency/Priority/紧急程度、Report To/汇报对象、Managed Person/管理对象和 Deliverable/交付物等标签。独立行的 1/2/3 或普通非空换行默认拆成不同 Task，字段行仍跟随上一 Task；行首“本周二 / 下周五 / 下下周三 / 周二”、8-25、8.25、8月25日及带年份变体会移出 Task 名称并直接预填 DDL。“每周三 / Every Wednesday”会预填每周周期和下周三 DDL，“每月 5 日 / Monthly on the 5th”会预填每月周期和下个月 5 日 DDL，周期结束仍需用户确认。其他模糊相对日期、近似名称或拼写只显示建议。</li>
             <li><b>周期 DDL：</b>周期 Task 仍只统计为一条 Task，但时间轴会按基准 DDL 的星期或日期显示多个 DDL；勾选本期完成会同时视同此前各期完成，下一周期自动恢复未勾选并保留之前的连续完成记录。</li>
             <li><b>Flow 工作流：</b>在分组和 Task 之间增加可选步骤层，支持拖动排序；新 Flow 默认继承所属分组颜色。</li>
-            <li><b>DDL 提醒：</b>每次进入程序会在右下角播报未来 7 天内的未完成 Task，10 秒后自动关闭，悬浮时不影响页面操作。</li>
+            <li><b>DDL 提醒：</b>首页显示今天和本周剩余的待办。每天首次打开时自动展开有待办的清单，可随时收起或查看。</li>
             <li><b>筛选与看板：</b>时间轴可按分组、Flow、状态、紧急程度、逾期或关键词组合筛选；筛选弹层会在切换菜单或点击空白处时关闭。整体看板常驻显示 Task 总数、已完成、未完成、当前逾期和完成率，并可按分组、Flow、管理对象或汇报对象切换查看详细进度。</li>
             <li><b>对象汇总与导出：</b>整体看板按人员姓名分别汇总每个管理对象和汇报对象的完成率、已完成、未完成及逾期数量，并一键导出该人员的 Task 状态。</li>
             <li><b>Excel 批量录入：</b>20 列 Task 主表包含周期、周期起止和完成历史；新版文件另含“进度历史”工作表，一行保存一条进度。可下载空白模板或按模板下载当前数据，上传后先校验预览，再选择补充导入或完整覆盖。</li>
@@ -1028,7 +1037,7 @@
           <h3>数据保存位置</h3>
           <p>数据保存在当前浏览器、当前页面来源的 <code>localStorage</code> 中，主数据键为：</p>
           <pre>weekflow-v2.4:data:v4</pre>
-          <p>v3.4 继续沿用 v2.4 兼容命名空间；内部结构自 v3.0 起为 v4，旧单条进度会自动迁移为一条历史记录。</p>
+          <p>v3.5 继续沿用 v2.4 兼容命名空间；内部结构自 v3.0 起为 v4，旧单条进度会自动迁移为一条历史记录。</p>
           <p>清除浏览器网站数据、使用无痕窗口、更换浏览器或更换启动地址，都会影响可见数据。</p>
         </section>
         <section>
@@ -1067,7 +1076,7 @@
           <h3>开发团队</h3>
           <p>开发团队：Wesley Yan</p>
           <p>首个正式版本（v1.0）：2026年7月30日</p>
-          <p>最新版本（v3.4）更新时间：2026年10月19日</p>
+          <p>最新版本（v3.5）更新时间：2026年11月22日</p>
         </section>
       </article>
       <div class="modal-actions">
@@ -1084,6 +1093,17 @@
         <button class="icon-button" type="button" data-action="close-changelog" aria-label="关闭">×</button>
       </div>
       <article class="document-content changelog-content">
+        <div class="release-entry" data-version="3.5">
+          <div class="release-heading"><span>v3.5 多人任务、本周待办与资料星标</span><time datetime="2026-11-22">2026-11-22</time></div>
+          <ul>
+            <li>Task 的汇报对象和管理对象均可多选，可勾选历史人员或用分号输入新姓名，重复姓名自动合并。批量修改支持替换多位管理对象。</li>
+            <li>多人任务分别计入每位相关人员的统计和个人报表，Excel 导出及回导保留多人字段，原有单人任务继续可用。</li>
+            <li>首页按“今天到期”和“本周稍后”纵向列出截至周日的未完成任务。有待办时每天首次打开自动展开并弹窗，手动关闭后当天不再弹出，首页仍可随时展开。</li>
+            <li>点击待办可在周时间轴定位任务，展开所属分组和 Flow；悬停及键盘聚焦时使用任务分组的颜色高亮。</li>
+            <li>资料名称旁的星标可点亮或取消，在列表、分组及同一资料所在的多个分组间同步。刷新或恢复 JSON 备份后仍保留星标。</li>
+          </ul>
+        </div>
+
         <div class="release-entry" data-version="3.4">
           <div class="release-heading">
             <span>v3.4 Task 复制与随手记布局修复版</span>
@@ -1653,30 +1673,26 @@
             <input id="task-completed-at" type="date" disabled />
             <small>标记完成时自动记录，可按需调整。</small>
           </label>
-          <label class="form-field">
-            <span>汇报对象 <em>*</em></span>
+          <div class="form-field">
+            <label for="task-report-to">汇报对象 <em>*</em></label>
             <input
               id="task-report-to"
-              list="task-report-to-options"
-              maxlength="120"
+              maxlength="32767"
               required
               autocomplete="off"
             />
-            <datalist id="task-report-to-options"></datalist>
-            <small>填写人员姓名；可从历史值中选择，也可输入新值。</small>
+            <small>可勾选多人，也可输入姓名，用分号分隔。</small>
             <small class="field-error" data-error-for="task-report-to"></small>
-          </label>
-          <label class="form-field">
-            <span>管理对象</span>
+          </div>
+          <div class="form-field">
+            <label for="task-managed-object">管理对象</label>
             <input
               id="task-managed-object"
-              list="task-managed-object-options"
-              maxlength="160"
+              maxlength="32767"
               autocomplete="off"
             />
-            <datalist id="task-managed-object-options"></datalist>
-            <small>填写人员姓名；可从历史值中选择，也可输入新值。</small>
-          </label>
+            <small>可勾选多人，也可输入姓名，用分号分隔。</small>
+          </div>
           <label class="form-field form-field-wide">
             <span>交付物 <em>*</em></span>
             <textarea id="task-deliverable" rows="2" maxlength="500" required></textarea>
@@ -2090,38 +2106,39 @@
       </form>
     </dialog>
 
-    <div id="toast-region" class="toast-region" aria-live="polite" aria-atomic="true">
-      <aside id="ddl-reminder" class="ddl-reminder" role="status" hidden>
-        <div class="ddl-reminder-head">
-          <span class="ddl-reminder-icon" aria-hidden="true">◷</span>
-          <div>
-            <strong>未来 7 天 DDL 提醒</strong>
-            <small id="ddl-reminder-summary"></small>
-          </div>
-          <button class="ddl-reminder-close" type="button" data-action="close-ddl-reminder" aria-label="关闭 DDL 提醒"></button>
+    <dialog id="agenda-reminder" class="modal agenda-reminder" aria-labelledby="agenda-reminder-title" aria-describedby="agenda-reminder-summary">
+      <form method="dialog">
+        <div class="agenda-dialog-heading">
+          <span class="home-entry-icon agenda-calendar" aria-hidden="true"></span>
+          <div><time id="agenda-reminder-date"></time><h2 id="agenda-reminder-title">本周待办提醒</h2></div>
         </div>
-        <div id="ddl-reminder-list" class="ddl-reminder-list"></div>
-      </aside>
+        <div id="agenda-reminder-summary"></div>
+        <div class="agenda-dialog-actions"><button class="button button-primary" autofocus>知道了，查看清单</button></div>
+      </form>
+    </dialog>
+
+    <div id="toast-region" class="toast-region" aria-live="polite" aria-atomic="true">
+
     </div>
 
     <script src="./vendor/jszip.min.js?v=acc7e41455a8"></script>
     <script src="./vendor/xlsx.full.min.js?v=cc015130aa85"></script>
-    <script src="./js/i18n.js?v=e7bb5d0a0dd3"></script>
+    <script src="./js/i18n.js?v=8308ab707626"></script>
     <script src="./js/xlsx-safe.js?v=dbdd78bec0da"></script>
-    <script src="./js/utils.js?v=1a526f5ee512"></script>
+    <script src="./js/utils.js?v=2498deaa4d83"></script>
     <script src="./js/rich-text.js?v=61d5fbbcb102"></script>
     <script src="./js/task-draft-parser.js?v=a9522fc3aee6"></script>
     <script src="./js/date-utils.js?v=a5bda2951586"></script>
-    <script src="./js/stats.js?v=4c407c8691f3"></script>
-    <script src="./js/materials.js?v=9e4a902fa2f2"></script>
+    <script src="./js/stats.js?v=8fcfcba05ede"></script>
+    <script src="./js/materials.js?v=5627b66899a5"></script>
     <script src="./js/automation.js?v=db996259d519"></script>
-    <script src="./js/storage.js?v=7858d325bc6b"></script>
-    <script src="./js/excel-export.js?v=5f52838c1ee1"></script>
-    <script src="./js/excel-import.js?v=9436b6b9cda2"></script>
-    <script src="./js/material-excel.js?v=d3ada4169ae5"></script>
+    <script src="./js/storage.js?v=00db980dca0c"></script>
+    <script src="./js/excel-export.js?v=eaaa783c1286"></script>
+    <script src="./js/excel-import.js?v=5876fc17c5e8"></script>
+    <script src="./js/material-excel.js?v=c968b89c600a"></script>
     <script src="./js/ai-provider.js?v=64438dc255d0"></script>
-    <script src="./js/bulk-actions.js?v=a34f38a65b6b"></script>
-    <script src="./js/bulk-ui.js?v=798c7df9f432"></script>
-    <script src="./js/app.js?v=aff462220421"></script>
+    <script src="./js/bulk-actions.js?v=3b0adc01ec7b"></script>
+    <script src="./js/bulk-ui.js?v=9b3ef6a4cc8f"></script>
+    <script src="./js/app.js?v=3a1f4bf162d2"></script>
   </body>
 </html>

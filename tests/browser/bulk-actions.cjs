@@ -80,7 +80,7 @@ const fixture = storage.validateData({ version: 4,
     await dialog.locator('input[type="number"]').fill('7');
     await dialog.locator('select').nth(1).selectOption('high');
     await dialog.locator('select').nth(2).selectOption('set');
-    await dialog.locator('input[list]').fill('Amy');
+    await dialog.locator('#bulk-managed-object').fill('Amy');
     await modal('预览修改');
     assert.match(await dialog.innerText(), /2026-09-10 → 2026-09-17/);
     assert.equal((await stored()).tasks[0].ddl, '2026-09-10');

@@ -68,7 +68,7 @@ test("Document Library exposes bilingual List and Group layout controls", () => 
   assert.equal(i18n.translateText("前往"), "Go to");
 });
 
-test("v3.4 version and release documentation stay aligned", () => {
+test("v3.5 version and release documentation stay aligned", () => {
   const pkg = JSON.parse(fs.readFileSync(path.join(root, "package.json"), "utf8"));
   const html = fs.readFileSync(path.join(root, "Weekflow.html"), "utf8");
   const readme = fs.readFileSync(path.join(root, "README.md"), "utf8");
@@ -76,10 +76,10 @@ test("v3.4 version and release documentation stay aligned", () => {
   const changelog = fs.readFileSync(path.join(root, "CHANGELOG.md"), "utf8");
   const release = fs.readFileSync(path.join(root, "RELEASE.txt"), "utf8");
 
-  assert.equal(pkg.version, "3.4.0");
-  assert.match(html, /<title>Weekflow v3\.4/);
-  assert.match(readme, /^# Weekflow v3\.4/m);
-  assert.match(readmeEn, /^# Weekflow v3\.4/m);
+  assert.equal(pkg.version, "3.5.0");
+  assert.match(html, /<title>Weekflow v3\.5/);
+  assert.match(readme, /^# Weekflow v3\.5/m);
+  assert.match(readmeEn, /^# Weekflow v3\.5/m);
   assert.match(
     changelog,
     /^## v3\.2 Note Tables and Favorites — 2026-08-29/m
@@ -92,10 +92,10 @@ test("v3.4 version and release documentation stay aligned", () => {
     changelog,
     /^## v3\.0 Quick Notes and Progress History — 2026-08-15/m
   );
-  assert.match(changelog, /^## v3\.4 Task Copying and Quick Notes Layout Fix — 2026-10-19/m);
-  assert.match(html, /v3\.4 Task 复制与随手记布局修复版/);
+  assert.match(changelog, /^## v3\.5 Multi-person Tasks, Weekly Agenda and Document Stars — 2026-11-22/m);
+  assert.match(html, /v3\.5 多人任务、本周待办与资料星标/);
   assert.doesNotMatch(changelog, /^## Unreleased/m);
-  assert.match(release, /^Weekflow v3\.4\nRelease date: 2026-10-19/);
+  assert.match(release, /^Weekflow v3\.5\nRelease date: 2026-11-22/);
   assert.match(html, /v3\.2 笔记表格与收藏版/);
   assert.match(html, /v3\.1 AI 辅助与富文本字号版/);
   assert.match(html, /v3\.0 随手记与进度历史版/);
@@ -114,7 +114,7 @@ test("English current-Task workbook has English sheets and can be imported", asy
   i18n.setLanguage("en");
   const workbook = excelImport.buildWorkbook(sampleData(), { language: "en" });
   assert.deepEqual(workbook.SheetNames, ["Task Import", "Progress History", "Instructions"]);
-  assert.equal(workbook.Props.Subject, "Weekflow v3.4 re-importable Task data");
+  assert.equal(workbook.Props.Subject, "Weekflow v3.5 re-importable Task data");
   assert.equal(workbook.Sheets["Task Import"].A4.v, "Group*");
   assert.equal(workbook.Sheets["Task Import"].L5.v, "High");
   const buffer = await excelImport.buildXlsxPackage(sampleData(), JSZip, "nodebuffer", { language: "en" });
@@ -151,7 +151,7 @@ test("English Document Library workbook has English headers and can be imported"
   i18n.setLanguage("en");
   const workbook = materialExcel.buildWorkbook(sampleData(), { language: "en" });
   assert.deepEqual(workbook.SheetNames, ["Document Library"]);
-  assert.equal(workbook.Props.Title, "Weekflow v3.4 Document Library");
+  assert.equal(workbook.Props.Title, "Weekflow v3.5 Document Library");
   assert.equal(workbook.Sheets["Document Library"].A1.v, "Link Name*");
   assert.equal(workbook.Sheets["Document Library"].C2.v, "Documentation");
   const buffer = await materialExcel.buildXlsxPackage(sampleData(), JSZip, "nodebuffer", { language: "en" });
@@ -195,4 +195,21 @@ test("English dashboard report keeps Windows-safe OOXML and English names", asyn
   assert.deepEqual(workbook.SheetNames, ["Overall Dashboard", "Timeline Dashboard", "Progress History"]);
   assert.equal(workbook.Sheets["Timeline Dashboard"].A1.v, "Group");
   assert.equal(workbook.Sheets["Timeline Dashboard"].R1.v, "Related Documents");
+});
+
+test("shared Tasks appear once per person and both roles survive Excel round trips", async () => {
+  const stats = require("../js/stats.js");
+  const data = sampleData();
+  Object.assign(data.tasks[0], { reportTo: "Lucy Chen; Amy", managedObject: "Jack Wang; Amy" });
+  for (const field of ["reportTo", "managedObject"]) {
+    const summary = stats.summarizeByTaskField(data.tasks, field);
+    assert.equal(summary.length, 2);
+    assert.equal(summary.find(row => row.value === "Amy").total, 1);
+    assert.deepEqual(excelExport.buildScopedTaskData(data, field, "Amy").tasks, data.tasks);
+  }
+  const bytes = await excelImport.buildXlsxPackage(data, JSZip, "nodebuffer", { language: "en" });
+  const parsed = excelImport.parseWorkbook(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength));
+  assert.deepEqual(parsed.errors, []);
+  assert.equal(parsed.rows[0].reportTo, data.tasks[0].reportTo);
+  assert.equal(parsed.rows[0].managedObject, data.tasks[0].managedObject);
 });

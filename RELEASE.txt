@@ -1,5 +1,12 @@
-Weekflow v3.4
-Release date: 2026-10-19
+Weekflow v3.5
+Release date: 2026-11-22
+
+Multi-person Tasks, Weekly Agenda and Document Stars — 2026-11-22
+- Select multiple Report To and Managed Person names from history or enter names separated by semicolons. Duplicate names are combined. Bulk edits can replace the managed-person list.
+- Shared Tasks count for each person in dashboard totals and individual reports. Excel export and re-import preserve multiple names and existing single-person Tasks.
+- Home lists incomplete Tasks due today and later through Sunday in a vertical agenda. On the first visit with work due, the list expands and a reminder stays open until dismissed. It can be dismissed once per day and the list reopened at any time.
+- Select an agenda item to locate it on the weekly timeline and expand its Group and Flow. Hover and keyboard focus use its Group color.
+- Star or unstar a document beside its name in List or Group view. The star follows the document across Groups, reloads, and JSON backup and restore.
 
 Task copying and Quick Notes layout release: 2026-10-19
 - Copy existing Tasks with clear copy names, numbered duplicates, and an editing banner.

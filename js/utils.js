@@ -7,6 +7,54 @@
 })(typeof self !== "undefined" ? self : globalThis, function () {
   "use strict";
 
+  function personNames(value) {
+    var names = new Map();
+    String(value || "").split(/[;；]/).forEach(function (item) {
+      var name = item.trim().replace(/\s+/g, " ");
+      var key = name.toLocaleLowerCase();
+      if (name && !names.has(key)) names.set(key, name);
+    });
+    return Array.from(names.values());
+  }
+
+  function personPicker(input, suggestions, english) {
+    var picker = el("details", "person-picker");
+    var summary = el("summary", "", english ? "Select people" : "选择人员");
+    var options = el("div", "person-options");
+    picker.append(summary, options);
+    function refresh() {
+      if (!picker.open) return;
+      clear(options);
+      var selected = personNames(input.value);
+      var keys = selected.map(function (name) { return name.toLocaleLowerCase(); });
+      var names = personNames(selected.concat(suggestions()).join("; "));
+      if (!names.length) options.textContent = english ? "Enter a name above first." : "可先在上方输入姓名。";
+      names.forEach(function (name) {
+        var label = el("label");
+        var box = el("input");
+        box.type = "checkbox";
+        box.checked = keys.includes(name.toLocaleLowerCase());
+        label.append(box, document.createTextNode(name));
+        options.append(label);
+        box.addEventListener("change", function () {
+          var current = personNames(input.value).filter(function (item) {
+            return item.toLocaleLowerCase() !== name.toLocaleLowerCase();
+          });
+          if (box.checked) current.push(name);
+          input.value = current.join("; ");
+          input.dispatchEvent(new Event("input", { bubbles: true }));
+          var next = Array.from(options.querySelectorAll("label")).find(function (row) {
+            return row.textContent === name;
+          });
+          if (next) next.firstChild.focus();
+        });
+      });
+    }
+    picker.addEventListener("toggle", refresh);
+    input.addEventListener("input", refresh);
+    return picker;
+  }
+
   function uid(prefix) {
     var value;
     if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -138,6 +186,8 @@
   }
 
   return {
+    personNames: personNames,
+    personPicker: personPicker,
     uid: uid,
     isValidUrl: isValidUrl,
     safeOpen: safeOpen,

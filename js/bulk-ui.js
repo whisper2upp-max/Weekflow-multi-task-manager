@@ -240,9 +240,14 @@
       var days = el("input"); days.type = "number"; days.step = "1"; days.min = "-3650"; days.max = "3650"; days.value = "0"; days.disabled = true;
       var urgency = select([["", t("不修改", "Keep Unchanged")], ["high", t("高", "High")], ["medium", t("中", "Medium")], ["low", t("低", "Low")]], "");
       var personMode = select([["keep", t("不修改", "Keep Unchanged")], ["set", t("替换为", "Replace With")], ["clear", t("清空管理对象", "Clear Managed Person")]], "keep");
-      var person = el("input"); person.maxLength = 160; person.disabled = true;
-      person.setAttribute("list", "task-managed-object-options");
+      var person = el("input"); person.maxLength = 32767; person.disabled = true;
+      person.id = "bulk-managed-object";
       fields.append(label(t("DDL 操作", "DDL Action"), dateMode), label("DDL", date), label(t("平移天数（负数为提前）", "Days (negative = earlier)"), days), label(t("紧急程度", "Urgency"), urgency), label(t("管理对象操作", "Managed Person Action"), personMode), label(t("管理对象", "Managed Person"), person));
+      var picker = utils.personPicker(person, function () {
+        return options.getData().tasks.flatMap(function (task) { return utils.personNames(task.managedObject); });
+      }, App.i18n.isEnglish());
+      fields.append(picker);
+      picker.hidden = true;
       var content = el("div"); content.setAttribute("aria-live", "polite");
       var actions = el("div", "modal-actions");
       var apply = button(t("确认应用", "Apply Changes"), applyPreview, "button button-primary"); apply.disabled = true;
@@ -250,13 +255,13 @@
         try {
           var patch = { ddlMode: dateMode.value, ddl: date.value, days: days.value === "" ? NaN : Number(days.value), urgency: urgency.value };
           if (personMode.value === "set") {
-            if (!person.value.trim()) throw new Error(t("请填写管理对象；如需清空，请选择“清空管理对象”。", "Enter a managed person, or select Clear Managed Person."));
-            patch.managedObject = person.value;
+            if (!utils.personNames(person.value).length) throw new Error(t("请填写管理对象；如需清空，请选择“清空管理对象”。", "Enter a managed person, or select Clear Managed Person."));
+            patch.managedObject = utils.personNames(person.value).join("; ");
           } else if (personMode.value === "clear") patch.managedObject = "";
           preview(bulk.planEdit(options.getData(), kind, Array.from(selected), patch, new Date().toISOString()), content, apply);
         } catch (error) { plan = null; apply.disabled = true; utils.clear(content); showError(error); }
       });
-      function invalidate() { plan = null; apply.disabled = true; utils.clear(content); date.disabled = dateMode.value !== "set"; days.disabled = dateMode.value !== "shift"; person.disabled = personMode.value !== "set"; }
+      function invalidate() { plan = null; apply.disabled = true; utils.clear(content); date.disabled = dateMode.value !== "set"; days.disabled = dateMode.value !== "shift"; person.disabled = personMode.value !== "set"; picker.hidden = person.disabled; }
       fields.addEventListener("input", invalidate); fields.addEventListener("change", invalidate);
       actions.append(button(t("取消", "Cancel"), function () { dialog.close(); }), previewButton, apply);
       dialogBody.append(fields, el("p", "bulk-help", t("周期 Task 可批量修改紧急程度和管理对象；DDL 请逐条编辑以核对周期与完成记录。", "Bulk edit urgency and managed person for recurring Tasks. Edit their DDL individually to review recurrence and completion history.")), content); dialog.append(actions); dialog.showModal();

@@ -88,7 +88,7 @@
     if (mode === "set" && !dates.parseISODate(patch.ddl)) throw new Error("invalid-date");
     if (mode === "shift" && (!Number.isInteger(patch.days) || Math.abs(patch.days) > 3650)) throw new Error("invalid-shift");
     if (patch.urgency && !["high", "medium", "low"].includes(patch.urgency)) throw new Error("invalid-urgency");
-    if (patch.managedObject !== undefined && String(patch.managedObject).trim().length > 160) throw new Error("invalid-person");
+    if (patch.managedObject !== undefined && String(patch.managedObject).trim().length > 32767) throw new Error("invalid-person");
     var changes = [];
     data.tasks.forEach(function (task) {
       if (!taskIds.has(task.id)) return;

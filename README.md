@@ -1,11 +1,11 @@
 <p align="right"><strong>中文</strong> · <a href="README_EN.md">English</a></p>
 
-# Weekflow v3.4 · Task management
+# Weekflow v3.5 · Task management
 
-> **v3.4 新增**：复制 Task 并以副本名称和提示区分，修改后保存为独立任务；修复随手记底部按钮遮挡，中间编辑区独立滚动。继续支持 [批量操作与归档](docs/bulk-archive-trial.md)。
+> **v3.5** · 多人任务、本周待办与资料星标
 
 <p>
-  <img src="https://img.shields.io/badge/version-3.4-665CFF?style=flat-square" alt="version 3.4">
+  <img src="https://img.shields.io/badge/version-3.5-665CFF?style=flat-square" alt="version 3.5">
   <img src="https://img.shields.io/badge/platforms-macOS%20%7C%20Windows-18213F?style=flat-square" alt="platforms macOS and Windows">
   <img src="https://img.shields.io/badge/runtime-HTML%20%7C%20CSS%20%7C%20JavaScript-16A8B8?style=flat-square" alt="runtime HTML, CSS and JavaScript">
   <img src="https://img.shields.io/badge/languages-%E4%B8%AD%E6%96%87%20%7C%20English-2F80ED?style=flat-square" alt="languages Chinese and English">
@@ -44,7 +44,7 @@ http://localhost:8080/Weekflow.html
 - 主页显示 Task、分组、Flow、资料数量和完成率。
 - 提供时间轴看板、整体看板、资料库、随手记、使用说明和更新日志入口。
 - 顶部“AI 设置”入口用于配置模型服务商、模型与 API Key；未配置 AI 时，本地 Task 草稿解析仍可完整使用。
-- 每次进入程序会在右下角显示未来 7 天内未完成 Task 的 DDL 提醒；提醒 10 秒后自动关闭，悬浮期间不阻断任何操作，关闭按钮采用清晰的图形化样式。
+- 首页按“今天到期”和“本周稍后”纵向列出截至周日的未完成任务。有待办时每天首次打开自动展开并弹窗，手动关闭后当天不再弹出，首页仍可随时展开。
 - 程序内更新日志按版本号从新到旧展示完整历史，而不是只显示当前版本内容。
 - `Command/Ctrl + K` 在主页进入时间轴搜索，在资料库聚焦资料名称搜索，在随手记聚焦笔记搜索。
 
@@ -168,7 +168,7 @@ http://localhost:8080/Weekflow.html
 weekflow-v2.4:data:v4
 ```
 
-v3.4 继续沿用 v2.4 数据命名空间；内部结构自 v3.0 起为 v4。这只是兼容性存储键，不代表当前程序版本仍是 v2.4。
+v3.5 继续沿用 v2.4 数据命名空间；内部结构自 v3.0 起为 v4。这只是兼容性存储键，不代表当前程序版本仍是 v2.4。
 
 相关迁移与安全备份键：
 
@@ -300,18 +300,18 @@ Weekflow_资料库_YYYYMMDD_HHmm.xlsx
 
 - 开发团队：Wesley Yan
 - 首个正式版本（v1.0）：2026年7月30日
-- 最新版本（v3.4）更新时间：2026年10月19日
+- 最新版本（v3.5）更新时间：2026年11月22日
 
 ## 程序文件
 
-- 本文件夹是 Weekflow v3.4 空白正式发布版。
+- 本文件夹是 Weekflow v3.5 空白正式发布版。
 - 程序需要保留整个文件夹结构，不能只移动 `Weekflow.html`；页面依赖 `css、js、templates、vendor` 子目录。
-- 如果收到 `Weekflow v3.4.zip`，请完整解压后再使用。
+- 如果收到 `Weekflow v3.5.zip`，请完整解压后再使用。
 
 ## 文件结构
 
 ```text
-Weekflow v3.4/
+Weekflow v3.5/
 ├── Weekflow.html
 ├── css/styles.css
 ├── js/
