@@ -16,6 +16,9 @@
   var englishDocumentFragments = null;
   var ENGLISH_DATE_PLACEHOLDER = "MM / DD / YYYY";
   var EN_TEXT = {
+    "本周待办提醒": "Weekly task reminder",
+    "知道了，查看清单": "Got it, view tasks",
+    "可勾选多人，也可输入姓名，用分号分隔。": "Select multiple people or enter names separated by semicolons.",
     "复制 Task": "Copy Task",
     "正在编辑副本，保存后会新增 Task，原 Task 不会改变。完成状态和进度已重置，相关资料将另存为独立条目。": "You are editing a copy. Saving creates a new Task and leaves the original unchanged. Completion and progress are reset; related documents will be saved as independent entries.",
     "批量完成": "Complete Selected",
@@ -165,7 +168,7 @@
     "了解主要功能、数据保存与导出方法": "Learn the key features, data storage, and export workflows",
     "更新日志": "Changelog",
     "查看 Weekflow v2.6 的发布内容": "Review the Weekflow v2.6 release history",
-    "查看 Weekflow v3.4 的发布内容": "Review the Weekflow v3.4 release history",
+    "查看 Weekflow v3.5 的发布内容": "Review the Weekflow v3.5 release history",
     "周一至周日 · 表头显示周五 · 双击周表头查看每天": "Monday to Sunday · Headers show Friday · Double-click a week to view each day",
     "本周": "This Week",
     "今天": "Today",
@@ -312,6 +315,7 @@
     "移动到其他分组": "Move to Another Group",
     "移动 Task 与 Flow 后删除": "Move Tasks and Flows, Then Delete",
     "同时删除 Task": "Delete Tasks Too",
+    "本周待办": "This week’s tasks",
     "未来 7 天 DDL 提醒": "Deadlines in the Next 7 Days",
     "请选择有效的周期。": "Select a valid recurrence.",
     "请输入 Task name。": "Enter a Task Name.",
@@ -465,7 +469,7 @@
     "Flow 工作流：": "Flow Workflow:",
     "在分组和 Task 之间增加可选步骤层，支持拖动排序；新 Flow 默认继承所属分组颜色。": "Use the optional Flow layer between Groups and Tasks to define ordered steps. Tasks can be reordered by dragging, and new Flows inherit their Group color by default.",
     "DDL 提醒：": "Deadline Reminder:",
-    "每次进入程序会在右下角播报未来 7 天内的未完成 Task，10 秒后自动关闭，悬浮时不影响页面操作。": "On entry, a non-blocking reminder lists incomplete Tasks due within seven days and closes automatically after ten seconds.",
+    "首页显示今天和本周剩余的待办。每天首次打开时自动展开有待办的清单，可随时收起或查看。": "Home shows tasks due today and later this week. On your first visit each day, a nonempty list opens automatically.",
     "筛选与看板：": "Filters and Dashboards:",
     "时间轴可按分组、Flow、状态、紧急程度、逾期或关键词组合筛选；筛选弹层会在切换菜单或点击空白处时关闭。整体看板常驻显示 Task 总数、已完成、未完成、当前逾期和完成率，并可按分组、Flow、管理对象或汇报对象切换查看详细进度。": "Filter the timeline by Group, Flow, status, urgency, overdue state, or keywords. Popovers close when another menu or blank area is selected. The Overall Dashboard always shows totals, completed, incomplete, overdue, and completion rate, with details by Group, Flow, Managed Person, or Report To.",
     "对象汇总与导出：": "People Summaries and Exports:",
@@ -495,7 +499,7 @@
     "开发团队：Wesley Yan": "Development team: Wesley Yan",
     "首个正式版本（v1.0）：2026年7月30日": "First release (v1.0): July 30, 2026",
     "最新版本（v2.6）更新时间：2026年8月14日": "Latest v2.6 update: August 14, 2026",
-    "最新版本（v3.4）更新时间：2026年10月19日": "Latest v3.4 update: October 19, 2026",
+    "最新版本（v3.5）更新时间：2026年11月22日": "Latest v3.5 update: November 22, 2026",
     "Weekflow 更新日志": "Weekflow Changelog",
     "新增与调整": "New and Updated",
     "新增": "New",
@@ -825,7 +829,7 @@
       "向后 4 周": "Forward 4 weeks",
       "Weekflow 首页": "Weekflow Home"
       ,"Weekflow v2.6 中英双语本地 Task 管理工具，支持周/日双时间轴、分组、Flow、资料库双布局、双向联动、看板、备份和 Excel 批量导入导出。": "Weekflow v2.6 bilingual local Task manager with weekly/daily timelines, Groups, Flows, a dual-layout Document Library, dashboards, backup, and Excel import/export."
-      ,"Weekflow v3.4 中英双语本地 Task 管理工具，支持周/日双时间轴、可收藏随手记、Excel 兼容表格、多条进度历史、可选 AI 改写与 Task 草稿解析、资料库、看板和本地备份。": "Weekflow v3.4 bilingual local Task manager with weekly/daily timelines, favorite Quick Notes, Excel-compatible tables, multi-entry progress history, optional AI rewriting and Task-draft parsing, a Document Library, dashboards, and local backup."
+      ,"Weekflow v3.5 中英双语本地 Task 管理工具，支持周/日双时间轴、可收藏随手记、Excel 兼容表格、多条进度历史、可选 AI 改写与 Task 草稿解析、资料库、看板和本地备份。": "Weekflow v3.5 bilingual local Task manager with weekly/daily timelines, favorite Quick Notes, Excel-compatible tables, multi-entry progress history, optional AI rewriting and Task-draft parsing, a Document Library, dashboards, and local backup."
       ,"例如：已完成需求确认和接口联调，当前等待业务方验收。\n\n可按日期分段记录，也可以作为持续更新的项目备注。": "Example: Requirements and integration are complete; business acceptance is pending.\n\nUse dated entries or maintain this as a continuously updated project note."
       ,"例如：已完成需求确认和接口联调，当前等待业务方验收。": "Example: Requirements and integration are complete; business acceptance is pending."
     };
@@ -954,7 +958,7 @@
       '<li><b>Draft Recognition Rules:</b> Common labels include Task / Todo / Action Item, Group, Flow / Workflow, DDL / Deadline / Due Date, Urgency / Priority, Report To, Managed Person, and Deliverable; corresponding Chinese aliases are recognized as well. Numbered 1/2/3 lines and ordinary non-empty unlabeled lines become separate candidates, while labeled detail lines remain attached to the preceding Task. Leading Chinese current/next/two-weeks-ahead weekdays, bare current-week weekdays, month-day forms, and year variants prefill DDL and are removed from Task names. Every Wednesday prefills Weekly recurrence and next Wednesday; Monthly on the 5th prefills Monthly recurrence and the 5th of next month. Equivalent Chinese recurring phrases are also recognized. Recurrence End still requires user confirmation; other fuzzy relative dates and names remain suggestions.</li>',
       '<li><b>Recurring Deadlines:</b> One recurring Task remains one stored Task while rendering every deadline. Completing the current period also completes all earlier periods.</li>',
       '<li><b>Flow Workflow:</b> Use the optional ordered Flow layer between a Group and its Tasks; new Flows inherit their Group color by default.</li>',
-      '<li><b>Reminder:</b> A non-blocking bottom-right reminder lists incomplete Tasks due within seven days and closes after ten seconds.</li>',
+      '<li><b>Reminder:</b> Home shows tasks due today and later this week. A nonempty list opens on your first visit each day.</li>',
       '<li><b>Filters and Dashboard:</b> Combine Group, Flow, status, urgency, overdue, and keyword filters. View summaries by Group, Flow, Managed Person, or Report To.</li>',
       '<li><b>Excel:</b> Download a blank 20-column Task main sheet or current re-importable data with a one-row-per-entry Progress History worksheet, validate uploads, and choose supplement import or complete replacement.</li>',
       '<li><b>Document Library:</b> Manage Documentation, Deliverables, Control Sheets, and Folders in List or Group layout. List keeps the full table and filters; Group shows fixed-height cards by Task Group with name search and Type filtering.</li>',
@@ -962,16 +966,17 @@
       '<li><b>Recently Used:</b> List filters documents opened in the current or previous natural week; Group automatically ranks documents with more recent opens first.</li>',
       '</ul></section>',
       '<section><h3>Board Bulk Actions and Archives</h3><p>In Task by Week / Day, click Select Multiple and check Tasks, Flows, or Groups. Preview bulk edits, completion, permanent deletion, or archiving before applying. Select All Visible Rows includes only filtered, expanded rows. Deleting a parent includes archived children while keeping Document Library entries and Quick Notes. Archived work retains progress and links, leaves daily statistics and reminders, and can be searched and restored in the Archived view.</p></section>',
-      '<section><h3>Data Storage Location</h3><p>Business data is stored in <code>localStorage</code> for the current browser and page origin under:</p><pre>weekflow-v2.4:data:v4</pre><p>v3.4 keeps the v2.4-compatible namespace; the internal structure has remained v4 since v3.0. Existing single progress notes migrate into one history entry. Clearing site data, using a private window, changing browsers, or changing the launch origin affects which data is visible.</p></section>',
+      '<section><h3>Data Storage Location</h3><p>Business data is stored in <code>localStorage</code> for the current browser and page origin under:</p><pre>weekflow-v2.4:data:v4</pre><p>v3.5 keeps the v2.4-compatible namespace; the internal structure has remained v4 since v3.0. Existing single progress notes migrate into one history entry. Clearing site data, using a private window, changing browsers, or changing the launch origin affects which data is visible.</p></section>',
       '<section><h3>Data Backup and Restore</h3><ol><li>Open the <b>•••</b> data menu.</li><li>Select <b>Export JSON Backup</b> and save the file securely.</li><li>To restore, select <b>Restore from JSON</b>; Weekflow validates the data and asks for confirmation.</li></ol><p>Export a JSON backup before bulk changes, browser migration, or clearing site data.</p><p>JSON backup stores Groups, Flows, Tasks, complete progress history, all Documents including unlinked items, Quick Notes, conversion records, and Document Library layout preferences.</p></section>',
       '<section><h3>Excel Bulk Import</h3><ol><li>Open <b>•••</b> and download a blank Task template or current data in import format.</li><li>Edit <b>Task Import</b>; each row represents one Task. Edit <b>Progress History</b> for one progress entry per row.</li><li>Upload the workbook and review errors and preview data.</li><li>Choose <b>Supplement Import</b> or <b>Complete Replacement</b>.</li></ol><p>Group, Task Name, Deadline, Urgency, Report To, and Deliverable are required. Missing Groups and Flows are created; matching names are reused. Recurring Tasks require start and end dates. Legacy one-cell Progress Notes remain importable.</p></section>',
       '<section><h3>Excel Export</h3><p><b>Export Dashboard Report</b> creates Overall Dashboard, Timeline Dashboard, and Progress History worksheets containing every Task, hierarchy summary, recurrence fields, all progress entries, deadlines, and related links. It is a presentation report, not an import workbook.</p><p>For re-import, select <b>Download Current Data in Import Format</b>. The Overall Dashboard also exports three-sheet one-person Task status reports. All report sheets are unfrozen and use Windows-safe OOXML. The Document Library Download menu provides its blank template and complete library.</p></section>',
-      '<section><h3>Development Team</h3><p>Developer: Wesley Yan</p><p>First release (v1.0): July 30, 2026</p><p>Latest release (v3.4): October 19, 2026</p></section>'
+      '<section><h3>Development Team</h3><p>Developer: Wesley Yan</p><p>First release (v1.0): July 30, 2026</p><p>Latest release (v3.5): November 22, 2026</p></section>'
     ].join("");
   }
 
   function englishChangelogHtml() {
     var entries = [
+      ["v3.5 Multi-person Tasks, Weekly Agenda and Document Stars", "2026-11-22", "Manage shared Tasks, review weekly deadlines and star frequently referenced documents.", ["Select multiple Report To and Managed Person names from history or enter names separated by semicolons. Duplicate names are combined. Bulk edits can replace the managed-person list.", "Shared Tasks count for each person in dashboard totals and individual reports. Excel export and re-import preserve multiple names and existing single-person Tasks.", "Home lists incomplete Tasks due today and later through Sunday in a vertical agenda. On the first visit with work due, the list expands and a reminder stays open until dismissed. It can be dismissed once per day and the list reopened at any time.", "Select an agenda item to locate it on the weekly timeline and expand its Group and Flow. Hover and keyboard focus use its Group color.", "Star or unstar a document beside its name in List or Group view. The star follows the document across Groups, reloads, and JSON backup and restore."]],
       ["v3.4 Task Copying and Quick Notes Layout Fix", "2026-10-19", "Create similar Tasks from existing ones and keep Quick Note actions visible within the window.", ["Copy Task prefills the current form with a distinct copy suffix, numbered when needed, and a prominent copy banner.", "Saving creates an independent Task; cancelling creates nothing. Completion, recurring completion records, progress, and archive state reset. Related documents become independent entries.", "Quick Notes use the available viewport height, keep footer actions visible, and scroll the editing area independently. Buttons wrap in narrow windows.", "Existing JSON data, Excel templates, and import/export schemas remain compatible."]],
       ["v3.3 Board Bulk Actions and Archives", "2026-09-10", "Select directly on the Task board to edit, complete, delete, or archive work together, with an Archived view for review and restoration.", ["Separate multi-selection from everyday completion controls in both Week and Day views. Select Tasks, Flows, Groups, or visible expanded rows.", "Preview changes to deadlines, urgency, and managed person before applying. Edit recurring deadlines individually.", "Bulk completion preserves existing completion dates and follows the current/earlier recurring-period rules. Permanent deletion previews every affected record, including archived children of deleted parents, while retaining Document Library entries and Quick Notes.", "Archives leave daily boards, statistics, and reminders. Search, review progress and documents, and restore in the Archived view; independently archived children stay archived.", "Keep archive metadata in JSON and re-importable Excel while remaining compatible with older data and templates.", "Keep bulk-dialog controls visible with a scrolling body, and version CSS/JS URLs by content to prevent stale cached UI after updates."]],
       ["v3.2 Note Tables and Favorites", "2026-08-29", "Added starred Note favorites and Excel-compatible tables with complete selection, AI protection, and native undo behavior.", ["Added per-Note star toggles and a Favorites scope; the favorite state is preserved by JSON backup and restore.", "Pastes Excel tables with merged cells preserved and copies selected regions or the whole table back to Excel with the same merge structure.", "Added hierarchical Create / Edit table menus, an 8 × 10 size picker, insert/delete row and column commands, rectangular merge selection, and a floating whole-table selector.", "Added Delete Entire Table to the Edit Table menu. With a whole-table selection, Windows Delete / macOS Delete clears cell contents, while Windows Backspace / macOS Fn+Delete removes the table; both actions use native undo.", "Supports horizontal, vertical, and rectangular mouse or Shift-click selection with program-owned highlighting and no misleading native text highlight in adjacent cells.", "Protects tables during AI Rewrite with stable placeholders and restores each original table after rewriting.", "Records create, paste, insert, delete, merge, and final-row/final-column removal as native browser editing transactions for Cmd/Ctrl+Z undo and redo.", "Kept data structure v4, Task and Document Excel schemas, report formats, Windows-safe OOXML paths, and timeline/Document Library scroll protections unchanged."]],

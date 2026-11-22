@@ -1,5 +1,19 @@
 # Weekflow Changelog
 
+## v3.5 Multi-person Tasks, Weekly Agenda and Document Stars — 2026-11-22
+
+- Task 的汇报对象和管理对象均可多选，可勾选历史人员或用分号输入新姓名，重复姓名自动合并。批量修改支持替换多位管理对象。
+- 多人任务分别计入每位相关人员的统计和个人报表，Excel 导出及回导保留多人字段，原有单人任务继续可用。
+- 首页按“今天到期”和“本周稍后”纵向列出截至周日的未完成任务。有待办时每天首次打开自动展开并弹窗，手动关闭后当天不再弹出，首页仍可随时展开。
+- 点击待办可在周时间轴定位任务，展开所属分组和 Flow；悬停及键盘聚焦时使用任务分组的颜色高亮。
+- 资料名称旁的星标可点亮或取消，在列表、分组及同一资料所在的多个分组间同步。刷新或恢复 JSON 备份后仍保留星标。
+
+- Select multiple Report To and Managed Person names from history or enter names separated by semicolons. Duplicate names are combined. Bulk edits can replace the managed-person list.
+- Shared Tasks count for each person in dashboard totals and individual reports. Excel export and re-import preserve multiple names and existing single-person Tasks.
+- Home lists incomplete Tasks due today and later through Sunday in a vertical agenda. On the first visit with work due, the list expands and a reminder stays open until dismissed. It can be dismissed once per day and the list reopened at any time.
+- Select an agenda item to locate it on the weekly timeline and expand its Group and Flow. Hover and keyboard focus use its Group color.
+- Star or unstar a document beside its name in List or Group view. The star follows the document across Groups, reloads, and JSON backup and restore.
+
 ## v3.4 Task Copying and Quick Notes Layout Fix — 2026-10-19
 
 - Added Copy Task to the edit dialog, prefilling the current form with a distinct copy suffix, numbered when needed, and a prominent copy banner.

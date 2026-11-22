@@ -63,9 +63,9 @@ with sync_playwright() as pw:
           localStorage.setItem('weekflow-v2.4:language', language);
         }""", dict(key=KEY, fixture=fixture, language=language))
         page.reload()
+        if page.locator('#agenda-reminder').is_visible():
+            page.locator('#agenda-reminder button').click()
         page.locator('nav [data-view="timeline"]').click()
-        if page.locator('[data-action="close-ddl-reminder"]').is_visible():
-            page.locator('[data-action="close-ddl-reminder"]').click()
         baseline = stored(page)
         suffix = '（副本）' if language == 'zh-CN' else ' (Copy)'
         title = '复制为新 Task' if language == 'zh-CN' else 'Copy as New Task'
@@ -117,9 +117,9 @@ with sync_playwright() as pw:
         assert page.locator(f'.task-row[data-task-id="{new["id"]}"] .task-title').inner_text() == new['name']
         # Copy remains identifiable after reloading; edits to it never change its source.
         page.reload()
+        if page.locator('#agenda-reminder').is_visible():
+            page.locator('#agenda-reminder button').click()
         page.locator('nav [data-view="timeline"]').click()
-        if page.locator('[data-action="close-ddl-reminder"]').is_visible():
-            page.locator('[data-action="close-ddl-reminder"]').click()
         open_task(page, new['id'])
         page.locator('#task-deliverable').fill('Only the copy changes')
         save(page)

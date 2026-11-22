@@ -451,7 +451,7 @@
     var urgency = parseUrgency(raw.urgency);
     var status = parseStatus(raw.status);
     var completedAt = parseDate(raw.completedAt);
-    var reportTo = cleanText(raw.reportTo, 120);
+    var reportTo = cleanText(raw.reportTo, 32767);
     var deliverable = cleanMultiline(raw.deliverable, 500);
     var documents = parseLinks(raw.documentLinks, "说明文档");
     var deliverables = parseLinks(raw.deliverableLinks, "交付物");
@@ -551,7 +551,7 @@
         status: status || "pending",
         completedAt: status === "completed" ? completedAt : "",
         reportTo: reportTo,
-        managedObject: cleanText(raw.managedObject, 160),
+        managedObject: cleanText(raw.managedObject, 32767),
         deliverable: deliverable,
         progressNote: cleanMultiline(raw.progressNote, 32767),
         documentLinks: documents.links,
@@ -1153,7 +1153,7 @@
       Title: english(options)
         ? isTemplate ? "Weekflow Task Import Template" : "Weekflow Current Task Data"
         : isTemplate ? "Weekflow Task 导入模板" : "Weekflow Task 当前数据",
-      Subject: "Weekflow v3.4 re-importable Task data",
+      Subject: "Weekflow v3.5 re-importable Task data",
       Author: "Wesley Yan",
       Comments: english(options)
         ? isTemplate ? "Blank Task import template." : "Matches the Weekflow Task import template and can be imported again."

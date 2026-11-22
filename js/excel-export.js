@@ -837,7 +837,10 @@
     }
     var expected = String(value || "").trim();
     var tasks = (data.tasks || []).filter(function (task) {
-      return String(task[field] || "").trim() === expected;
+      var names = stats.personNames(task[field]);
+      return expected ? names.some(function (name) {
+        return name.toLocaleLowerCase() === expected.toLocaleLowerCase();
+      }) : !names.length;
     });
     var taskIds = new Set(
       tasks.map(function (task) {
